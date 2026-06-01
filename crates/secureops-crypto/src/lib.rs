@@ -453,13 +453,14 @@ pub mod signing {
     }
 
     /// TPM / Secure Enclave-backed signing (PRODUCT.md A.3 + line 214;
-    /// `tss-esapi`). Linux-only; gated so the crate still compiles on darwin
-    /// (HARD RULE 5).
-    #[cfg(target_os = "linux")]
+    /// `tss-esapi`). Linux-only AND behind the off-by-default `tpm` feature, so
+    /// the crate compiles on darwin (HARD RULE 5) and on Linux hosts without the
+    /// system TSS stack (libtss2-dev). Enable with `--features tpm`.
+    #[cfg(all(target_os = "linux", feature = "tpm"))]
     #[derive(Debug, Default)]
     pub struct TpmSigner;
 
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "linux", feature = "tpm"))]
     impl SigningBackend for TpmSigner {
         fn backend(&self) -> KeyBackend {
             KeyBackend::Tpm

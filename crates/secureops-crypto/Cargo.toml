@@ -27,8 +27,14 @@ zeroize = "1"          # wipe derived keys / plaintext secrets from memory on dr
 keyring = "3"          # OS keychain (macOS Keychain / Windows Credential Manager / libsecret)
 ed25519-dalek = "2"    # signing key for KeychainSigner
 
-# ---- Future heavy deps (TPM) ----
-# tss-esapi = "7"       # TPM 2.0 / Secure Enclave-backed signing keys (Linux fleets)
+[features]
+# TPM 2.0 / Secure Enclave signing backend (Linux fleets). OFF by default:
+# tss-esapi links the system TSS stack (libtss2-dev), which is absent on most
+# build hosts / CI / `cargo install` environments. The default signing path is
+# keychain-backed (KeychainSigner) and needs none of this. Enable with
+# `--features tpm` on a host that has the TSS libraries.
+tpm = ["dep:tss-esapi"]
 
 [target.'cfg(target_os = "linux")'.dependencies]
-tss-esapi = "7"
+# Optional: only compiled when the `tpm` feature is enabled (see [features]).
+tss-esapi = { version = "7", optional = true }
