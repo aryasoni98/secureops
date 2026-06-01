@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# Cut a SecureOps release: bump versions, tag, push.
+# Cut a SecureOps release: bump version, build/test gate, tag, push.
 # Usage: ./scripts/release.sh <version>
-# Example: ./scripts/release.sh 3.0.0
+# Example: ./scripts/release.sh 0.2.0
+#
+# This repo is the Rust workspace at its root. The npm shim
+# (@adversa/secureops) is released from its own repository.
 set -euo pipefail
 
 VERSION="${1:-}"
 if [[ -z "$VERSION" ]]; then
-  echo "Usage: $0 <version>  (e.g. 3.0.0)"
+  echo "Usage: $0 <version>  (e.g. 0.2.0)"
   exit 1
 fi
 
@@ -21,44 +24,41 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
   exit 1
 fi
 
-# 2. Bump workspace Cargo.toml version.
-sed -i.bak "s/^version = \".*\"/version = \"$VERSION\"/" rust/Cargo.toml
-rm -f rust/Cargo.toml.bak
+# 2. Bump workspace version ([workspace.package] version).
+sed -i.bak "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
+rm -f Cargo.toml.bak
 
-# 3. Bump npm package version.
-cd secureops
-npm version "$VERSION" --no-git-tag-version
-cd "$REPO_ROOT"
+# 2b. Keep inter-crate dependency versions in sync (crates.io requires a
+#     version on every published dependency; these are pinned inline next to
+#     `path = "..."`). Updates the version literal inside any secureops-* dep.
+for f in Cargo.toml crates/*/Cargo.toml; do
+  perl -i -pe 's/(secureops-[a-z]+\s*=\s*\{[^}]*version\s*=\s*")[0-9]+\.[0-9]+\.[0-9]+(")/${1}'"$VERSION"'${2}/g if /secureops-/' "$f"
+done
 
-# 4. Build + test.
+# 3. Build + test gate (matches CI).
 echo "--- Rust CI gate ---"
-cd rust
-/opt/homebrew/bin/cargo build --workspace
-/opt/homebrew/bin/cargo test --workspace
-/opt/homebrew/bin/cargo clippy --workspace -- -D warnings
-/opt/homebrew/bin/cargo fmt --all --check
-cd "$REPO_ROOT"
+cargo build --workspace
+cargo test --workspace
+cargo clippy --workspace -- -D warnings
+cargo fmt --all --check
 
-echo "--- TS CI gate ---"
-cd secureops && npm run build && npm test && cd "$REPO_ROOT"
+# 4. Refresh Cargo.lock with the new version.
+cargo generate-lockfile
 
-# 5. Update Cargo.lock.
-cd rust && /opt/homebrew/bin/cargo generate-lockfile && cd "$REPO_ROOT"
-
-# 6. Commit version bump.
-git add rust/Cargo.toml rust/Cargo.lock secureops/package.json secureops/package-lock.json
+# 5. Commit version bump.
+git add Cargo.toml Cargo.lock
 git commit -m "chore: release v$VERSION"
 
-# 7. Tag.
+# 6. Tag.
 git tag -a "v$VERSION" -m "SecureOps v$VERSION"
 
 echo ""
 echo "=== Release v$VERSION prepared ==="
 echo ""
 echo "Push to GitHub (creates the release + triggers publish workflows):"
-echo "  git push origin main v$VERSION"
+echo "  git push origin master v$VERSION"
 echo ""
-echo "Or push to a remote named 'origin' if not yet configured:"
+echo "If 'origin' is not configured yet:"
 echo "  git remote add origin https://github.com/adversa-ai/secureops.git"
-echo "  git push --set-upstream origin main"
+echo "  git push --set-upstream origin master"
 echo "  git push origin v$VERSION"

@@ -1,5 +1,5 @@
 # SecureOps Rust — multi-stage image (CLI + Ring-2 daemon)
-# Build context: rust/   (docker build -f deploy/docker/Dockerfile .)
+# Build context: repo root   (docker build -f deploy/docker/Dockerfile .)
 
 FROM rust:1-bookworm AS builder
 

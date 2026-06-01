@@ -1,11 +1,11 @@
 # SecureOps — Rust workspace
 
-Rust port of [`@adversa/secureops`](../secureops) (v2.2.0): security audit, hardening, and **out-of-band enforcement** for OpenClaw agent deployments.
+Rust port of [`@adversa/secureops`](https://www.npmjs.com/package/@adversa/secureops) (v2.2.0): security audit, hardening, and **out-of-band enforcement** for OpenClaw agent deployments.
 
 | | |
 |---|---|
 | **Tests** | ~165 workspace tests |
-| **Architecture** | Three trust rings + PDP/PEP ([PRODUCT.md](../PRODUCT.md)) |
+| **Architecture** | Three trust rings + PDP/PEP ([PRODUCT.md](PRODUCT.md)) |
 | **Run locally / Docker / K8s** | **[docs/RUNNING.md](docs/RUNNING.md)** |
 | **One-command setup** | `just setup` (see [Justfile](Justfile)) |
 
@@ -510,7 +510,7 @@ just kill-off
 
 | Goal | Command |
 |------|---------|
-| Full local bootstrap | `cd rust && just setup` |
+| Full local bootstrap | `just setup` |
 | Security audit | `just audit` |
 | Live monitors | `just monitor` |
 | Ring-2 daemon | `just daemon` |
@@ -523,7 +523,6 @@ just kill-off
 Manual build (no just):
 
 ```sh
-cd rust
 cargo build --workspace
 cargo test --workspace
 export OPENCLAW_STATE_DIR=/tmp/secureops-demo
@@ -593,7 +592,7 @@ cp target/release/libsecureops_napi.* ../secureops/secureops.node
 
 | Feature | Platform |
 |---------|----------|
-| eBPF kernel PEP | Linux + `rust/ebpf` build |
+| eBPF kernel PEP | Linux + `ebpf/` build |
 | macOS Endpoint Security | macOS entitlement |
 | TPM signing | Linux + `tss-esapi` |
 
@@ -602,7 +601,8 @@ macOS builds and tests **without** eBPF/TPM.
 ### TS parity check
 
 ```sh
-cd ../secureops && npm run build && cd ../rust
+# From a checkout of the sibling npm shim repo:
+cd ../secureops && npm run build && cd -
 # Compare audit JSON — see docs/RUNNING.md and historical README section in git
 ```
 
@@ -611,8 +611,9 @@ cd ../secureops && npm run build && cd ../rust
 ## Repository layout
 
 ```
-rust/
+secureops/                   # repo root = Rust workspace
 ├── Justfile                 # just setup · audit · docker-* · k8s-*
+├── Cargo.toml               # workspace manifest (16 members)
 ├── docs/RUNNING.md          # Local · EC2/Docker · Kubernetes
 ├── deploy/docker/           # Dockerfile + compose
 ├── deploy/k8s/              # Kustomize manifests
@@ -624,6 +625,12 @@ rust/
 
 ## Further reading
 
-- [PRODUCT.md](../PRODUCT.md) — full architecture, workflows B.1–B.9, migration phasing  
+- [PRODUCT.md](PRODUCT.md) — full architecture, workflows B.1–B.9, migration phasing  
 - [docs/RUNNING.md](docs/RUNNING.md) — step-by-step runbooks  
-- [../secureops](../secureops) — TypeScript package (v2.2.0 reference)
+- [`@adversa/secureops`](https://www.npmjs.com/package/@adversa/secureops) — TypeScript package (v2.2.0 reference)
+
+---
+
+## License
+
+[MIT](LICENSE) © Adversa AI

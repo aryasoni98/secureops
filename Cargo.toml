@@ -2,9 +2,9 @@
 #
 # Migration of the @adversa/secureops TypeScript tool (v2.2.0) to Rust,
 # structured as the three-trust-ring / PDP-PEP architecture described in
-# ../PRODUCT.md. `secureops-core` is fully implemented (the frozen type +
-# JSON wire contract); every other crate is a compiling scaffold whose bodies
-# are `todo!()` stubs to be filled per the phasing in PRODUCT.md Part G.
+# PRODUCT.md. All 16 crates are implemented (no `todo!()` stubs); the JSON
+# wire contract in `secureops-core` stays byte-compatible with the TS tool.
+# Linux-only enforcement (eBPF kernel PEP) is feature/platform gated.
 
 [workspace]
 resolver = "2"
@@ -30,7 +30,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 rust-version = "1.80"
 license = "MIT"
@@ -44,7 +44,7 @@ homepage = "https://github.com/adversa-ai/secureops#readme"
 # commented TODOs in each scaffold so the workspace stays fast to build until
 # those phases land.
 [workspace.dependencies]
-secureops-core = { path = "crates/secureops-core" }
+secureops-core = { path = "crates/secureops-core", version = "0.0.1" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 async-trait = "0.1"

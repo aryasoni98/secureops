@@ -8,7 +8,7 @@ Step-by-step guide for **local development**, **AWS EC2 + Docker**, and **Kubern
 | **AWS EC2 + Docker** | `just docker-up` (on the instance) | [§2 EC2 + Docker](#2-aws-ec2--docker--docker-compose) |
 | **Kubernetes** | `just k8s-apply` (after image load) | [§3 Kubernetes](#3-kubernetes) |
 
-Prerequisites for all paths: **[rust/README.md](../README.md)** (crate map, tests, N-API).
+Prerequisites for all paths: **[README.md](../README.md)** (crate map, tests, N-API).
 
 ---
 
@@ -50,10 +50,9 @@ Optional:
 
 ### 1.2 One-command setup
 
-From the **`rust/`** directory:
+From the repo root:
 
 ```sh
-cd rust
 just setup
 ```
 
@@ -72,7 +71,7 @@ OPENCLAW_STATE_DIR=$HOME/.openclaw just setup
 
 ### 1.3 Day-to-day commands (Justfile)
 
-All recipes use `OPENCLAW_STATE_DIR` (default `/tmp/secureops-demo`). Run from `rust/`:
+All recipes use `OPENCLAW_STATE_DIR` (default `/tmp/secureops-demo`). Run from the repo root:
 
 | Command | What it does |
 |---------|----------------|
@@ -92,7 +91,6 @@ All recipes use `OPENCLAW_STATE_DIR` (default `/tmp/secureops-demo`). Run from `
 Without `just`, equivalent manual flow:
 
 ```sh
-cd rust
 cargo build --workspace
 cargo test --workspace
 export OPENCLAW_STATE_DIR=/tmp/secureops-demo
@@ -141,11 +139,11 @@ See [README.md § Selected test targets](../README.md#selected-test-targets).
 
 ### 1.6 eBPF (Linux only)
 
-The `rust/ebpf/` crate is **outside** the main workspace.
+The `ebpf/` crate is **outside** the main workspace.
 
 ```sh
 cargo install bpf-linker
-cd rust/ebpf
+cd ebpf
 CARGO_TARGET_BPFEL_UNKNOWN_NONE_LINKER=bpf-linker \
   cargo build --target bpfel-unknown-none -Z build-std=core --release
 ```
@@ -211,7 +209,7 @@ On the EC2 instance:
 
 ```sh
 git clone https://github.com/adversa-ai/secureops.git
-cd secureops/rust
+cd secureops
 ```
 
 **Option A — Just (recommended):**
@@ -288,7 +286,7 @@ Exit code `2` from `audit --json` means score below threshold — treat as failu
 
 ## 3. Kubernetes
 
-Manifests live in **`rust/deploy/k8s/`** (Kustomize). They deploy:
+Manifests live in **`deploy/k8s/`** (Kustomize). They deploy:
 
 - **Deployment** `secureops-daemon` — Ring-2 daemon (init container runs `secureops init`)
 - **CronJob** `secureops-audit` — daily `secureops audit --json` (06:00 UTC)
@@ -308,7 +306,6 @@ Manifests live in **`rust/deploy/k8s/`** (Kustomize). They deploy:
 **On your laptop or CI:**
 
 ```sh
-cd rust
 docker build -f deploy/docker/Dockerfile -t secureops-rust:latest .
 ```
 
@@ -331,7 +328,6 @@ kind load docker-image secureops-rust:latest
 ### 3.3 Install manifests
 
 ```sh
-cd rust
 just k8s-apply
 # or: kubectl apply -k deploy/k8s/
 ```
@@ -422,7 +418,7 @@ just k8s-delete
 ## 6. File map
 
 ```
-rust/
+secureops/                      # repo root = Rust workspace
   Justfile                      # just setup, audit, docker-*, k8s-*
   docs/RUNNING.md               # this document
   deploy/
@@ -438,4 +434,4 @@ rust/
       cronjob-audit.yaml
 ```
 
-CI reference: [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) (`cargo build/test/clippy/fmt` on ubuntu + macOS).
+CI reference: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) (`cargo build/test/clippy/fmt` on ubuntu + macOS).

@@ -3,7 +3,7 @@
 // TS business logic removed; compare Rust CLI output against the napi addon.
 //
 // Usage: node scripts/ts-faithfulness-check.mjs [stateDir]
-// Requires: cargo build (rust/) + ./scripts/build-napi.sh --release
+// Requires: cargo build (repo root) + ./scripts/build-napi.sh --release
 
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';

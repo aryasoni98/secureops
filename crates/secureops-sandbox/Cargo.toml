@@ -11,7 +11,7 @@ homepage.workspace = true
 
 [dependencies]
 secureops-core = { workspace = true }
-secureops-policy = { path = "../secureops-policy" }
+secureops-policy = { path = "../secureops-policy", version = "0.0.1" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 async-trait = { workspace = true }

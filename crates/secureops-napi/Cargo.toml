@@ -20,11 +20,11 @@ secureops-core = { workspace = true }
 # Sibling scaffolds reached via path: the addon assembles the real tokio::fs
 # AuditContext (secureops-fs) and the Check registry (secureops-checks),
 # then drives secureops_core::run_audit.
-secureops-checks = { path = "../secureops-checks" }
-secureops-fs = { path = "../secureops-fs" }
-secureops-intel = { path = "../secureops-intel" }   # bundled IOC db for the audit path
-secureops-harden = { path = "../secureops-harden" } # harden command
-secureops-monitors = { path = "../secureops-monitors" } # skill-scan + cost-report commands
+secureops-checks = { path = "../secureops-checks", version = "0.0.1" }
+secureops-fs = { path = "../secureops-fs", version = "0.0.1" }
+secureops-intel = { path = "../secureops-intel", version = "0.0.1" }   # bundled IOC db for the audit path
+secureops-harden = { path = "../secureops-harden", version = "0.0.1" } # harden command
+secureops-monitors = { path = "../secureops-monitors", version = "0.0.1" } # skill-scan + cost-report commands
 serde_json = { workspace = true }
 time = { workspace = true }                            # RFC3339 audit timestamp
 

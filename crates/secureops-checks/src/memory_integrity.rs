@@ -151,7 +151,7 @@ impl Check for MemoryIntegrityCheck {
                                 pattern_source(pattern)
                             ),
                             remediation:
-                                "Quarantine this memory file: openclaw secureops memory quarantine"
+                                "Remove or quarantine the affected memory file, then re-run \"secureops audit\""
                                     .to_string(),
                             auto_fixable: false,
                             references: vec![],

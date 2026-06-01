@@ -22,12 +22,12 @@ secureops-core = { workspace = true }
 # Sibling scaffold crates wired in once their stubs are filled (PRODUCT.md Part G).
 # `secureops_checks::default_checks()` supplies the `Vec<Box<dyn Check>>` and
 # `secureops_fs::FsAuditContext` supplies the on-disk `AuditContext`.
-secureops-checks = { path = "../secureops-checks" }
-secureops-fs = { path = "../secureops-fs" }
-secureops-intel = { path = "../secureops-intel" }   # load the bundled IOC database
-secureops-harden = { path = "../secureops-harden" } # harden + rollback engine
-secureops-monitors = { path = "../secureops-monitors" } # live monitor daemon
-secureops-crypto = { path = "../secureops-crypto" }     # keystore init
+secureops-checks = { path = "../secureops-checks", version = "0.0.1" }
+secureops-fs = { path = "../secureops-fs", version = "0.0.1" }
+secureops-intel = { path = "../secureops-intel", version = "0.0.1" }   # load the bundled IOC database
+secureops-harden = { path = "../secureops-harden", version = "0.0.1" } # harden + rollback engine
+secureops-monitors = { path = "../secureops-monitors", version = "0.0.1" } # live monitor daemon
+secureops-crypto = { path = "../secureops-crypto", version = "0.0.1" }     # keystore init
 
 # CLI plumbing.
 clap = { workspace = true }

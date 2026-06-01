@@ -368,7 +368,7 @@ impl Check for CostExposureCheck {
                     total_cost
                 ),
                 remediation:
-                    "Configure cost monitoring: openclaw secureops cost-report --set-limit"
+                    "Set SPENDING_LIMIT, MAX_BUDGET, or COST_LIMIT in .env, then run \"secureops monitor\""
                         .to_string(),
                 auto_fixable: false,
                 references: vec![],

@@ -1,6 +1,6 @@
 # Changelog
 
-## v3.0.0 — Rust rewrite: production-grade PDP/PEP enforcement (2026-06-01)
+## v0.0.1 — Rust rewrite: production-grade PDP/PEP enforcement (2026-06-01)
 
 Full TypeScript → Rust migration. Feature-complete, TS-faithful, zero `todo!()` panics.
 

@@ -17,8 +17,8 @@ path = "src/main.rs"
 [dependencies]
 # Frozen core contract (types / traits / scoring; no I/O) — PRODUCT.md A.4.
 secureops-core = { workspace = true }
-secureops-fs = { path = "../secureops-fs" }             # kill-switch check (B.4 step 1)
-secureops-intel = { path = "../secureops-intel" }       # IOC db for the skill monitor
+secureops-fs = { path = "../secureops-fs", version = "0.0.1" }             # kill-switch check (B.4 step 1)
+secureops-intel = { path = "../secureops-intel", version = "0.0.1" }       # IOC db for the skill monitor
 
 # Allowed shared workspace deps.
 serde = { workspace = true }
@@ -31,13 +31,13 @@ tracing = { workspace = true }
 # ---- Ring-2 sibling crates the daemon wires together (PRODUCT.md A.2 / A.4 / B.4) ----
 # The daemon is the single place that brings the PDP + every PEP + AlertBus +
 # signed audit log up, so it path-depends on all of them.
-secureops-policy = { path = "../secureops-policy" }     # PDP — the allow/deny/escalate authority
-secureops-proxy = { path = "../secureops-proxy" }       # egress PEP — forward proxy + DNS sinkhole
-secureops-sandbox = { path = "../secureops-sandbox" }   # execution PEP — wasmtime host
-secureops-auditlog = { path = "../secureops-auditlog" } # append-only hash-chained signed log
-secureops-monitors = { path = "../secureops-monitors" } # tokio monitors, AlertBus, SQLite, circuit breaker
-secureops-ipc = { path = "../secureops-ipc" }           # unix-socket JSON-RPC + SO_PEERCRED auth
-secureops-bpf = { path = "../secureops-bpf" }           # kernel PEP — aya loader / ES-framework fallback
+secureops-policy = { path = "../secureops-policy", version = "0.0.1" }     # PDP — the allow/deny/escalate authority
+secureops-proxy = { path = "../secureops-proxy", version = "0.0.1" }       # egress PEP — forward proxy + DNS sinkhole
+secureops-sandbox = { path = "../secureops-sandbox", version = "0.0.1" }   # execution PEP — wasmtime host
+secureops-auditlog = { path = "../secureops-auditlog", version = "0.0.1" } # append-only hash-chained signed log
+secureops-monitors = { path = "../secureops-monitors", version = "0.0.1" } # tokio monitors, AlertBus, SQLite, circuit breaker
+secureops-ipc = { path = "../secureops-ipc", version = "0.0.1" }           # unix-socket JSON-RPC + SO_PEERCRED auth
+secureops-bpf = { path = "../secureops-bpf", version = "0.0.1" }           # kernel PEP — aya loader / ES-framework fallback
 
 # ---- Heavy deps the real daemon impl will pull in (Phase 4) — kept commented so the
 # ---- workspace stays offline-fast/green until this phase lands (PRODUCT.md Part G). ----

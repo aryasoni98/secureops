@@ -19,7 +19,7 @@ if ! command -v bpf-linker &>/dev/null; then
   cargo install bpf-linker
 fi
 
-cd "$(dirname "$0")/../rust/ebpf"
+cd "$(dirname "$0")/../ebpf"
 
 echo "Compiling eBPF programs (target: bpfel-unknown-none, profile: $PROFILE)..."
 CARGO_TARGET_BPFEL_UNKNOWN_NONE_LINKER=bpf-linker \

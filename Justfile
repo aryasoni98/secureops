@@ -11,7 +11,7 @@ state_dir := env_var_or_default("OPENCLAW_STATE_DIR", "/tmp/secureops-demo")
 cli := "target/debug/secureops"
 daemon := "target/debug/secureops-daemon"
 
-# Docker paths (context = rust/)
+# Docker paths (context = repo root)
 docker_dir := "deploy/docker"
 image := "secureops-rust:latest"
 

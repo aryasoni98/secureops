@@ -194,7 +194,7 @@ pub fn format_console_report(report: &AuditReport) -> String {
         report.summary.auto_fixable
     ));
     lines.push(format!(
-        "  {DIM}Run \"openclaw secureops harden\" to apply automatic fixes{RESET}"
+        "  {DIM}Run \"secureops harden\" to apply automatic fixes{RESET}"
     ));
     lines.push(String::new());
 

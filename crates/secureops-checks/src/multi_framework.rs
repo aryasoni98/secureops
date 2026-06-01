@@ -72,7 +72,7 @@ impl Check for MultiFrameworkCheck {
                 title: "Kill switch is active".to_string(),
                 description: "The SecureOps kill switch is currently active. All agent operations should be suspended.".to_string(),
                 evidence: format!("Kill switch file: {killswitch_path}"),
-                remediation: "Run \"npx openclaw secureops resume\" to deactivate".to_string(),
+                remediation: "Run \"secureops kill --deactivate\" to deactivate".to_string(),
                 auto_fixable: false,
                 references: vec![],
                 owasp_asi: "ASI10".to_string(),

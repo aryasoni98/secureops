@@ -60,15 +60,12 @@ jobs:
         with:
           node-version: 22
       - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: rust
 
       - name: Install cross (for aarch64 Linux)
         if: matrix.cross
         run: cargo install cross --git https://github.com/cross-rs/cross
 
       - name: Build CLI binary
-        working-directory: rust
         run: |
           if [ "${{ matrix.cross }}" = "true" ]; then
             cross build --release -p secureops-cli --target ${{ matrix.target }}
@@ -79,7 +76,7 @@ jobs:
       - name: Package binary
         run: |
           TAG=${GITHUB_REF#refs/tags/}
-          BIN_DIR="rust/target/${{ matrix.target }}/release"
+          BIN_DIR="target/${{ matrix.target }}/release"
           ARCHIVE="secureops-${TAG}-${{ matrix.suffix }}.tar.gz"
           cp "$BIN_DIR/secureops" secureops-cli
           tar czf "$ARCHIVE" secureops-cli
