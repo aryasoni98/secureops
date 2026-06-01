@@ -35,8 +35,8 @@ edition = "2021"
 rust-version = "1.80"
 license = "MIT"
 authors = ["Adversa AI <https://adversa.ai>"]
-repository = "https://github.com/adversa-ai/secureops"
-homepage = "https://github.com/adversa-ai/secureops#readme"
+repository = "https://github.com/aryasoni98/secureops"
+homepage = "https://github.com/aryasoni98/secureops#readme"
 
 # Centralized dependency versions. Members opt in with `dep.workspace = true`,
 # so the whole tree shares one version per crate. Heavy Ring-2-specific deps

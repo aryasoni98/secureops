@@ -208,7 +208,7 @@ sudo usermod -aG docker ubuntu
 On the EC2 instance:
 
 ```sh
-git clone https://github.com/adversa-ai/secureops.git
+git clone https://github.com/aryasoni98/secureops.git
 cd secureops
 ```
 

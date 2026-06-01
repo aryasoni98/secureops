@@ -31,9 +31,9 @@
 //! - **AllowlistEngine**: dependency-free fallback for simple host allowlists.
 //! - **Cedar**: future extension (cedar-policy dep, commented).
 //!
-//! [`secureops-proxy`]: https://github.com/adversa-ai/secureops
-//! [`secureops-bpf`]: https://github.com/adversa-ai/secureops
-//! [`secureops-sandbox`]: https://github.com/adversa-ai/secureops
+//! [`secureops-proxy`]: https://github.com/aryasoni98/secureops
+//! [`secureops-bpf`]: https://github.com/aryasoni98/secureops
+//! [`secureops-sandbox`]: https://github.com/aryasoni98/secureops
 
 #![allow(dead_code, unused_variables)]
 

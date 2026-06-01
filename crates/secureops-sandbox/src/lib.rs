@@ -39,8 +39,8 @@
 //! [`PolicyEngine`]: secureops_policy::PolicyEngine
 //! [`Decision::Allow`]: secureops_policy::Decision::Allow
 //! [`DecisionResponse::fail_closed`]: secureops_policy::DecisionResponse::fail_closed
-//! [`secureops-proxy`]: https://github.com/adversa-ai/secureops
-//! [`secureops-intel`]: https://github.com/adversa-ai/secureops
+//! [`secureops-proxy`]: https://github.com/aryasoni98/secureops
+//! [`secureops-intel`]: https://github.com/aryasoni98/secureops
 //! [`secureops-core`]: secureops_core
 
 #![allow(dead_code, unused_variables)]

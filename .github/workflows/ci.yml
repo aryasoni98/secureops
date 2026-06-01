@@ -61,6 +61,7 @@ jobs:
             secureops-proxy \
             secureops-bpf \
             secureops-sandbox \
+            secureops-daemon \
             secureops-napi \
             secureops-cli; do
             cargo publish -p "$crate" --no-verify
