@@ -1,0 +1,25 @@
+[package]
+name = "secureops-ipc"
+description = "SecureOps IPC: unix-socket JSON-RPC protocol + SO_PEERCRED/LOCAL_PEERCRED peer auth."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+secureops-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["io-util"] }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+# ---- Heavy / phase-specific deps (PRODUCT.md A.3, A.4) — TODO, keep commented ----
+# The real SO_PEERCRED / LOCAL_PEERCRED reads use raw getsockopt; if a safe
+# wrapper is preferred over hand-rolled libc the following may be enabled later:
+# nix = { version = "0.29", features = ["socket", "uio"] }   # TODO: portable peer-cred / ucred helpers
+# libc = "0.2"                                                # TODO: getsockopt(SO_PEERCRED) / xucred constants

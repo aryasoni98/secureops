@@ -1,0 +1,27 @@
+[package]
+name = "secureops-fs"
+description = "tokio::fs-backed AuditContext + localhost port probe for SecureOps (PRODUCT.md A.4 / B.2)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+secureops-core = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+time = { workspace = true, features = ["parsing"] }   # parse behavioral log timestamps
+
+[dev-dependencies]
+tempfile = "3"
+
+# ---- Heavier deps the real impl may pull in later (kept commented so the
+#      workspace stays offline-fast & green; uncomment per PRODUCT.md phasing) ----
+# hickory-dns = "0.24"   # async resolver for deep network probes (PRODUCT.md B.2)

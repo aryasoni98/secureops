@@ -1,0 +1,30 @@
+[package]
+name = "secureops-proxy"
+description = "SecureOps egress PEP: forward proxy + DNS sinkhole, fail-closed (PRODUCT.md B.5)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+secureops-core.workspace = true
+# PDP sibling — the proxy asks it allow/deny/escalate per connection (PRODUCT.md B.5 step 2-3).
+secureops-policy = { path = "../secureops-policy" }
+tokio = { workspace = true, features = ["io-util"] }   # CONNECT tunnel: read/write + copy_bidirectional
+anyhow.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+
+# ---- Heavy deps the real implementation will need (Phase 4 / PRODUCT.md B.5) ----
+# Declared here as commented TODOs only, so the workspace stays offline-fast and green
+# until the egress PEP lands. NONE of these are active dependencies yet.
+#
+# hyper            = { version = "1", features = ["server", "client", "http1"] }  # CONNECT forward proxy
+# rustls           = "0.23"        # parse ClientHello / SNI without MITM (no cert interception)
+# tokio-rustls     = "0.26"        # async TLS plumbing for the proxy listener
+hickory-proto = { version = "0.24", default-features = false }
+hickory-resolver = { version = "0.24", default-features = false, features = ["tokio-runtime"] }
+# hickory-server = "0.24"          # full authority server (future)

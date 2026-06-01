@@ -1,0 +1,51 @@
+[package]
+name = "secureops-daemon"
+description = "SecureOps Ring-2 root-of-trust daemon: wires the PDP + all PEPs (proxy/sinkhole/eBPF/sandbox) + AlertBus + signed audit log."
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[[bin]]
+name = "secureops-daemon"
+path = "src/main.rs"
+
+[dependencies]
+# Frozen core contract (types / traits / scoring; no I/O) — PRODUCT.md A.4.
+secureops-core = { workspace = true }
+secureops-fs = { path = "../secureops-fs" }             # kill-switch check (B.4 step 1)
+secureops-intel = { path = "../secureops-intel" }       # IOC db for the skill monitor
+
+# Allowed shared workspace deps.
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+# ---- Ring-2 sibling crates the daemon wires together (PRODUCT.md A.2 / A.4 / B.4) ----
+# The daemon is the single place that brings the PDP + every PEP + AlertBus +
+# signed audit log up, so it path-depends on all of them.
+secureops-policy = { path = "../secureops-policy" }     # PDP — the allow/deny/escalate authority
+secureops-proxy = { path = "../secureops-proxy" }       # egress PEP — forward proxy + DNS sinkhole
+secureops-sandbox = { path = "../secureops-sandbox" }   # execution PEP — wasmtime host
+secureops-auditlog = { path = "../secureops-auditlog" } # append-only hash-chained signed log
+secureops-monitors = { path = "../secureops-monitors" } # tokio monitors, AlertBus, SQLite, circuit breaker
+secureops-ipc = { path = "../secureops-ipc" }           # unix-socket JSON-RPC + SO_PEERCRED auth
+secureops-bpf = { path = "../secureops-bpf" }           # kernel PEP — aya loader / ES-framework fallback
+
+# ---- Heavy deps the real daemon impl will pull in (Phase 4) — kept commented so the
+# ---- workspace stays offline-fast/green until this phase lands (PRODUCT.md Part G). ----
+# tracing-subscriber = { version = "0.3", features = ["env-filter"] }  # structured log output / startup banner sink
+# opentelemetry = "0.27"     # optional OTel export of AlertBus events (PRODUCT.md tier: enterprise)
+# Note: the daemon itself adds no new heavy crates — the wasmtime/aya/hyper/rustls/
+# hickory/rusqlite/ed25519/keyring/tss-esapi deps live (commented) in the sibling
+# crates above; the daemon only orchestrates their public APIs.
+
+[dev-dependencies]
+tokio = { workspace = true }

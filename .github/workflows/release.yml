@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract changelog entry
+        id: changelog
+        run: |
+          # Extract the first version block from CHANGELOG.md
+          awk '/^## v/{if (found) exit; found=1} found' CHANGELOG.md \
+            | head -120 > /tmp/release-notes.md
+          echo "notes_file=/tmp/release-notes.md" >> "$GITHUB_OUTPUT"
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: ${{ steps.changelog.outputs.notes_file }}
+          draft: false
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
+
+  build-binaries:
+    name: Build release binaries (${{ matrix.target }})
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            suffix: linux-x86_64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            suffix: linux-arm64
+            cross: true
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            suffix: macos-x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            suffix: macos-arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Install cross (for aarch64 Linux)
+        if: matrix.cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build CLI binary
+        working-directory: rust
+        run: |
+          if [ "${{ matrix.cross }}" = "true" ]; then
+            cross build --release -p secureops-cli --target ${{ matrix.target }}
+          else
+            cargo build --release -p secureops-cli --target ${{ matrix.target }}
+          fi
+
+      - name: Package binary
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          BIN_DIR="rust/target/${{ matrix.target }}/release"
+          ARCHIVE="secureops-${TAG}-${{ matrix.suffix }}.tar.gz"
+          cp "$BIN_DIR/secureops" secureops-cli
+          tar czf "$ARCHIVE" secureops-cli
+          echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+
+      - name: Upload binary to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ARCHIVE }}

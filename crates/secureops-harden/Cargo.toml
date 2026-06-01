@@ -1,0 +1,22 @@
+[package]
+name = "secureops-harden"
+description = "Hardening engine: 5 config-mutating modules + timestamped backup/rollback (PRODUCT.md B.3)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+secureops-core = { workspace = true }
+secureops-crypto = { path = "../secureops-crypto" }   # generate_token for gateway auth
+async-trait = { workspace = true }
+tokio = { workspace = true }                            # real file I/O (read/write/copy/mkdir)
+serde = { workspace = true }
+serde_json = { workspace = true }                       # read/write openclaw.json + manifest
+anyhow = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

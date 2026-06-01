@@ -1,0 +1,56 @@
+# SecureOps on Docker — EC2, VM, or local Linux host.
+# From rust/:  just docker-up   OR   docker compose -f deploy/docker/docker-compose.yml up -d
+
+services:
+  secureops-daemon:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+    image: secureops-rust:latest
+    container_name: secureops-daemon
+    restart: unless-stopped
+    environment:
+      OPENCLAW_STATE_DIR: /data/openclaw
+    volumes:
+      - secureops-state:/data/openclaw
+    # Egress PEP binds 127.0.0.1:8889 inside the container. Use host network on
+    # Linux EC2 so agents on the host can reach the proxy. On Mac Docker Desktop,
+    # omit network_mode and use audit-only, or run the daemon natively (just daemon).
+    network_mode: ${SECUREOPS_NETWORK_MODE:-bridge}
+    ports:
+      # Only used when network_mode=bridge; map if you change proxy bind in future.
+      - "8889:8889"
+    healthcheck:
+      test: ["CMD-SHELL", "test -d /data/openclaw/.secureops || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # One-shot audit (profile: tools). Example: just docker-audit
+  secureops-audit:
+    profiles: ["tools"]
+    image: secureops-rust:latest
+    depends_on:
+      - secureops-daemon
+    environment:
+      OPENCLAW_STATE_DIR: /data/openclaw
+    volumes:
+      - secureops-state:/data/openclaw
+    entrypoint: ["secureops", "audit", "--json"]
+    restart: "no"
+
+  # Optional init on first deploy (profile: tools)
+  secureops-init:
+    profiles: ["tools"]
+    image: secureops-rust:latest
+    environment:
+      OPENCLAW_STATE_DIR: /data/openclaw
+    volumes:
+      - secureops-state:/data/openclaw
+    entrypoint: ["secureops", "init"]
+    restart: "no"
+
+volumes:
+  secureops-state:
+    driver: local

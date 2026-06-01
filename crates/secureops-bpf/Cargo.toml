@@ -1,0 +1,21 @@
+[package]
+name = "secureops-bpf"
+description = "SecureOps kernel PEP: syscall/egress correlation; Linux aya CO-RE + LSM-BPF, macOS Endpoint Security fallback (PRODUCT.md B.6)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+secureops-core.workspace = true
+anyhow.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+aya = { version = "0.13", default-features = false }
+# aya-log = "0.2"   # ring-buffer log plumbing (add when eBPF programs are built)
+
+# macOS Endpoint Security is a system library (not crates.io); add a native link
+# in build.rs when the entitlement is available.

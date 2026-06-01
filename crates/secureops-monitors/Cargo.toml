@@ -1,0 +1,28 @@
+[package]
+name = "secureops-monitors"
+description = "SecureOps runtime monitors: tokio monitor loops, AlertBus, SQLite persistence, cost circuit breaker."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+secureops-core = { workspace = true }
+secureops-intel = { path = "../secureops-intel" }   # hash_string + IOC matchers (skill scanner)
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+regex = { workspace = true }                            # dangerous-skill + prompt-injection patterns
+time = { workspace = true, features = ["parsing"] }     # parse entry timestamps for cost windows
+
+rusqlite = { version = "0.32", features = ["bundled"] }   # SQLite: alerts + audit-log tables
+
+[dev-dependencies]
+tokio = { workspace = true }
+tempfile = "3"

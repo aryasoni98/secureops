@@ -1,0 +1,25 @@
+[package]
+name = "secureops-policy"
+description = "SecureOps PDP: the single allow/deny/escalate authority (Rego/Cedar eval, hot-reload, decision cache)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+secureops-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+regorus = "0.2"        # OPA/Rego policy evaluation engine (pure-Rust, embeddable)
+cedar-policy = "4"     # AWS Cedar policy language + authorizer
+
+[dev-dependencies]
+tokio = { workspace = true }

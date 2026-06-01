@@ -1,0 +1,27 @@
+# secureops-ebpf — kernel-side eBPF programs for the SecureOps kernel PEP.
+#
+# Built separately from the main workspace (requires bpfel-unknown-none target):
+#   cargo install bpf-linker
+#   CARGO_TARGET_BPFEL_UNKNOWN_NONE_LINKER=bpf-linker \
+#       cargo build --target bpfel-unknown-none -Z build-std=core --release
+#
+# The BPF object lands at:
+#   target/bpfel-unknown-none/release/secureops-ebpf
+#
+# Set SECUREOPS_BPF_OBJ to that path when starting secureops-daemon.
+
+[package]
+name = "secureops-ebpf"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "secureops-ebpf"
+path = "src/main.rs"
+
+[dependencies]
+aya-ebpf = "0.1"
+
+[profile.release]
+lto = true
+opt-level = 3

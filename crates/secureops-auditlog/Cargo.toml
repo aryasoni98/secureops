@@ -1,0 +1,31 @@
+[package]
+name = "secureops-auditlog"
+description = "SecureOps tamper-evident audit log: append-only hash chain + ed25519 signing + optional Rekor/RFC3161 anchor."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+secureops-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+sha2 = { workspace = true }              # SHA-256 hash chain
+ed25519-dalek = "2"                      # signing / non-repudiation (B.9)
+getrandom = { workspace = true }         # CSPRNG for in-memory key generation
+
+[dev-dependencies]
+tempfile = "3"
+
+# ---- Heavy deps for the real impl (PRODUCT.md B.9 / W6 / Phase 4) ----
+# Kept commented so the workspace stays offline-fast and green during
+# scaffolding; activate when the hash-chain + signing logic lands.
+# sha2 = "0.10"           # SHA-256: hash = H(prev_hash || canonical(payload)) chain link
+# ed25519-dalek = "2"     # ed25519 sign/verify each LogEntry; key from keychain/TPM (A.3)
+# rekor-client = "0.1"    # optional anchor of the chain head to a Rekor transparency log (W6)
+# (RFC3161 timestamp-authority anchoring — alternative to Rekor — via a TSA client crate)

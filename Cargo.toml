@@ -1,0 +1,64 @@
+# SecureOps — Rust workspace
+#
+# Migration of the @adversa/secureops TypeScript tool (v2.2.0) to Rust,
+# structured as the three-trust-ring / PDP-PEP architecture described in
+# ../PRODUCT.md. `secureops-core` is fully implemented (the frozen type +
+# JSON wire contract); every other crate is a compiling scaffold whose bodies
+# are `todo!()` stubs to be filled per the phasing in PRODUCT.md Part G.
+
+[workspace]
+resolver = "2"
+members = [
+    # ---- Rings 0–1 + shared core (blueprint Phases 1–3) ----
+    "crates/secureops-core",     # types, Check/AuditContext traits, scoring — no I/O (IMPLEMENTED)
+    "crates/secureops-checks",   # one Check impl per audit* fn
+    "crates/secureops-fs",       # tokio::fs AuditContext + localhost port probe
+    "crates/secureops-intel",    # signed IOC feed, aho-corasick/strsim, tree-sitter scan
+    "crates/secureops-crypto",   # aes-gcm + argon2 + zeroize + keyring, v1-readable
+    "crates/secureops-harden",   # harden + rollback: 5 config-mutating modules (B.3)
+    "crates/secureops-monitors", # tokio monitors, AlertBus, sqlite
+    "crates/secureops-cli",      # clap binary
+    "crates/secureops-napi",     # .node addon for the TS shim
+    # ---- Ring 2 enforcement (blueprint Phase 4) ----
+    "crates/secureops-ipc",      # unix-socket JSON-RPC + SO_PEERCRED auth
+    "crates/secureops-policy",   # PDP: regorus/cedar eval, hot-reload, decision cache
+    "crates/secureops-proxy",    # egress PEP: forward proxy + DNS sinkhole, fail-closed
+    "crates/secureops-bpf",      # kernel PEP: aya loader + CO-RE; ES-framework fallback
+    "crates/secureops-sandbox",  # execution PEP: wasmtime host, WASI grants, fuel/epoch
+    "crates/secureops-auditlog", # append-only hash chain + ed25519 + optional anchor
+    "crates/secureops-daemon",   # privileged binary wiring PDP + PEPs + AlertBus + auditlog
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+license = "MIT"
+authors = ["Adversa AI <https://adversa.ai>"]
+repository = "https://github.com/adversa-ai/secureops"
+homepage = "https://github.com/adversa-ai/secureops#readme"
+
+# Centralized dependency versions. Members opt in with `dep.workspace = true`,
+# so the whole tree shares one version per crate. Heavy Ring-2-specific deps
+# (wasmtime, aya, hyper, rustls, regorus, etc.) are declared per-crate as
+# commented TODOs in each scaffold so the workspace stays fast to build until
+# those phases land.
+[workspace.dependencies]
+secureops-core = { path = "crates/secureops-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+async-trait = "0.1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "net", "sync", "signal", "time"] }
+anyhow = "1"
+thiserror = "2"
+clap = { version = "4", features = ["derive"] }
+tracing = "0.1"
+regex = "1"
+sha2 = "0.10"
+time = { version = "0.3", features = ["formatting"] }
+getrandom = "0.2"
+
+[profile.release]
+lto = "thin"
+strip = true
+codegen-units = 1

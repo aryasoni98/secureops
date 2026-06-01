@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openclaw-config
+  labels:
+    app.kubernetes.io/name: secureops
+data:
+  openclaw.json: |
+    {
+      "secureops": {
+        "network": {
+          "egressAllowlistEnabled": false,
+          "egressAllowlist": ["api.anthropic.com"]
+        }
+      }
+    }

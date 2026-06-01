@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: secureops
+
+resources:
+  - namespace.yaml
+  - pvc.yaml
+  - configmap-openclaw.yaml
+  - deployment-daemon.yaml
+  - cronjob-audit.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: secureops
+  app.kubernetes.io/managed-by: kustomize
+
+images:
+  - name: secureops-rust
+    newName: secureops-rust
+    newTag: latest

@@ -1,0 +1,45 @@
+[package]
+name = "secureops-cli"
+description = "SecureOps command-line interface: audit / harden / monitor / init / kill / export-incident (PRODUCT.md B.1-B.3, B.9, Part C)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+# The published binary name. `secureops audit --json` is the CI/CD gate
+# entry point documented in PRODUCT.md Part C.
+[[bin]]
+name = "secureops"
+path = "src/main.rs"
+
+[dependencies]
+# Frozen type + scoring contract (run_audit, Check, AuditContext, AuditReport).
+secureops-core = { workspace = true }
+
+# Sibling scaffold crates wired in once their stubs are filled (PRODUCT.md Part G).
+# `secureops_checks::default_checks()` supplies the `Vec<Box<dyn Check>>` and
+# `secureops_fs::FsAuditContext` supplies the on-disk `AuditContext`.
+secureops-checks = { path = "../secureops-checks" }
+secureops-fs = { path = "../secureops-fs" }
+secureops-intel = { path = "../secureops-intel" }   # load the bundled IOC database
+secureops-harden = { path = "../secureops-harden" } # harden + rollback engine
+secureops-monitors = { path = "../secureops-monitors" } # live monitor daemon
+secureops-crypto = { path = "../secureops-crypto" }     # keystore init
+
+# CLI plumbing.
+clap = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+time = { workspace = true }                            # RFC3339 audit timestamp (wire-compatible)
+serde_json = { workspace = true }                      # parse openclaw.json config
+
+# --- Heavier deps the real CLI impl will pull in (commented until their phase) ---
+# tracing = { workspace = true }                 # structured logs / --verbose (Part G)
+# tracing-subscriber = "0.3"                      # human + JSON log formatting
+# serde_json = { workspace = true }              # incident-export envelope (B.9)
+# comfy-table = "7"                               # pretty non-JSON audit table (B.1)
+# owo-colors = "4"                                # severity coloring in TTY output
+# indicatif = "0.17"                              # --deep progress spinner (B.1)

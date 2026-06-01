@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secureops-daemon
+  labels:
+    app.kubernetes.io/name: secureops-daemon
+    app.kubernetes.io/component: ring2-daemon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: secureops-daemon
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: secureops-daemon
+        app.kubernetes.io/component: ring2-daemon
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+      # Uncomment hostNetwork when egress PEP is enabled and agents run on the
+      # same node (proxy listens on 127.0.0.1:8889 inside the pod network ns).
+      # hostNetwork: true
+      # dnsPolicy: ClusterFirstWithHostNet
+      initContainers:
+        - name: init-state
+          image: secureops-rust:latest
+          imagePullPolicy: IfNotPresent
+          command: ["secureops", "init"]
+          env:
+            - name: OPENCLAW_STATE_DIR
+              value: /data/openclaw
+          volumeMounts:
+            - name: state
+              mountPath: /data/openclaw
+            - name: config
+              mountPath: /data/openclaw/openclaw.json
+              subPath: openclaw.json
+      containers:
+        - name: daemon
+          image: secureops-rust:latest
+          imagePullPolicy: IfNotPresent
+          command: ["secureops-daemon"]
+          env:
+            - name: OPENCLAW_STATE_DIR
+              value: /data/openclaw
+          volumeMounts:
+            - name: state
+              mountPath: /data/openclaw
+            - name: config
+              mountPath: /data/openclaw/openclaw.json
+              subPath: openclaw.json
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          # Liveness: process is up; state dir exists after init
+          livenessProbe:
+            exec:
+              command: ["test", "-d", "/data/openclaw/.secureops"]
+            initialDelaySeconds: 15
+            periodSeconds: 30
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: openclaw-state
+        - name: config
+          configMap:
+            name: openclaw-config
