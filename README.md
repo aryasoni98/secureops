@@ -67,7 +67,7 @@ secureops-core = "0.0.1"
 
 ### Container / Kubernetes
 
-Docker image + Kustomize manifests live in [`deploy/`](deploy). See **[docs/RUNNING.md](docs/RUNNING.md)** for EC2/Docker and Kubernetes runbooks.
+Docker image + Kustomize manifests live in [`deploy/`](deploy). Step-by-step **[AWS EC2 + Kubernetes deployment guide → docs/DEPLOY_AWS_K8S.md](docs/DEPLOY_AWS_K8S.md)**; local/dev runbook in [docs/RUNNING.md](docs/RUNNING.md).
 
 ---
 

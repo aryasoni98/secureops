@@ -2,6 +2,8 @@
 
 Step-by-step guide for **local development**, **AWS EC2 + Docker**, and **Kubernetes**.
 
+> For a focused, copy-paste **AWS + Kubernetes** deployment walkthrough (ECR push, Kustomize image override, egress PEP patterns), see **[DEPLOY_AWS_K8S.md](DEPLOY_AWS_K8S.md)**.
+
 | Environment | One-command entry | Full path |
 |-------------|-------------------|-----------|
 | **Local (macOS/Linux)** | `just setup` | [§1 Local](#1-local-development-macos--linux) |
