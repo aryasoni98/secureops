@@ -28,6 +28,8 @@ secureops audit --json                 # exits 2 if score < 80 → fail the buil
 
 That is the whole audit-gate path. The rest of this doc is for **enforcement** (the daemon).
 
+> Want to run locally and only *inspect* AWS read-only (no cost, no impact) before deploying? See **[LOCAL_AND_AWS_READONLY.md](LOCAL_AND_AWS_READONLY.md)**.
+
 ---
 
 ## 1. AWS EC2 + Docker
