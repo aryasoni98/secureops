@@ -49,6 +49,11 @@ jobs:
           node-version: 22
       - uses: Swatinem/rust-cache@v2
       # Publish in dependency order (core first, cli last).
+      # Idempotent + rate-limit-aware: skips crates/versions already on
+      # crates.io and sleeps through 429s. crates.io throttles *new* crate
+      # names to ~1 / 10 min, so a first-time 16-crate publish can take ~2h;
+      # the loop simply waits it out (well within the 6h job limit). Re-runs
+      # resume cleanly because already-published crates are skipped.
       - name: Publish crates
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
@@ -70,6 +75,16 @@ jobs:
             secureops-daemon \
             secureops-napi \
             secureops-cli; do
-            cargo publish -p "$crate" --no-verify
-            sleep 10   # crates.io rate limit
+            while true; do
+              if out=$(cargo publish -p "$crate" --no-verify 2>&1); then
+                echo "published $crate"; sleep 12; break
+              fi
+              if echo "$out" | grep -qiE 'already uploaded|crate version.*already|is already'; then
+                echo "skip $crate (already published)"; break
+              fi
+              if echo "$out" | grep -qiE '429|Too Many Requests'; then
+                echo "rate limited on $crate — sleeping 11m"; sleep 660; continue
+              fi
+              echo "$out"; exit 1
+            done
           done
