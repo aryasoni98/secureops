@@ -15,7 +15,7 @@ Full TypeScript → Rust migration. Feature-complete, TS-faithful, zero `todo!()
 - **Execution PEP**: wasmtime 27 WASM sandbox, WASI preview1, fuel + epoch caps,
   PDP-negotiated capability grants. `.env` unconditionally unreachable.
 - **Kernel PEP**: aya loader framework (Linux) + Endpoint Security (macOS gated).
-  eBPF programs in `rust/ebpf/` — correlate `openat`/`connect`/`execve` per PID.
+  eBPF programs in `ebpf/` — correlate `openat`/`connect`/`execve` per PID.
 - **Tamper-evident audit log**: SHA-256 hash chain + ed25519 (InMemorySigner / OS
   keychain / TPM). JSONL disk persistence, `AuditLog::open()` resumes chain.
 - **IPC**: Unix socket JSON-RPC, `SO_PEERCRED` / `LOCAL_PEERCRED` peer auth.

@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [master]
+    tags: ['v*']        # tag pushes must trigger CI so the tag-gated publish-crates job runs
   pull_request:
     branches: [master]
 
