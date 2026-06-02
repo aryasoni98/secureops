@@ -13,8 +13,16 @@ homepage.workspace = true
 secureops-core.workspace = true
 anyhow.workspace = true
 
+[features]
+# Linux aya CO-RE eBPF loader. OFF by default: the loader is not yet wired into
+# the daemon (PEPs are Phase 4 / disabled) and pulls the aya stack. The default
+# build provides the cross-platform dispatcher + types only. Enable with
+# `--features ebpf` on Linux once the eBPF programs are built.
+ebpf = ["dep:aya"]
+
 [target.'cfg(target_os = "linux")'.dependencies]
-aya = { version = "0.13", default-features = false }
+# Optional: only compiled when the `ebpf` feature is enabled (see [features]).
+aya = { version = "0.13", default-features = false, optional = true }
 # aya-log = "0.2"   # ring-buffer log plumbing (add when eBPF programs are built)
 
 # macOS Endpoint Security is a system library (not crates.io); add a native link

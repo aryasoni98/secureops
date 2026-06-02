@@ -382,10 +382,12 @@ pub fn run_skill(wasm_bytes: &[u8], caps: &Capabilities, pdp: &dyn PolicyEngine)
 /// Linux-specific defence-in-depth that hardens the sandbox host process itself
 /// beyond the WASM boundary (seccomp around the `wasmtime` host).
 ///
-/// Behind `#[cfg(target_os = "linux")]` so the crate still compiles on macOS,
-/// this host (PRODUCT.md A.2 platform-specific PEP note). The real impl uses the
-/// commented `seccompiler` dep declared by the kernel PEP crate.
-#[cfg(target_os = "linux")]
+/// Behind `#[cfg(all(target_os = "linux", feature = "seccomp"))]` so the crate
+/// compiles on macOS (PRODUCT.md A.2 platform-specific PEP note) and on Linux
+/// without `seccompiler`/`libc`. This module is defense-in-depth around the
+/// wasmtime host and is not yet wired into the daemon; enable with
+/// `--features seccomp` once the seccompiler filter is finalized.
+#[cfg(all(target_os = "linux", feature = "seccomp"))]
 pub mod host_hardening {
     use super::SandboxError;
     use seccompiler::{

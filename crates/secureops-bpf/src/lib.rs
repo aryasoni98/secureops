@@ -173,7 +173,7 @@ impl SyscallEvent {
 /// inline-deny hook; on macOS it attaches the observe-only Endpoint Security
 /// client. On any other target it returns an error — there is no kernel PEP.
 pub fn load() -> anyhow::Result<()> {
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "linux", feature = "ebpf"))]
     {
         return linux::load();
     }
@@ -181,9 +181,13 @@ pub fn load() -> anyhow::Result<()> {
     {
         macos::load()
     }
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    #[cfg(not(any(all(target_os = "linux", feature = "ebpf"), target_os = "macos")))]
     {
-        anyhow::bail!("secureops-bpf: no kernel PEP available on this platform (PRODUCT.md B.6)")
+        anyhow::bail!(
+            "secureops-bpf: no kernel PEP in this build — enable the `ebpf` feature \
+             on Linux (and build the secureops-ebpf programs), or this platform has \
+             no kernel PEP (PRODUCT.md B.6)"
+        )
     }
 }
 
@@ -210,7 +214,7 @@ pub fn load() -> anyhow::Result<()> {
 /// # target/bpfel-unknown-none/release/secureops-ebpf
 /// # Set SECUREOPS_BPF_OBJ to that path before running the daemon.
 /// ```
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", feature = "ebpf"))]
 pub mod linux {
     use aya::{programs::TracePoint, Bpf};
 

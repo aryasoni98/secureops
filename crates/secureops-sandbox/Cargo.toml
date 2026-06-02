@@ -22,9 +22,18 @@ tracing = { workspace = true }
 wasmtime = { version = "27", default-features = false, features = ["cranelift", "runtime"] }
 wasmtime-wasi = "27"
 
+[features]
+# Linux seccomp host-hardening around the wasmtime host (defense-in-depth).
+# OFF by default: the module is not yet wired into the daemon and pulls
+# seccompiler + libc. The primary execution PEP is the wasmtime WASI sandbox,
+# which needs none of this. Enable with `--features seccomp`.
+seccomp = ["dep:seccompiler", "dep:libc"]
+
 [dev-dependencies]
 tokio = { workspace = true }
 wat = "1"   # WAT → WASM bytecode for sandbox tests
 
 [target.'cfg(target_os = "linux")'.dependencies]
-seccompiler = "0.4"
+# Optional: only compiled when the `seccomp` feature is enabled (see [features]).
+seccompiler = { version = "0.4", optional = true }
+libc = { version = "0.2", optional = true }
