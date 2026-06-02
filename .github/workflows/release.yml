@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
 
+# Run bundled JS actions (checkout/setup-node/gh-release) on Node 24, ahead of
+# the Node 20 removal from runners (Sept 2026). Silences deprecation warnings.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   create-release:
     name: Create GitHub Release

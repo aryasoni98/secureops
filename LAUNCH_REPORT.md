@@ -79,7 +79,7 @@ So beta = **audit + harden + egress/monitor enforcement**, not full kernel-level
 3. **Docker/K8s deploy** — manifests + compose reviewed, **not** live-tested locally (no Docker running here).
 4. `scripts/rename-repo.sh` — obsolete; recommend delete.
 5. Rotate the crates.io token after first publish.
-6. (cosmetic) GitHub Actions Node20 deprecation warnings — bump action versions before Sept 2026.
+6. ~~GitHub Actions Node20 deprecation warnings~~ — **resolved**: both workflows set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` (runs bundled JS actions on Node 24, ahead of the Sept 2026 Node 20 removal).
 
 ## 8. Recommendation
 
