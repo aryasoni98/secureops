@@ -16,6 +16,9 @@
 
 #![forbid(unsafe_code)]
 
+/// Real OpenAI/Anthropic providers (codec pure; HTTP behind `live-llm`).
+pub mod providers;
+
 use async_trait::async_trait;
 use secureops_tokenbudget::{Evidence, TokenBudget};
 use serde::{Deserialize, Serialize};

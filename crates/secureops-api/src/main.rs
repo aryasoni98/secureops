@@ -19,7 +19,7 @@ use secureops_api::evidence::S3Presigner;
 use secureops_api::redis_queue::RedisQueue;
 use secureops_api::store::pg::PgStore;
 use secureops_api::store::{InMemoryStore, Store};
-use secureops_api::{build_router, AppState};
+use secureops_api::{build_router, with_spa, AppState};
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -75,10 +75,19 @@ async fn main() -> anyhow::Result<()> {
         tracing::info!("evidence presigner wired");
     }
 
+    // Optionally embed the built dashboard SPA (PRODUCT.md Phase 8).
+    let mut app = build_router(state);
+    if let Ok(dir) = std::env::var("SECUREOPS_WEB_DIR") {
+        if !dir.is_empty() {
+            tracing::info!("serving dashboard SPA from {dir}");
+            app = with_spa(app, &dir);
+        }
+    }
+
     let addr = std::env::var("SECUREOPS_API_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".into());
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     tracing::info!("secureops-api listening on {addr}");
-    axum::serve(listener, build_router(state)).await?;
+    axum::serve(listener, app).await?;
     Ok(())
 }
 

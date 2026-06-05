@@ -3769,6 +3769,7 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "async-trait",
+ "reqwest",
  "secureops-tokenbudget",
  "serde",
  "serde_json",

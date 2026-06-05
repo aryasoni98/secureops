@@ -32,7 +32,7 @@ pub mod store;
 pub mod ws;
 
 pub use error::{ApiError, ApiResult};
-pub use router::build_router;
+pub use router::{build_router, with_spa};
 pub use state::AppState;
 
 pub mod state {
