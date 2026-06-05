@@ -15,9 +15,6 @@ async-trait = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-anyhow = { workspace = true }
-tracing = { workspace = true }
-time = { workspace = true, features = ["parsing"] }   # parse behavioral log timestamps
 
 [dev-dependencies]
 tempfile = "3"

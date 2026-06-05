@@ -26,14 +26,18 @@ pub mod check;
 pub mod config;
 pub mod context;
 pub mod ioc;
+pub mod patterns;
 pub mod runtime;
 pub mod scoring;
 pub mod types;
+pub mod util;
 
 pub use check::*;
 pub use config::*;
 pub use context::*;
 pub use ioc::*;
+pub use patterns::*;
 pub use runtime::*;
 pub use scoring::*;
 pub use types::*;
+pub use util::*;

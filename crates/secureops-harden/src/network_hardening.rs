@@ -167,21 +167,16 @@ impl HardeningModule for NetworkHardening {
     async fn check(&self, ctx: &dyn AuditContext) -> Vec<AuditFinding> {
         let mut findings: Vec<AuditFinding> = Vec::new();
 
-        findings.push(AuditFinding {
-            id: "SC-NET-001".to_string(),
-            severity: Severity::Info,
-            category: "network".to_string(),
-            title: "Network hardening available".to_string(),
-            description: "SecureOps can generate egress allowlist and C2 blocklist scripts."
-                .to_string(),
-            evidence: format!("Platform: {}", ctx.platform()),
-            remediation: "Run \"secureops harden\" to generate network rules".to_string(),
-            auto_fixable: true,
-            references: Vec::new(),
-            owasp_asi: "ASI05".to_string(),
-            maestro_layer: None,
-            nist_category: None,
-        });
+        findings.push(
+            AuditFinding::builder("SC-NET-001", Severity::Info, "network")
+                .title("Network hardening available")
+                .description("SecureOps can generate egress allowlist and C2 blocklist scripts.")
+                .evidence(format!("Platform: {}", ctx.platform()))
+                .remediation("Run \"secureops harden\" to generate network rules")
+                .auto_fixable(true)
+                .owasp_asi("ASI05")
+                .build(),
+        );
 
         findings
     }

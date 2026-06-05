@@ -66,26 +66,24 @@ pub fn cross_layer_risk(findings: &[AuditFinding]) -> Vec<AuditFinding> {
             .map(|l| l.as_str())
             .collect::<Vec<_>>()
             .join(", ");
-        out.push(AuditFinding {
-            id: "SC-CROSS-001".to_string(),
-            severity: Severity::High,
-            category: "cross-layer".to_string(),
-            title: "Cross-layer compound attack surface detected".to_string(),
-            description: format!(
-                "Findings span {} MAESTRO layers ({}). Compound attack surfaces enable chained exploits (e.g., supply chain → agent compromise → credential theft).",
-                affected.len(),
-                layers
-            ),
-            evidence: format!("Affected layers: {}", layers),
-            remediation: "Address findings in each affected layer to reduce the compound attack surface. Prioritize layers with CRITICAL/HIGH findings.".to_string(),
-            auto_fixable: false,
-            references: vec![
-                "https://cloudsecurityalliance.org/blog/2025/02/06/agentic-ai-threat-modeling-framework-maestro".to_string(),
-            ],
-            owasp_asi: "ASI10".to_string(),
-            maestro_layer: Some(MaestroLayer::L6),
-            nist_category: Some(NistAttackType::Evasion),
-        });
+        out.push(
+            AuditFinding::builder("SC-CROSS-001", Severity::High, "cross-layer")
+                .title("Cross-layer compound attack surface detected")
+                .description(format!(
+                    "Findings span {} MAESTRO layers ({}). Compound attack surfaces enable chained exploits (e.g., supply chain → agent compromise → credential theft).",
+                    affected.len(),
+                    layers
+                ))
+                .evidence(format!("Affected layers: {}", layers))
+                .remediation("Address findings in each affected layer to reduce the compound attack surface. Prioritize layers with CRITICAL/HIGH findings.")
+                .references([
+                    "https://cloudsecurityalliance.org/blog/2025/02/06/agentic-ai-threat-modeling-framework-maestro",
+                ])
+                .owasp_asi("ASI10")
+                .maestro(MaestroLayer::L6)
+                .nist(NistAttackType::Evasion)
+                .build(),
+        );
     }
     out
 }

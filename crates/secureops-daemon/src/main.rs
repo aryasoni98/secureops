@@ -25,10 +25,13 @@ use std::sync::Arc;
 use anyhow::Result;
 use tokio::task::JoinSet;
 
+use secureops_bpf::chain::EnforcementMode;
 use secureops_monitors::{
     circuit_channel, AlertBus, CancellationToken, CircuitState, CostMonitor, CredentialMonitor,
     MemoryIntegrityMonitor, Monitor, SkillScanner,
 };
+
+mod bpf_wire;
 
 /// Resolve the state dir: `OPENCLAW_STATE_DIR` → `~/.openclaw` (same contract as
 /// the CLI and the TS tool).
@@ -42,10 +45,8 @@ fn resolve_state_dir() -> String {
 
 /// Load `<stateDir>/openclaw.json`, or the default config if absent/invalid.
 fn load_config(state_dir: &str) -> secureops_core::OpenClawConfig {
-    match std::fs::read_to_string(format!("{state_dir}/openclaw.json")) {
-        Ok(c) => serde_json::from_str(&c).unwrap_or_default(),
-        Err(_) => secureops_core::OpenClawConfig::default(),
-    }
+    let content = std::fs::read_to_string(format!("{state_dir}/openclaw.json")).unwrap_or_default();
+    secureops_core::OpenClawConfig::from_json_or_default(&content)
 }
 
 #[tokio::main]
@@ -83,6 +84,9 @@ async fn main() -> Result<()> {
     let ioc = Arc::new(secureops_intel::empty_database());
 
     let (circuit_tx, mut circuit_rx) = circuit_channel();
+    // The kernel-PEP chain agent also trips the breaker on an exfil-chain match,
+    // so it needs its own sender clone (the original is moved into CostMonitor).
+    let circuit_tx_bpf = circuit_tx.clone();
     let (cancel_src, cancel) = CancellationToken::new();
 
     // Steps 3–4 — spawn monitors by value into the JoinSet.
@@ -140,8 +144,24 @@ async fn main() -> Result<()> {
         ),
     }
 
+    // PEP: kernel exfil-chain correlator (PRODUCT.md B.6). Enforce mode (inline
+    // LSM-BPF deny) is opt-in via SECUREOPS_BPF_ENFORCE=1 and only real on
+    // Linux+ebpf; elsewhere it escalates and the egress proxy enforces.
+    let bpf_mode = if std::env::var("SECUREOPS_BPF_ENFORCE").as_deref() == Ok("1") {
+        EnforcementMode::Enforce
+    } else {
+        EnforcementMode::Observe
+    };
+    bpf_wire::spawn(
+        &mut tasks,
+        bus.clone(),
+        circuit_tx_bpf,
+        cancel.clone(),
+        bpf_mode,
+    );
+
     println!(
-        "  {} tasks running. eBPF / WASM-sandbox PEPs DISABLED — Phase 4.",
+        "  {} tasks running. WASM-sandbox PEP DISABLED — Phase 4.",
         tasks.len()
     );
     println!("  Ctrl-C to stop.");

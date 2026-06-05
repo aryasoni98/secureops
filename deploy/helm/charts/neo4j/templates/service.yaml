@@ -1,0 +1,20 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-neo4j
+  labels:
+    app.kubernetes.io/name: secureops-neo4j
+    app.kubernetes.io/part-of: secureops
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: secureops-neo4j
+  ports:
+    - name: bolt
+      port: {{ .Values.ports.bolt }}
+      targetPort: bolt
+    - name: http
+      port: {{ .Values.ports.http }}
+      targetPort: http
+{{- end }}

@@ -1,11 +1,11 @@
-# SecureOps Rust — multi-stage image (CLI + Ring-2 daemon)
+# SecureOps Rust — multi-stage image (CLI + Ring-2 daemon + platform API)
 # Build context: repo root   (docker build -f deploy/docker/Dockerfile .)
 
 FROM rust:1-bookworm AS builder
 
 WORKDIR /build
 COPY . .
-RUN cargo build --release -p secureops-cli -p secureops-daemon
+RUN cargo build --release -p secureops-cli -p secureops-daemon -p secureops-api
 
 # -----------------------------------------------------------------------------
 
@@ -17,6 +17,7 @@ RUN apt-get update \
 
 COPY --from=builder /build/target/release/secureops /usr/local/bin/secureops
 COPY --from=builder /build/target/release/secureops-daemon /usr/local/bin/secureops-daemon
+COPY --from=builder /build/target/release/secureops-api /usr/local/bin/secureops-api
 
 ENV OPENCLAW_STATE_DIR=/data/openclaw
 RUN mkdir -p /data/openclaw && chown -R 65532:65532 /data/openclaw

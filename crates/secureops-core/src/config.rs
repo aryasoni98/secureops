@@ -269,6 +269,15 @@ pub struct OpenClawConfig {
 }
 
 impl OpenClawConfig {
+    /// Parse `openclaw.json` content, falling back to [`OpenClawConfig::default`]
+    /// on missing or malformed input — the shared parse-or-default contract used
+    /// by every loader (CLI, napi, harden, daemon). Pass the file content (or
+    /// an empty string when the file is absent); the result is identical to the
+    /// TS tool's `try { JSON.parse(...) } catch { {} }`.
+    pub fn from_json_or_default(content: &str) -> Self {
+        serde_json::from_str(content).unwrap_or_default()
+    }
+
     /// Active failure mode (directive G4), defaulting to `block_all`
     /// (port of `getFailureMode`).
     pub fn failure_mode(&self) -> FailureMode {

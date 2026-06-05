@@ -32,20 +32,16 @@ impl HardeningModule for GatewayHardening {
         // TS: if (gw?.bind !== 'loopback')
         if gw.and_then(|g| g.bind.as_deref()) != Some("loopback") {
             let bind = gw.and_then(|g| g.bind.as_deref()).unwrap_or("undefined");
-            findings.push(AuditFinding {
-                id: "SC-GW-001".to_string(),
-                severity: Severity::Critical,
-                category: "gateway".to_string(),
-                title: "Gateway not bound to loopback".to_string(),
-                description: "Gateway needs to be bound to loopback.".to_string(),
-                evidence: format!("gateway.bind = \"{bind}\""),
-                remediation: "Will set gateway.bind to \"loopback\"".to_string(),
-                auto_fixable: true,
-                references: vec![],
-                owasp_asi: "ASI03".to_string(),
-                maestro_layer: None,
-                nist_category: None,
-            });
+            findings.push(
+                AuditFinding::builder("SC-GW-001", Severity::Critical, "gateway")
+                    .title("Gateway not bound to loopback")
+                    .description("Gateway needs to be bound to loopback.")
+                    .evidence(format!("gateway.bind = \"{bind}\""))
+                    .remediation("Will set gateway.bind to \"loopback\"")
+                    .auto_fixable(true)
+                    .owasp_asi("ASI03")
+                    .build(),
+            );
         }
 
         // SC-GW-002: gateway authentication disabled.
@@ -54,21 +50,16 @@ impl HardeningModule for GatewayHardening {
             .and_then(|g| g.auth.as_ref())
             .and_then(|a| a.mode.as_deref());
         if auth_mode != Some("password") && auth_mode != Some("token") {
-            findings.push(AuditFinding {
-                id: "SC-GW-002".to_string(),
-                severity: Severity::Critical,
-                category: "gateway".to_string(),
-                title: "Gateway authentication disabled".to_string(),
-                description: "Will enable password authentication with a strong token.".to_string(),
-                evidence: format!("gateway.auth.mode = \"{}\"", auth_mode.unwrap_or("none")),
-                remediation: "Will set gateway.auth.mode to \"password\" and generate a token"
-                    .to_string(),
-                auto_fixable: true,
-                references: vec![],
-                owasp_asi: "ASI03".to_string(),
-                maestro_layer: None,
-                nist_category: None,
-            });
+            findings.push(
+                AuditFinding::builder("SC-GW-002", Severity::Critical, "gateway")
+                    .title("Gateway authentication disabled")
+                    .description("Will enable password authentication with a strong token.")
+                    .evidence(format!("gateway.auth.mode = \"{}\"", auth_mode.unwrap_or("none")))
+                    .remediation("Will set gateway.auth.mode to \"password\" and generate a token")
+                    .auto_fixable(true)
+                    .owasp_asi("ASI03")
+                    .build(),
+            );
         }
 
         // SC-GW-003: weak gateway auth token.
@@ -81,20 +72,16 @@ impl HardeningModule for GatewayHardening {
             && !token.is_empty()
             && token.len() < 32
         {
-            findings.push(AuditFinding {
-                id: "SC-GW-003".to_string(),
-                severity: Severity::Medium,
-                category: "gateway".to_string(),
-                title: "Weak gateway auth token".to_string(),
-                description: "Will regenerate a strong 64-character token.".to_string(),
-                evidence: format!("Token length: {}", token.len()),
-                remediation: "Will generate a 32-byte (64-char hex) token".to_string(),
-                auto_fixable: true,
-                references: vec![],
-                owasp_asi: "ASI03".to_string(),
-                maestro_layer: None,
-                nist_category: None,
-            });
+            findings.push(
+                AuditFinding::builder("SC-GW-003", Severity::Medium, "gateway")
+                    .title("Weak gateway auth token")
+                    .description("Will regenerate a strong 64-character token.")
+                    .evidence(format!("Token length: {}", token.len()))
+                    .remediation("Will generate a 32-byte (64-char hex) token")
+                    .auto_fixable(true)
+                    .owasp_asi("ASI03")
+                    .build(),
+            );
         }
 
         // SC-GW-009: device auth disabled.
@@ -104,20 +91,16 @@ impl HardeningModule for GatewayHardening {
             .and_then(|c| c.dangerously_disable_device_auth)
             == Some(true)
         {
-            findings.push(AuditFinding {
-                id: "SC-GW-009".to_string(),
-                severity: Severity::Critical,
-                category: "gateway".to_string(),
-                title: "Device auth disabled".to_string(),
-                description: "Will re-enable device authentication.".to_string(),
-                evidence: "dangerouslyDisableDeviceAuth = true".to_string(),
-                remediation: "Will set to false".to_string(),
-                auto_fixable: true,
-                references: vec![],
-                owasp_asi: "ASI03".to_string(),
-                maestro_layer: None,
-                nist_category: None,
-            });
+            findings.push(
+                AuditFinding::builder("SC-GW-009", Severity::Critical, "gateway")
+                    .title("Device auth disabled")
+                    .description("Will re-enable device authentication.")
+                    .evidence("dangerouslyDisableDeviceAuth = true")
+                    .remediation("Will set to false")
+                    .auto_fixable(true)
+                    .owasp_asi("ASI03")
+                    .build(),
+            );
         }
 
         // SC-GW-010: insecure auth allowed.
@@ -127,20 +110,16 @@ impl HardeningModule for GatewayHardening {
             .and_then(|c| c.allow_insecure_auth)
             == Some(true)
         {
-            findings.push(AuditFinding {
-                id: "SC-GW-010".to_string(),
-                severity: Severity::Medium,
-                category: "gateway".to_string(),
-                title: "Insecure auth allowed".to_string(),
-                description: "Will disable insecure auth.".to_string(),
-                evidence: "allowInsecureAuth = true".to_string(),
-                remediation: "Will set to false".to_string(),
-                auto_fixable: true,
-                references: vec![],
-                owasp_asi: "ASI03".to_string(),
-                maestro_layer: None,
-                nist_category: None,
-            });
+            findings.push(
+                AuditFinding::builder("SC-GW-010", Severity::Medium, "gateway")
+                    .title("Insecure auth allowed")
+                    .description("Will disable insecure auth.")
+                    .evidence("allowInsecureAuth = true")
+                    .remediation("Will set to false")
+                    .auto_fixable(true)
+                    .owasp_asi("ASI03")
+                    .build(),
+            );
         }
 
         // SC-GW-007: mDNS in full mode.
@@ -148,20 +127,15 @@ impl HardeningModule for GatewayHardening {
         if let Some(mdns) = gw.and_then(|g| g.mdns.as_ref()) {
             let mode = mdns.mode.as_deref();
             if mode != Some("minimal") {
-                findings.push(AuditFinding {
-                    id: "SC-GW-007".to_string(),
-                    severity: Severity::Medium,
-                    category: "gateway".to_string(),
-                    title: "mDNS in full mode".to_string(),
-                    description: "mDNS is broadcasting in full mode, exposing service information to the local network.".to_string(),
-                    evidence: format!("mdns.mode = \"{}\"", mode.unwrap_or("")),
-                    remediation: "Manually set gateway.mdns.mode to \"minimal\" (not auto-fixable — key not in OpenClaw config schema)".to_string(),
-                    auto_fixable: false,
-                    references: vec![],
-                    owasp_asi: "ASI05".to_string(),
-                    maestro_layer: None,
-                    nist_category: None,
-                });
+                findings.push(
+                    AuditFinding::builder("SC-GW-007", Severity::Medium, "gateway")
+                        .title("mDNS in full mode")
+                        .description("mDNS is broadcasting in full mode, exposing service information to the local network.")
+                        .evidence(format!("mdns.mode = \"{}\"", mode.unwrap_or("")))
+                        .remediation("Manually set gateway.mdns.mode to \"minimal\" (not auto-fixable — key not in OpenClaw config schema)")
+                        .owasp_asi("ASI05")
+                        .build(),
+                );
             }
         }
 

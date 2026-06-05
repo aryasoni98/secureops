@@ -119,21 +119,18 @@ impl Check for IocCheck {
         // degrades to an INFO finding. Here the injected db degrades to the
         // empty-fallback (version "0.0.0"); replicate the INFO path.
         if db.version == "0.0.0" {
-            findings.push(AuditFinding {
-                id: "SC-IOC-000".to_string(),
-                severity: Severity::Info,
-                category: "ioc".to_string(),
-                title: "IOC database not available".to_string(),
-                description: "Could not load the IOC database. Threat intelligence checks skipped."
-                    .to_string(),
-                evidence: "IOC database file not found or corrupted".to_string(),
-                remediation: "Ensure ioc/indicators.json exists and is valid JSON".to_string(),
-                auto_fixable: false,
-                references: vec![],
-                owasp_asi: "ASI04".to_string(),
-                maestro_layer: Some(MaestroLayer::L6),
-                nist_category: None,
-            });
+            findings.push(
+                AuditFinding::builder("SC-IOC-000", Severity::Info, "ioc")
+                    .title("IOC database not available")
+                    .description(
+                        "Could not load the IOC database. Threat intelligence checks skipped.",
+                    )
+                    .evidence("IOC database file not found or corrupted")
+                    .remediation("Ensure ioc/indicators.json exists and is valid JSON")
+                    .owasp_asi("ASI04")
+                    .maestro(MaestroLayer::L6)
+                    .build(),
+            );
             return findings;
         }
 
@@ -142,27 +139,24 @@ impl Check for IocCheck {
             for caps in IP_PATTERN.captures_iter(log_entry) {
                 let ip = &caps[1];
                 if secureops_intel::is_known_c2(db, ip) {
-                    findings.push(AuditFinding {
-                        id: "SC-IOC-001".to_string(),
-                        severity: Severity::Critical,
-                        category: "ioc".to_string(),
-                        title: "Connection to known C2 infrastructure detected".to_string(),
-                        description: format!(
-                            "Outbound connection to known command-and-control IP: {ip}"
-                        ),
-                        evidence: format!(
-                            "IP: {ip}, Log entry: {}",
-                            substring_prefix(log_entry, 200)
-                        ),
-                        remediation:
-                            "Immediately investigate this connection. Block the IP and check for compromise."
-                                .to_string(),
-                        auto_fixable: false,
-                        references: vec![],
-                        owasp_asi: "ASI04".to_string(),
-                        maestro_layer: Some(MaestroLayer::L7),
-                        nist_category: Some(NistAttackType::Evasion),
-                    });
+                    findings.push(
+                        AuditFinding::builder("SC-IOC-001", Severity::Critical, "ioc")
+                            .title("Connection to known C2 infrastructure detected")
+                            .description(format!(
+                                "Outbound connection to known command-and-control IP: {ip}"
+                            ))
+                            .evidence(format!(
+                                "IP: {ip}, Log entry: {}",
+                                substring_prefix(log_entry, 200)
+                            ))
+                            .remediation(
+                                "Immediately investigate this connection. Block the IP and check for compromise.",
+                            )
+                            .owasp_asi("ASI04")
+                            .maestro(MaestroLayer::L7)
+                            .nist(NistAttackType::Evasion)
+                            .build(),
+                    );
                 }
             }
         }
@@ -173,25 +167,25 @@ impl Check for IocCheck {
             if let Some(source) = skill.source.as_deref() {
                 if let Some(hostname) = url_hostname(source) {
                     if secureops_intel::is_known_malicious_domain(db, &hostname) {
-                        findings.push(AuditFinding {
-                            id: "SC-IOC-002".to_string(),
-                            severity: Severity::Critical,
-                            category: "ioc".to_string(),
-                            title: format!("Skill \"{}\" references malicious domain", skill.name),
-                            description: format!(
-                                "Skill source URL references a known malicious domain: {hostname}"
-                            ),
-                            evidence: format!("Skill: {}, Source: {}", skill.name, source),
-                            remediation: format!(
-                                "Remove this skill immediately: openclaw skills remove {}",
-                                skill.name
-                            ),
-                            auto_fixable: false,
-                            references: vec![],
-                            owasp_asi: "ASI04".to_string(),
-                            maestro_layer: Some(MaestroLayer::L7),
-                            nist_category: Some(NistAttackType::Poisoning),
-                        });
+                        findings.push(
+                            AuditFinding::builder("SC-IOC-002", Severity::Critical, "ioc")
+                                .title(format!(
+                                    "Skill \"{}\" references malicious domain",
+                                    skill.name
+                                ))
+                                .description(format!(
+                                    "Skill source URL references a known malicious domain: {hostname}"
+                                ))
+                                .evidence(format!("Skill: {}, Source: {}", skill.name, source))
+                                .remediation(format!(
+                                    "Remove this skill immediately: openclaw skills remove {}",
+                                    skill.name
+                                ))
+                                .owasp_asi("ASI04")
+                                .maestro(MaestroLayer::L7)
+                                .nist(NistAttackType::Poisoning)
+                                .build(),
+                        );
                     }
                 }
                 // Invalid URL, skip
@@ -209,23 +203,19 @@ impl Check for IocCheck {
                 };
                 let hash = secureops_intel::hash_string(&content);
                 if let Some(campaign) = secureops_intel::is_known_malicious_hash(db, &hash) {
-                    findings.push(AuditFinding {
-                        id: "SC-IOC-003".to_string(),
-                        severity: Severity::Critical,
-                        category: "ioc".to_string(),
-                        title: format!("Malicious file detected in skill \"{}\"", skill.name),
-                        description: format!(
-                            "File {file} matches known malicious hash from \"{campaign}\" campaign."
-                        ),
-                        evidence: format!("SHA-256: {hash}, Campaign: {campaign}"),
-                        remediation: "Remove this skill and investigate for further compromise"
-                            .to_string(),
-                        auto_fixable: false,
-                        references: vec![],
-                        owasp_asi: "ASI04".to_string(),
-                        maestro_layer: Some(MaestroLayer::L7),
-                        nist_category: Some(NistAttackType::Poisoning),
-                    });
+                    findings.push(
+                        AuditFinding::builder("SC-IOC-003", Severity::Critical, "ioc")
+                            .title(format!("Malicious file detected in skill \"{}\"", skill.name))
+                            .description(format!(
+                                "File {file} matches known malicious hash from \"{campaign}\" campaign."
+                            ))
+                            .evidence(format!("SHA-256: {hash}, Campaign: {campaign}"))
+                            .remediation("Remove this skill and investigate for further compromise")
+                            .owasp_asi("ASI04")
+                            .maestro(MaestroLayer::L7)
+                            .nist(NistAttackType::Poisoning)
+                            .build(),
+                    );
                 }
             }
         }
@@ -238,23 +228,17 @@ impl Check for IocCheck {
             for artifact_pattern in macos_artifacts {
                 let expanded_path = expand_home(artifact_pattern);
                 if ctx.file_exists(&expanded_path).await {
-                    findings.push(AuditFinding {
-                        id: "SC-IOC-004".to_string(),
-                        severity: Severity::Critical,
-                        category: "ioc".to_string(),
-                        title: "Potential infostealer artifact detected (macOS)".to_string(),
-                        description:
-                            "Found suspicious file matching Atomic Stealer (AMOS) artifact pattern."
-                                .to_string(),
-                        evidence: format!("File: {expanded_path}, Pattern: {artifact_pattern}"),
-                        remediation: "Investigate this file immediately. Run a full malware scan."
-                            .to_string(),
-                        auto_fixable: false,
-                        references: vec![],
-                        owasp_asi: "ASI10".to_string(),
-                        maestro_layer: Some(MaestroLayer::L4),
-                        nist_category: Some(NistAttackType::Privacy),
-                    });
+                    findings.push(
+                        AuditFinding::builder("SC-IOC-004", Severity::Critical, "ioc")
+                            .title("Potential infostealer artifact detected (macOS)")
+                            .description("Found suspicious file matching Atomic Stealer (AMOS) artifact pattern.")
+                            .evidence(format!("File: {expanded_path}, Pattern: {artifact_pattern}"))
+                            .remediation("Investigate this file immediately. Run a full malware scan.")
+                            .owasp_asi("ASI10")
+                            .maestro(MaestroLayer::L4)
+                            .nist(NistAttackType::Privacy)
+                            .build(),
+                    );
                 }
             }
         }
@@ -265,26 +249,19 @@ impl Check for IocCheck {
             for artifact_pattern in linux_artifacts {
                 let expanded_path = expand_home(artifact_pattern);
                 if ctx.file_exists(&expanded_path).await {
-                    findings.push(AuditFinding {
-                        id: "SC-IOC-005".to_string(),
-                        severity: Severity::Critical,
-                        category: "ioc".to_string(),
-                        title: "Potential infostealer artifact detected (Linux)".to_string(),
-                        description:
-                            "Found suspicious file matching Redline/Lumma/Vidar infostealer artifact pattern."
-                                .to_string(),
-                        evidence: format!(
-                            "File: {expanded_path}, Pattern: {artifact_pattern}"
-                        ),
-                        remediation:
-                            "Investigate this file immediately. Run a full malware scan."
-                                .to_string(),
-                        auto_fixable: false,
-                        references: vec![],
-                        owasp_asi: "ASI10".to_string(),
-                        maestro_layer: Some(MaestroLayer::L4),
-                        nist_category: Some(NistAttackType::Privacy),
-                    });
+                    findings.push(
+                        AuditFinding::builder("SC-IOC-005", Severity::Critical, "ioc")
+                            .title("Potential infostealer artifact detected (Linux)")
+                            .description("Found suspicious file matching Redline/Lumma/Vidar infostealer artifact pattern.")
+                            .evidence(format!(
+                                "File: {expanded_path}, Pattern: {artifact_pattern}"
+                            ))
+                            .remediation("Investigate this file immediately. Run a full malware scan.")
+                            .owasp_asi("ASI10")
+                            .maestro(MaestroLayer::L4)
+                            .nist(NistAttackType::Privacy)
+                            .build(),
+                    );
                 }
             }
         }

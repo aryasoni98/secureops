@@ -50,6 +50,45 @@
 // so the API surface references the FROZEN `secureops-core` contract directly.
 use secureops_core::{MaestroLayer, NistAttackType, Severity};
 
+/// Per-PID exfil-chain correlation (PRODUCT.md B.6 step 2) — kernel-free,
+/// unit-testable on every platform.
+pub mod chain;
+/// seccomp-bpf "learn mode" allowlist generation (PRODUCT.md B.6).
+pub mod seccomp;
+
+pub use chain::{ChainAction, ChainCorrelator, EnforcementMode, ExfilChain};
+
+/// Kernel-free demo event source (gated by the `mock` feature) so the daemon's
+/// chain wiring can be exercised end-to-end without a kernel (PRODUCT.md B.6).
+#[cfg(feature = "mock")]
+pub mod mock {
+    use crate::{SyscallEvent, SyscallKind};
+    use tokio::sync::mpsc;
+
+    /// Spawn a task that injects a synthetic exfil chain (read `.env` → dial an
+    /// off-allowlist host) into `tx`, then drops the sender to close the stream.
+    pub fn spawn_demo(tx: mpsc::Sender<SyscallEvent>) {
+        tokio::spawn(async move {
+            let _ = tx
+                .send(SyscallEvent::new(
+                    4242,
+                    "agent",
+                    SyscallKind::Openat,
+                    "/home/agent/.env",
+                ))
+                .await;
+            let _ = tx
+                .send(SyscallEvent::new(
+                    4242,
+                    "agent",
+                    SyscallKind::Connect,
+                    "203.0.113.7:443",
+                ))
+                .await;
+        });
+    }
+}
+
 /// A single in-kernel syscall observation, lifted out of the eBPF ring buffer
 /// (Linux) or the Endpoint Security event stream (macOS) with the originating
 /// process attached — PRODUCT.md B.6 step 1 ("events stream to the daemon over

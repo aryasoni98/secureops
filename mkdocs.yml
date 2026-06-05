@@ -1,0 +1,12 @@
+site_name: SecureOps
+site_description: Self-hosted, AI-native multi-cloud security platform
+theme:
+  name: material
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Running locally: RUNNING.md
+  - Deploy (AWS/K8s): DEPLOY_AWS_K8S.md
+  - Local & AWS read-only: LOCAL_AND_AWS_READONLY.md
+docs_dir: docs
+# `pip install mkdocs-material && mkdocs build` (CI gate in release.yml).

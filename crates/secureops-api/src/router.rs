@@ -1,0 +1,74 @@
+//! Router assembly + OpenAPI document (PRODUCT.md Phase 5).
+
+use axum::extract::State;
+use axum::response::IntoResponse;
+use axum::routing::{get, post};
+use axum::Router;
+use utoipa::OpenApi;
+
+use crate::state::AppState;
+use crate::{health, intel, routes, sso, ws};
+
+/// Generated OpenAPI document, served at `/api/v1/openapi.json`.
+#[derive(OpenApi)]
+#[openapi(
+    info(title = "SecureOps Platform API", version = "0.0.1"),
+    components(schemas(
+        crate::models::Finding,
+        crate::models::Scan,
+        crate::models::ScanStatus,
+        crate::models::Severity,
+        crate::license::License,
+        crate::license::Tier,
+    ))
+)]
+pub struct ApiDoc;
+
+async fn openapi_json() -> axum::Json<utoipa::openapi::OpenApi> {
+    axum::Json(ApiDoc::openapi())
+}
+
+/// Readiness probe: `200` when the store is reachable, else `503 + Retry-After`.
+async fn readyz(State(state): State<AppState>) -> impl IntoResponse {
+    health::readyz(state.store.health().await).await
+}
+
+/// Build the full application router with state injected.
+pub fn build_router(state: AppState) -> Router {
+    let api = Router::new()
+        .route("/license/activate", post(routes::license_activate))
+        .route("/license", get(routes::license_get))
+        .route("/scans", post(routes::create_scan))
+        .route("/scans/{id}", get(routes::get_scan))
+        .route("/findings", get(routes::list_findings))
+        .route("/findings/{id}/action", post(routes::finding_action))
+        .route("/compliance/reports", get(routes::compliance_reports))
+        // Intelligence + autonomy (6b/7b).
+        .route("/bughunt", post(intel::bughunt_run))
+        .route("/bughunt/{job_id}", get(intel::bughunt_get))
+        .route("/graph/rebuild", post(intel::graph_rebuild))
+        .route("/graph/paths", get(intel::graph_paths))
+        .route("/graph/blast-radius/{node}", get(intel::graph_blast_radius))
+        .route("/rl/feedback", post(intel::rl_feedback))
+        .route("/rl/stats", get(intel::rl_stats))
+        .route("/remediations", post(intel::remediation_create))
+        .route("/remediations/queue", get(intel::remediations_queue))
+        .route(
+            "/remediations/{id}/approve",
+            post(intel::remediation_approve),
+        )
+        .route("/remediations/{id}/deny", post(intel::remediation_deny))
+        // SSO (P8).
+        .route("/auth/oidc/metadata", get(sso::oidc_metadata))
+        .route("/auth/oidc/callback", post(sso::oidc_callback))
+        .route("/openapi.json", get(openapi_json));
+
+    Router::new()
+        .route("/livez", get(health::livez))
+        .route("/readyz", get(readyz))
+        .route("/ws/findings", get(ws::ws_handler))
+        .route("/ws/scan-progress", get(ws::ws_handler))
+        .route("/ws/remediation", get(ws::ws_handler))
+        .nest("/api/v1", api)
+        .with_state(state)
+}

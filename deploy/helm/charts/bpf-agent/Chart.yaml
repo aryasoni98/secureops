@@ -1,0 +1,13 @@
+apiVersion: v2
+name: bpf-agent
+description: >-
+  SecureOps kernel PEP (eBPF exfil-chain detection) as a privileged DaemonSet.
+  Enterprise tier only — requires hostPID + BPF/NET_RAW/SYS_ADMIN capabilities
+  on Linux nodes (PRODUCT.md B.6). No-op on non-Linux nodes.
+type: application
+version: 0.0.1
+appVersion: "0.0.1"
+keywords:
+  - ebpf
+  - security
+  - enforcement

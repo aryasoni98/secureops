@@ -163,10 +163,9 @@ On **macOS**, skip eBPF; the workspace builds and tests without it.
 
 ```sh
 just napi
-# Copy dylib/so to ../secureops/secureops.node per README
+# Copy the built dylib/so (target/release/libsecureops_napi.*) to your TS
+# package as secureops.node.
 ```
-
-TS vs Rust findings diff: [README.md § TS faithfulness](../README.md#ts-faithfulness-cross-check).
 
 ---
 

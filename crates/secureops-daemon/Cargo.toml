@@ -21,23 +21,24 @@ secureops-fs = { path = "../secureops-fs", version = "0.0.1" }             # kil
 secureops-intel = { path = "../secureops-intel", version = "0.0.1" }       # IOC db for the skill monitor
 
 # Allowed shared workspace deps.
-serde = { workspace = true }
-serde_json = { workspace = true }
-async-trait = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
-tracing = { workspace = true }
 
-# ---- Ring-2 sibling crates the daemon wires together (PRODUCT.md A.2 / A.4 / B.4) ----
-# The daemon is the single place that brings the PDP + every PEP + AlertBus +
-# signed audit log up, so it path-depends on all of them.
-secureops-policy = { path = "../secureops-policy", version = "0.0.1" }     # PDP — the allow/deny/escalate authority
+# ---- Ring-2 sibling crates the daemon currently wires (PRODUCT.md A.2 / A.4 / B.4) ----
+# Phase-2 slice: monitors + AlertBus + circuit breaker, plus the egress proxy PEP.
 secureops-proxy = { path = "../secureops-proxy", version = "0.0.1" }       # egress PEP — forward proxy + DNS sinkhole
-secureops-sandbox = { path = "../secureops-sandbox", version = "0.0.1" }   # execution PEP — wasmtime host
-secureops-auditlog = { path = "../secureops-auditlog", version = "0.0.1" } # append-only hash-chained signed log
 secureops-monitors = { path = "../secureops-monitors", version = "0.0.1" } # tokio monitors, AlertBus, SQLite, circuit breaker
-secureops-ipc = { path = "../secureops-ipc", version = "0.0.1" }           # unix-socket JSON-RPC + SO_PEERCRED auth
-secureops-bpf = { path = "../secureops-bpf", version = "0.0.1" }           # kernel PEP — aya loader / ES-framework fallback
+secureops-bpf = { path = "../secureops-bpf", version = "0.0.1" }           # kernel PEP — exfil-chain correlator (P4, light by default)
+# Phase-4 PEPs/PDP (policy, sandbox, auditlog, ipc) are not wired into the
+# daemon yet; re-add their path-deps here when their startup wiring lands so the
+# daemon build doesn't drag wasmtime/regorus/cedar/etc. until then.
+
+[features]
+# Inject a synthetic exfil chain through the kernel-PEP wiring on any OS (no
+# kernel) so the daemon's chain detection can be demoed/tested end-to-end.
+mock = ["secureops-bpf/mock"]
+# Linux aya CO-RE kernel hooks (attaches openat/connect/execve tracepoints).
+ebpf = ["secureops-bpf/ebpf"]
 
 # ---- Heavy deps the real daemon impl will pull in (Phase 4) — kept commented so the
 # ---- workspace stays offline-fast/green until this phase lands (PRODUCT.md Part G). ----

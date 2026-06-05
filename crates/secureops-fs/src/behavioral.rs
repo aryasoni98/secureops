@@ -8,7 +8,6 @@
 
 use std::collections::HashMap;
 use std::path::Path;
-use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
 /// Rolling behavioral statistics (port of the `getBehavioralBaseline` return).
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -69,9 +68,9 @@ pub async fn get_behavioral_baseline(
             Err(_) => continue,
         };
         let ts = v.get("timestamp").and_then(|x| x.as_str()).unwrap_or("");
-        let ms = match OffsetDateTime::parse(ts, &Rfc3339) {
-            Ok(t) => t.unix_timestamp_nanos() / 1_000_000,
-            Err(_) => continue,
+        let ms = match secureops_core::parse_ms(ts) {
+            Some(t) => t,
+            None => continue,
         };
         if ms >= cutoff {
             let tool = v
@@ -96,10 +95,7 @@ mod tests {
     use super::*;
 
     fn ms(ts: &str) -> i128 {
-        OffsetDateTime::parse(ts, &Rfc3339)
-            .unwrap()
-            .unix_timestamp_nanos()
-            / 1_000_000
+        secureops_core::parse_ms(ts).unwrap()
     }
 
     #[tokio::test]

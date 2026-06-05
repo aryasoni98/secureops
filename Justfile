@@ -156,6 +156,132 @@ bpf-daemon:
     SECUREOPS_BPF_OBJ=ebpf/target/bpfel-unknown-none/release/secureops-ebpf \
       OPENCLAW_STATE_DIR="{{state_dir}}" {{daemon}}
 
+# Build + attach the kernel PEP (Linux only; no-op elsewhere).
+bpf-load:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! uname -s | grep -qi linux; then
+      echo "bpf-load: kernel PEP is Linux-only — no-op on $(uname -s)."; exit 0
+    fi
+    just bpf-build
+    echo "eBPF object built. Start the PEP with: just bpf-daemon"
+
+# Show attached SecureOps eBPF programs (Linux only; needs bpftool + root).
+bpf-status:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! uname -s | grep -qi linux; then
+      echo "bpf-status: Linux-only — no-op on $(uname -s)."; exit 0
+    fi
+    sudo bpftool prog show 2>/dev/null | grep -i secureops || echo "no SecureOps eBPF programs attached"
+
+# Detach the kernel PEP (programs unpin when the daemon exits).
+bpf-unload:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! uname -s | grep -qi linux; then
+      echo "bpf-unload: Linux-only — no-op on $(uname -s)."; exit 0
+    fi
+    echo "Stop secureops-daemon to detach; eBPF programs are unpinned on exit."
+
+# Demo the exfil-chain detector on ANY OS (no kernel): runs the daemon with a
+# mock event source that injects a read-.env→connect chain.
+bpf-mock-demo:
+    OPENCLAW_STATE_DIR="{{state_dir}}" cargo run -p secureops-daemon --features mock
+
+# --- Platform services (Phase 5: API + Postgres + Redis + MinIO + OTel) -------
+
+platform_compose := "deploy/docker/docker-compose.platform.yml"
+
+# Bring up the platform stack. Copy deploy/docker/.env.example → .env first.
+platform-up:
+    docker compose -f {{platform_compose}} --env-file deploy/docker/.env up -d --build
+
+platform-down:
+    docker compose -f {{platform_compose}} --env-file deploy/docker/.env down
+
+platform-logs service="api":
+    docker compose -f {{platform_compose}} logs -f {{service}}
+
+platform-status:
+    docker compose -f {{platform_compose}} ps
+
+# Run the API locally (in-memory store; no Postgres needed for the 5a surface).
+api:
+    SECUREOPS_API_ADDR=127.0.0.1:8080 cargo run -p secureops-api
+
+# Queue a scan via the running API (export TOKEN from /license/activate first).
+platform-scan target="all":
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/scans \
+      -H "Authorization: Bearer ${TOKEN:-}" -H 'Content-Type: application/json' \
+      -d '{"scope":"{{target}}"}'
+
+# Apply SQL migrations to $DATABASE_URL (needs sqlx-cli: cargo install sqlx-cli).
+db-migrate:
+    sqlx migrate run --source crates/secureops-api/migrations
+
+# --- Intelligence layer (Phase 6: graph + LLM bug-hunt + token budget) -------
+
+# Run the intelligence-engine unit tests (graph algorithms, knapsack, agentic loop).
+intel-test:
+    cargo test -p secureops-tokenbudget -p secureops-graph -p secureops-bughunt
+
+# Rebuild the security knowledge graph from stored assets/identities.
+# NOTE: the API route (/graph/rebuild) lands in P6b; this is the placeholder.
+graph-rebuild:
+    @echo "graph-rebuild: API wiring lands in P6b (POST /api/v1/graph/rebuild)."
+
+# Queue an LLM bug-hunt via the running API (export TOKEN; tier must include 'bughunt').
+bughunt scope="all":
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/bughunt \
+      -H "Authorization: Bearer ${TOKEN:-}" -H 'Content-Type: application/json' \
+      -d '{"scope":"{{scope}}"}'
+
+# --- Autonomy (Phase 7: RL ranking + self-healing playbooks) -----------------
+
+# Run the autonomy unit tests (LinUCB ranking, playbook engine, circuit breaker).
+autonomy-test:
+    cargo test -p secureops-rl -p secureops-selfheal
+
+# Show the remediation HITL queue (API route lands in P7b).
+heal-status:
+    @echo "heal-status: API wiring lands in P7b (GET /api/v1/remediations/queue, /rl/stats)."
+
+# Dry-run a remediation plan for a target (API route lands in P7b).
+heal-dry target="all":
+    @echo "heal-dry {{target}}: API wiring lands in P7b (POST /api/v1/remediations dry-run)."
+
+# Approve a queued destructive remediation by id (API route lands in P7b).
+heal-approve id="":
+    @echo "heal-approve {{id}}: API wiring lands in P7b (POST /api/v1/remediations/{{id}}/approve)."
+
+# --- Enterprise (Phase 8: dashboard + license server) ------------------------
+
+# Run the stateless license server locally.
+license-server:
+    SECUREOPS_ADMIN_KEY="${SECUREOPS_ADMIN_KEY:-dev-admin-key}" cargo run -p secureops-license-server
+
+# Dashboard dev server (needs Node 18+; proxies /api + /ws to the running API).
+web-dev:
+    cd web && npm install && npm run dev
+
+# Build the dashboard for production (emits web/dist).
+web-build:
+    cd web && npm install && npm run build
+
+# Zero-downtime-ish platform upgrade: pull → migrate → rolling restart → health poll.
+platform-upgrade:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker compose -f {{platform_compose}} --env-file deploy/docker/.env pull
+    just db-migrate || echo "migrate skipped (set DATABASE_URL + install sqlx-cli)"
+    docker compose -f {{platform_compose}} --env-file deploy/docker/.env up -d --no-deps api
+    for i in $(seq 1 30); do
+      if curl -fsS http://127.0.0.1:8080/livez >/dev/null 2>&1; then echo "api healthy after upgrade"; exit 0; fi
+      sleep 2
+    done
+    echo "health check failed after upgrade" >&2; exit 1
+
 # --- Docs --------------------------------------------------------------------
 
 docs:

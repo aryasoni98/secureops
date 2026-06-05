@@ -77,24 +77,20 @@ impl Check for SupplyChainCheck {
         } else {
             skill_names.join(", ")
         };
-        findings.push(AuditFinding {
-            id: "SC-SKILL-001".to_string(),
-            severity: Severity::Info,
-            category: "supply-chain".to_string(),
-            title: format!("{} skill(s) installed", skills.len()),
-            description: format!(
-                "Found {} installed skills. Each skill has access to agent capabilities.",
-                skills.len()
-            ),
-            evidence: format!("Installed skills: {}", installed_list),
-            remediation: "Review each installed skill for necessity and trustworthiness"
-                .to_string(),
-            auto_fixable: false,
-            references: vec![],
-            owasp_asi: "ASI04".to_string(),
-            maestro_layer: Some(MaestroLayer::L7),
-            nist_category: Some(NistAttackType::Poisoning),
-        });
+        findings.push(
+            AuditFinding::builder("SC-SKILL-001", Severity::Info, "supply-chain")
+                .title(format!("{} skill(s) installed", skills.len()))
+                .description(format!(
+                    "Found {} installed skills. Each skill has access to agent capabilities.",
+                    skills.len()
+                ))
+                .evidence(format!("Installed skills: {}", installed_list))
+                .remediation("Review each installed skill for necessity and trustworthiness")
+                .owasp_asi("ASI04")
+                .maestro(MaestroLayer::L7)
+                .nist(NistAttackType::Poisoning)
+                .build(),
+        );
 
         // SC-002..005: Scan each skill for dangerous patterns
         for skill in skills {
@@ -115,96 +111,80 @@ impl Check for SupplyChainCheck {
                             .get(idx)
                             .copied()
                             .unwrap_or_else(|| dsp.pattern.as_str());
-                        findings.push(AuditFinding {
-                            id: "SC-SKILL-002".to_string(),
-                            severity: Severity::High,
-                            category: "supply-chain".to_string(),
-                            title: format!("Dangerous pattern in skill \"{}\"", skill.name),
-                            description: format!(
-                                "Found {} in {}. This may indicate malicious behavior.",
-                                dsp.description, file
-                            ),
-                            evidence: format!("{}: matches {}", file_path, source),
-                            remediation: "Review the skill source code and remove if suspicious"
-                                .to_string(),
-                            auto_fixable: false,
-                            references: vec![],
-                            owasp_asi: "ASI04".to_string(),
-                            maestro_layer: Some(MaestroLayer::L7),
-                            nist_category: Some(NistAttackType::Poisoning),
-                        });
+                        findings.push(
+                            AuditFinding::builder("SC-SKILL-002", Severity::High, "supply-chain")
+                                .title(format!("Dangerous pattern in skill \"{}\"", skill.name))
+                                .description(format!(
+                                    "Found {} in {}. This may indicate malicious behavior.",
+                                    dsp.description, file
+                                ))
+                                .evidence(format!("{}: matches {}", file_path, source))
+                                .remediation("Review the skill source code and remove if suspicious")
+                                .owasp_asi("ASI04")
+                                .maestro(MaestroLayer::L7)
+                                .nist(NistAttackType::Poisoning)
+                                .build(),
+                        );
                     }
                 }
 
                 // Check hash against IOC database
                 let file_hash = secureops_intel::hash_string(&content);
                 if let Some(campaign) = secureops_intel::is_known_malicious_hash(db, &file_hash) {
-                    findings.push(AuditFinding {
-                        id: "SC-SKILL-003".to_string(),
-                        severity: Severity::Critical,
-                        category: "supply-chain".to_string(),
-                        title: format!("Known malicious file in skill \"{}\"", skill.name),
-                        description: format!(
-                            "File {} matches known malicious hash from campaign \"{}\".",
-                            file, campaign
-                        ),
-                        evidence: format!("SHA-256: {}, Campaign: {}", file_hash, campaign),
-                        remediation: format!(
-                            "Immediately remove this skill: openclaw skills remove {}",
-                            skill.name
-                        ),
-                        auto_fixable: false,
-                        references: vec![],
-                        owasp_asi: "ASI04".to_string(),
-                        maestro_layer: Some(MaestroLayer::L7),
-                        nist_category: Some(NistAttackType::Poisoning),
-                    });
+                    findings.push(
+                        AuditFinding::builder("SC-SKILL-003", Severity::Critical, "supply-chain")
+                            .title(format!("Known malicious file in skill \"{}\"", skill.name))
+                            .description(format!(
+                                "File {} matches known malicious hash from campaign \"{}\".",
+                                file, campaign
+                            ))
+                            .evidence(format!("SHA-256: {}, Campaign: {}", file_hash, campaign))
+                            .remediation(format!(
+                                "Immediately remove this skill: openclaw skills remove {}",
+                                skill.name
+                            ))
+                            .owasp_asi("ASI04")
+                            .maestro(MaestroLayer::L7)
+                            .nist(NistAttackType::Poisoning)
+                            .build(),
+                    );
                 }
             }
 
             // SC-004: GitHub account age
             if let Some(age) = skill.github_account_age {
                 if age < 7 {
-                    findings.push(AuditFinding {
-                        id: "SC-SKILL-004".to_string(),
-                        severity: Severity::Medium,
-                        category: "supply-chain".to_string(),
-                        title: format!("Skill \"{}\" from new GitHub account", skill.name),
-                        description:
-                            "The GitHub account that published this skill is less than 7 days old."
-                                .to_string(),
-                        evidence: format!("Account age: {} days", age),
-                        remediation:
-                            "Review the skill carefully — new accounts are commonly used for typosquatting attacks"
-                                .to_string(),
-                        auto_fixable: false,
-                        references: vec![],
-                        owasp_asi: "ASI04".to_string(),
-                        maestro_layer: Some(MaestroLayer::L7),
-                        nist_category: Some(NistAttackType::Poisoning),
-                    });
+                    findings.push(
+                        AuditFinding::builder("SC-SKILL-004", Severity::Medium, "supply-chain")
+                            .title(format!("Skill \"{}\" from new GitHub account", skill.name))
+                            .description(
+                                "The GitHub account that published this skill is less than 7 days old."
+                            )
+                            .evidence(format!("Account age: {} days", age))
+                            .remediation(
+                                "Review the skill carefully — new accounts are commonly used for typosquatting attacks"
+                            )
+                            .owasp_asi("ASI04")
+                            .maestro(MaestroLayer::L7)
+                            .nist(NistAttackType::Poisoning)
+                            .build(),
+                    );
                 }
             }
 
             // SC-005: Typosquat check
             if secureops_intel::matches_typosquat(db, &skill.name) {
-                findings.push(AuditFinding {
-                    id: "SC-SKILL-005".to_string(),
-                    severity: Severity::High,
-                    category: "supply-chain".to_string(),
-                    title: format!("Skill \"{}\" matches typosquat pattern", skill.name),
-                    description: "This skill name matches known ClawHavoc typosquatting patterns."
-                        .to_string(),
-                    evidence: format!("Skill name: {}", skill.name),
-                    remediation:
-                        "Verify this is the intended skill and not a malicious impersonator"
-                            .to_string(),
-                    auto_fixable: false,
-                    references: vec![],
-                    owasp_asi: "ASI04".to_string(),
-                    maestro_layer: Some(MaestroLayer::L7),
-                    nist_category: Some(NistAttackType::Poisoning),
-                });
+                findings.push(
+                    AuditFinding::builder("SC-SKILL-005", Severity::High, "supply-chain")
+                        .title(format!("Skill \"{}\" matches typosquat pattern", skill.name))
+                        .description("This skill name matches known ClawHavoc typosquatting patterns.")
+                        .evidence(format!("Skill name: {}", skill.name))
+                        .remediation("Verify this is the intended skill and not a malicious impersonator")
+                        .owasp_asi("ASI04")
+                        .maestro(MaestroLayer::L7)
+                        .nist(NistAttackType::Poisoning)
+                        .build(),
+                );
             }
         }
 
@@ -216,25 +196,20 @@ impl Check for SupplyChainCheck {
                 let dangerous_matches = secureops_intel::matches_dangerous_pattern(db, &readme);
                 if !dangerous_matches.is_empty() {
                     let joined = dangerous_matches.join(", ");
-                    findings.push(AuditFinding {
-                        id: "SC-SKILL-006".to_string(),
-                        severity: Severity::High,
-                        category: "supply-chain".to_string(),
-                        title: format!("Skill \"{}\" has dangerous prerequisites", skill.name),
-                        description: format!(
-                            "README contains dangerous prerequisite patterns: {}",
-                            joined
-                        ),
-                        evidence: format!("Patterns found: {}", joined),
-                        remediation:
-                            "Do not follow these prerequisites blindly. Review each step manually."
-                                .to_string(),
-                        auto_fixable: false,
-                        references: vec![],
-                        owasp_asi: "ASI04".to_string(),
-                        maestro_layer: Some(MaestroLayer::L7),
-                        nist_category: Some(NistAttackType::Poisoning),
-                    });
+                    findings.push(
+                        AuditFinding::builder("SC-SKILL-006", Severity::High, "supply-chain")
+                            .title(format!("Skill \"{}\" has dangerous prerequisites", skill.name))
+                            .description(format!(
+                                "README contains dangerous prerequisite patterns: {}",
+                                joined
+                            ))
+                            .evidence(format!("Patterns found: {}", joined))
+                            .remediation("Do not follow these prerequisites blindly. Review each step manually.")
+                            .owasp_asi("ASI04")
+                            .maestro(MaestroLayer::L7)
+                            .nist(NistAttackType::Poisoning)
+                            .build(),
+                    );
                 }
             }
         }

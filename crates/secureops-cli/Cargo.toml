@@ -33,7 +33,6 @@ secureops-crypto = { path = "../secureops-crypto", version = "0.0.1" }     # key
 clap = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
-time = { workspace = true }                            # RFC3339 audit timestamp (wire-compatible)
 serde_json = { workspace = true }                      # parse openclaw.json config
 
 # --- Heavier deps the real CLI impl will pull in (commented until their phase) ---

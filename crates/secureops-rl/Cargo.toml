@@ -1,0 +1,14 @@
+[package]
+name = "secureops-rl"
+description = "SecureOps RL finding ranking (PRODUCT.md §18/Phase 7): LinUCB contextual bandit with Sherman-Morrison online updates (no BLAS/LAPACK), reward shaping, NDCG@k/Precision@k."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.82"
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }

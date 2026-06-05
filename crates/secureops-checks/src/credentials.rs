@@ -6,8 +6,8 @@
 
 use async_trait::async_trait;
 use secureops_core::{
-    AuditContext, AuditFinding, AuditOptions, Check, IocDatabase, MaestroLayer, NistAttackType,
-    Severity,
+    basename, is_group_or_other_accessible, AuditContext, AuditFinding, AuditOptions, Check,
+    IocDatabase, MaestroLayer, NistAttackType, Severity,
 };
 use std::sync::Arc;
 
@@ -22,11 +22,6 @@ impl CredentialsCheck {
     pub fn new(db: Arc<IocDatabase>) -> Self {
         Self { db }
     }
-}
-
-/// Returns the final path component (port of Node's `path.basename`).
-fn basename(p: &str) -> &str {
-    p.trim_end_matches('/').rsplit('/').next().unwrap_or(p)
 }
 
 /// Port of `scanForApiKeys`: recursively scan `.md`/`.json` files under the state
@@ -84,24 +79,22 @@ impl Check for CredentialsCheck {
         // CRED-001: State directory permissions
         let state_dir_perms = ctx.get_file_permissions(ctx.state_dir()).await;
         if let Some(perms) = state_dir_perms {
-            if (perms & 0o077) != 0 {
-                findings.push(AuditFinding {
-                    id: "SC-CRED-001".to_string(),
-                    severity: Severity::High,
-                    category: "credentials".to_string(),
-                    title: "State directory has excessive permissions".to_string(),
-                    description: format!(
-                        "~/.openclaw/ directory is accessible by group/other users ({:o}).",
-                        perms
-                    ),
-                    evidence: format!("Permissions: {:o} (expected: 700)", perms),
-                    remediation: "Run: chmod 700 ~/.openclaw/".to_string(),
-                    auto_fixable: true,
-                    references: vec![],
-                    owasp_asi: "ASI03".to_string(),
-                    maestro_layer: Some(MaestroLayer::L4),
-                    nist_category: Some(NistAttackType::Privacy),
-                });
+            if is_group_or_other_accessible(perms) {
+                findings.push(
+                    AuditFinding::builder("SC-CRED-001", Severity::High, "credentials")
+                        .title("State directory has excessive permissions")
+                        .description(format!(
+                            "~/.openclaw/ directory is accessible by group/other users ({:o}).",
+                            perms
+                        ))
+                        .evidence(format!("Permissions: {:o} (expected: 700)", perms))
+                        .remediation("Run: chmod 700 ~/.openclaw/")
+                        .auto_fixable(true)
+                        .owasp_asi("ASI03")
+                        .maestro(MaestroLayer::L4)
+                        .nist(NistAttackType::Privacy)
+                        .build(),
+                );
             }
         }
 
@@ -109,24 +102,22 @@ impl Check for CredentialsCheck {
         let config_path = format!("{}/openclaw.json", ctx.state_dir());
         let config_perms = ctx.get_file_permissions(&config_path).await;
         if let Some(perms) = config_perms {
-            if (perms & 0o077) != 0 {
-                findings.push(AuditFinding {
-                    id: "SC-CRED-002".to_string(),
-                    severity: Severity::High,
-                    category: "credentials".to_string(),
-                    title: "Config file has excessive permissions".to_string(),
-                    description: format!(
-                        "openclaw.json is readable by group/other users ({:o}).",
-                        perms
-                    ),
-                    evidence: format!("Permissions: {:o} (expected: 600)", perms),
-                    remediation: "Run: chmod 600 ~/.openclaw/openclaw.json".to_string(),
-                    auto_fixable: true,
-                    references: vec![],
-                    owasp_asi: "ASI03".to_string(),
-                    maestro_layer: Some(MaestroLayer::L4),
-                    nist_category: Some(NistAttackType::Privacy),
-                });
+            if is_group_or_other_accessible(perms) {
+                findings.push(
+                    AuditFinding::builder("SC-CRED-002", Severity::High, "credentials")
+                        .title("Config file has excessive permissions")
+                        .description(format!(
+                            "openclaw.json is readable by group/other users ({:o}).",
+                            perms
+                        ))
+                        .evidence(format!("Permissions: {:o} (expected: 600)", perms))
+                        .remediation("Run: chmod 600 ~/.openclaw/openclaw.json")
+                        .auto_fixable(true)
+                        .owasp_asi("ASI03")
+                        .maestro(MaestroLayer::L4)
+                        .nist(NistAttackType::Privacy)
+                        .build(),
+                );
             }
         }
 
@@ -136,24 +127,22 @@ impl Check for CredentialsCheck {
         if let Some(env_content) = env_content {
             let has_keys = API_KEY_PATTERNS.iter().any(|p| p.is_match(&env_content));
             if has_keys {
-                findings.push(AuditFinding {
-                    id: "SC-CRED-003".to_string(),
-                    severity: Severity::High,
-                    category: "credentials".to_string(),
-                    title: "Plaintext API keys in .env file".to_string(),
-                    description:
-                        "API keys are stored in plaintext in .env file. These are targeted by infostealers."
-                            .to_string(),
-                    evidence: ".env file contains API key patterns".to_string(),
-                    remediation:
-                        "Encrypt .env using secureops credential-hardening or use a secrets manager"
-                            .to_string(),
-                    auto_fixable: true,
-                    references: vec![],
-                    owasp_asi: "ASI03".to_string(),
-                    maestro_layer: Some(MaestroLayer::L4),
-                    nist_category: Some(NistAttackType::Privacy),
-                });
+                findings.push(
+                    AuditFinding::builder("SC-CRED-003", Severity::High, "credentials")
+                        .title("Plaintext API keys in .env file")
+                        .description(
+                            "API keys are stored in plaintext in .env file. These are targeted by infostealers."
+                        )
+                        .evidence(".env file contains API key patterns")
+                        .remediation(
+                            "Encrypt .env using secureops credential-hardening or use a secrets manager"
+                        )
+                        .auto_fixable(true)
+                        .owasp_asi("ASI03")
+                        .maestro(MaestroLayer::L4)
+                        .nist(NistAttackType::Privacy)
+                        .build(),
+                );
             }
         }
 
@@ -167,24 +156,22 @@ impl Check for CredentialsCheck {
             let file_path = format!("{}/{}", creds_dir, file);
             let perms = ctx.get_file_permissions(&file_path).await;
             if let Some(perms) = perms {
-                if (perms & 0o077) != 0 {
-                    findings.push(AuditFinding {
-                        id: "SC-CRED-004".to_string(),
-                        severity: Severity::High,
-                        category: "credentials".to_string(),
-                        title: format!("Credential file \"{}\" has excessive permissions", file),
-                        description: format!(
-                            "Credential file is readable by group/other users ({:o}).",
-                            perms
-                        ),
-                        evidence: format!("{}: permissions {:o}", file_path, perms),
-                        remediation: format!("Run: chmod 600 {}", file_path),
-                        auto_fixable: true,
-                        references: vec![],
-                        owasp_asi: "ASI03".to_string(),
-                        maestro_layer: Some(MaestroLayer::L4),
-                        nist_category: Some(NistAttackType::Privacy),
-                    });
+                if is_group_or_other_accessible(perms) {
+                    findings.push(
+                        AuditFinding::builder("SC-CRED-004", Severity::High, "credentials")
+                            .title(format!("Credential file \"{}\" has excessive permissions", file))
+                            .description(format!(
+                                "Credential file is readable by group/other users ({:o}).",
+                                perms
+                            ))
+                            .evidence(format!("{}: permissions {:o}", file_path, perms))
+                            .remediation(format!("Run: chmod 600 {}", file_path))
+                            .auto_fixable(true)
+                            .owasp_asi("ASI03")
+                            .maestro(MaestroLayer::L4)
+                            .nist(NistAttackType::Privacy)
+                            .build(),
+                    );
                 }
             }
         }
@@ -200,27 +187,25 @@ impl Check for CredentialsCheck {
             }
             let perms = ctx.get_file_permissions(&auth_profile_path).await;
             if let Some(perms) = perms {
-                if (perms & 0o077) != 0 {
-                    findings.push(AuditFinding {
-                        id: "SC-CRED-005".to_string(),
-                        severity: Severity::High,
-                        category: "credentials".to_string(),
-                        title: format!(
-                            "Auth profiles for agent \"{}\" have excessive permissions",
-                            agent
-                        ),
-                        description: format!(
-                            "auth-profiles.json is readable by group/other users ({:o}).",
-                            perms
-                        ),
-                        evidence: format!("{}: permissions {:o}", auth_profile_path, perms),
-                        remediation: format!("Run: chmod 600 {}", auth_profile_path),
-                        auto_fixable: true,
-                        references: vec![],
-                        owasp_asi: "ASI03".to_string(),
-                        maestro_layer: Some(MaestroLayer::L4),
-                        nist_category: Some(NistAttackType::Privacy),
-                    });
+                if is_group_or_other_accessible(perms) {
+                    findings.push(
+                        AuditFinding::builder("SC-CRED-005", Severity::High, "credentials")
+                            .title(format!(
+                                "Auth profiles for agent \"{}\" have excessive permissions",
+                                agent
+                            ))
+                            .description(format!(
+                                "auth-profiles.json is readable by group/other users ({:o}).",
+                                perms
+                            ))
+                            .evidence(format!("{}: permissions {:o}", auth_profile_path, perms))
+                            .remediation(format!("Run: chmod 600 {}", auth_profile_path))
+                            .auto_fixable(true)
+                            .owasp_asi("ASI03")
+                            .maestro(MaestroLayer::L4)
+                            .nist(NistAttackType::Privacy)
+                            .build(),
+                    );
                 }
             }
         }
@@ -234,24 +219,22 @@ impl Check for CredentialsCheck {
             let content = ctx.read_file(&file_path).await;
             if let Some(content) = content {
                 if content.contains("\"access_token\"") || content.contains("\"refresh_token\"") {
-                    findings.push(AuditFinding {
-                        id: "SC-CRED-006".to_string(),
-                        severity: Severity::Medium,
-                        category: "credentials".to_string(),
-                        title: format!("OAuth tokens in plaintext in \"{}\"", file),
-                        description:
-                            "OAuth access/refresh tokens are stored in plaintext, vulnerable to infostealer theft."
-                                .to_string(),
-                        evidence: format!("{} contains OAuth token fields", file_path),
-                        remediation:
-                            "Encrypt credential files using secureops credential-hardening"
-                                .to_string(),
-                        auto_fixable: true,
-                        references: vec![],
-                        owasp_asi: "ASI03".to_string(),
-                        maestro_layer: Some(MaestroLayer::L4),
-                        nist_category: Some(NistAttackType::Privacy),
-                    });
+                    findings.push(
+                        AuditFinding::builder("SC-CRED-006", Severity::Medium, "credentials")
+                            .title(format!("OAuth tokens in plaintext in \"{}\"", file))
+                            .description(
+                                "OAuth access/refresh tokens are stored in plaintext, vulnerable to infostealer theft."
+                            )
+                            .evidence(format!("{} contains OAuth token fields", file_path))
+                            .remediation(
+                                "Encrypt credential files using secureops credential-hardening"
+                            )
+                            .auto_fixable(true)
+                            .owasp_asi("ASI03")
+                            .maestro(MaestroLayer::L4)
+                            .nist(NistAttackType::Privacy)
+                            .build(),
+                    );
                 }
             }
         }
@@ -265,24 +248,18 @@ impl Check for CredentialsCheck {
                 if let Some(content) = content {
                     let has_keys = API_KEY_PATTERNS.iter().any(|p| p.is_match(&content));
                     if has_keys {
-                        findings.push(AuditFinding {
-                            id: "SC-CRED-007".to_string(),
-                            severity: Severity::Critical,
-                            category: "credentials".to_string(),
-                            title: format!("API keys found in memory file \"{}\"", mem_file),
-                            description:
-                                "API keys are present in LLM memory files. These leak credentials into the model context."
-                                    .to_string(),
-                            evidence: format!("{} contains API key patterns", mem_path),
-                            remediation:
-                                "Remove API keys from memory files and redact using secureops credential-hardening"
-                                    .to_string(),
-                            auto_fixable: true,
-                            references: vec![],
-                            owasp_asi: "ASI03".to_string(),
-                            maestro_layer: Some(MaestroLayer::L4),
-                            nist_category: Some(NistAttackType::Privacy),
-                        });
+                        findings.push(
+                            AuditFinding::builder("SC-CRED-007", Severity::Critical, "credentials")
+                                .title(format!("API keys found in memory file \"{}\"", mem_file))
+                                .description("API keys are present in LLM memory files. These leak credentials into the model context.")
+                                .evidence(format!("{} contains API key patterns", mem_path))
+                                .remediation("Remove API keys from memory files and redact using secureops credential-hardening")
+                                .auto_fixable(true)
+                                .owasp_asi("ASI03")
+                                .maestro(MaestroLayer::L4)
+                                .nist(NistAttackType::Privacy)
+                                .build(),
+                        );
                     }
                 }
             }
@@ -298,20 +275,17 @@ impl Check for CredentialsCheck {
             if m.contains(".env") {
                 continue;
             }
-            findings.push(AuditFinding {
-                id: "SC-CRED-008".to_string(),
-                severity: Severity::High,
-                category: "credentials".to_string(),
-                title: "API key found in configuration file".to_string(),
-                description: format!("API key pattern detected in {}.", basename(m)),
-                evidence: format!("File: {}", m),
-                remediation: "Remove or redact API keys from this file".to_string(),
-                auto_fixable: false,
-                references: vec![],
-                owasp_asi: "ASI03".to_string(),
-                maestro_layer: Some(MaestroLayer::L4),
-                nist_category: Some(NistAttackType::Privacy),
-            });
+            findings.push(
+                AuditFinding::builder("SC-CRED-008", Severity::High, "credentials")
+                    .title("API key found in configuration file")
+                    .description(format!("API key pattern detected in {}.", basename(m)))
+                    .evidence(format!("File: {}", m))
+                    .remediation("Remove or redact API keys from this file")
+                    .owasp_asi("ASI03")
+                    .maestro(MaestroLayer::L4)
+                    .nist(NistAttackType::Privacy)
+                    .build(),
+            );
         }
 
         findings

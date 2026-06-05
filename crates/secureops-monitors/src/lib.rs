@@ -33,22 +33,14 @@ pub use skill_scanner::SkillScanner;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use tokio::sync::{broadcast, watch};
-
-/// Current UTC time as an RFC3339 string (`new Date().toISOString()`), shared by
-/// the monitor run loops for alert timestamps.
-pub fn now_iso() -> String {
-    OffsetDateTime::now_utc()
-        .format(&Rfc3339)
-        .unwrap_or_default()
-}
 
 // Re-export the runtime wire types this crate produces/consumes so downstream
 // crates (daemon, ipc) can depend on us without also reaching into core.
+// `now_iso` (RFC3339 "now") is shared by the monitor run loops for alert timestamps.
 pub use secureops_core::{
-    BehavioralBaseline, CostEntry, CostProjection, CostReport, MonitorAlert, MonitorStatus,
-    Severity, SkillScanResult,
+    now_iso, BehavioralBaseline, CostEntry, CostProjection, CostReport, MonitorAlert,
+    MonitorStatus, Severity, SkillScanResult,
 };
 
 // ---------------------------------------------------------------------------

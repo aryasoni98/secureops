@@ -40,40 +40,34 @@ impl Check for AccessControlCheck {
 
             // AC-001: Open DM policy
             if dm_policy == Some("open") {
-                findings.push(AuditFinding {
-                    id: "SC-AC-001".to_string(),
-                    severity: Severity::High,
-                    category: "access-control".to_string(),
-                    title: format!("Channel \"{}\" has open DM policy", ch.name),
-                    description: "Anyone can send direct messages to the agent without pairing, enabling prompt injection attacks.".to_string(),
-                    evidence: format!("Channel \"{}\": dmPolicy = \"open\"", ch.name),
-                    remediation: "Set dmPolicy to \"pairing\" for this channel".to_string(),
-                    auto_fixable: true,
-                    references: vec![],
-                    owasp_asi: "ASI01".to_string(),
-                    maestro_layer: Some(MaestroLayer::L3),
-                    nist_category: Some(NistAttackType::Evasion),
-                });
+                findings.push(
+                    AuditFinding::builder("SC-AC-001", Severity::High, "access-control")
+                        .title(format!("Channel \"{}\" has open DM policy", ch.name))
+                        .description("Anyone can send direct messages to the agent without pairing, enabling prompt injection attacks.")
+                        .evidence(format!("Channel \"{}\": dmPolicy = \"open\"", ch.name))
+                        .remediation("Set dmPolicy to \"pairing\" for this channel")
+                        .auto_fixable(true)
+                        .owasp_asi("ASI01")
+                        .maestro(MaestroLayer::L3)
+                        .nist(NistAttackType::Evasion)
+                        .build(),
+                );
             }
 
             // AC-002: Open group policy
             if group_policy == Some("open") {
-                findings.push(AuditFinding {
-                    id: "SC-AC-002".to_string(),
-                    severity: Severity::High,
-                    category: "access-control".to_string(),
-                    title: format!("Channel \"{}\" has open group policy", ch.name),
-                    description:
-                        "Anyone in the group can interact with the agent without restrictions."
-                            .to_string(),
-                    evidence: format!("Channel \"{}\": groupPolicy = \"open\"", ch.name),
-                    remediation: "Set groupPolicy to \"allowlist\" for this channel".to_string(),
-                    auto_fixable: true,
-                    references: vec![],
-                    owasp_asi: "ASI01".to_string(),
-                    maestro_layer: Some(MaestroLayer::L3),
-                    nist_category: Some(NistAttackType::Evasion),
-                });
+                findings.push(
+                    AuditFinding::builder("SC-AC-002", Severity::High, "access-control")
+                        .title(format!("Channel \"{}\" has open group policy", ch.name))
+                        .description("Anyone in the group can interact with the agent without restrictions.")
+                        .evidence(format!("Channel \"{}\": groupPolicy = \"open\"", ch.name))
+                        .remediation("Set groupPolicy to \"allowlist\" for this channel")
+                        .auto_fixable(true)
+                        .owasp_asi("ASI01")
+                        .maestro(MaestroLayer::L3)
+                        .nist(NistAttackType::Evasion)
+                        .build(),
+                );
             }
 
             // AC-003: Wildcard allowlist
@@ -82,20 +76,17 @@ impl Check for AccessControlCheck {
                 .as_ref()
                 .is_some_and(|a| a.iter().any(|e| e == "*"))
             {
-                findings.push(AuditFinding {
-                    id: "SC-AC-003".to_string(),
-                    severity: Severity::Medium,
-                    category: "access-control".to_string(),
-                    title: format!("Channel \"{}\" has wildcard in allowlist", ch.name),
-                    description: "Using \"*\" in the allowlist effectively makes the channel open to everyone.".to_string(),
-                    evidence: format!("Channel \"{}\": allowlist contains \"*\"", ch.name),
-                    remediation: "Replace \"*\" with specific user identifiers".to_string(),
-                    auto_fixable: false,
-                    references: vec![],
-                    owasp_asi: "ASI09".to_string(),
-                    maestro_layer: Some(MaestroLayer::L3),
-                    nist_category: Some(NistAttackType::Evasion),
-                });
+                findings.push(
+                    AuditFinding::builder("SC-AC-003", Severity::Medium, "access-control")
+                        .title(format!("Channel \"{}\" has wildcard in allowlist", ch.name))
+                        .description("Using \"*\" in the allowlist effectively makes the channel open to everyone.")
+                        .evidence(format!("Channel \"{}\": allowlist contains \"*\"", ch.name))
+                        .remediation("Replace \"*\" with specific user identifiers")
+                        .owasp_asi("ASI09")
+                        .maestro(MaestroLayer::L3)
+                        .nist(NistAttackType::Evasion)
+                        .build(),
+                );
             }
         }
 
@@ -105,23 +96,21 @@ impl Check for AccessControlCheck {
             let allowlist_empty = ch.allowlist.as_ref().map_or(true, |a| a.is_empty());
             if dm_policy != Some("pairing") && allowlist_empty {
                 let dm_scope_str = ch.dm_policy.as_deref().unwrap_or("undefined");
-                findings.push(AuditFinding {
-                    id: "SC-AC-004".to_string(),
-                    severity: Severity::High,
-                    category: "access-control".to_string(),
-                    title: format!("Channel \"{}\" has no pairing and no allowlist", ch.name),
-                    description: "Neither pairing nor an allowlist is configured, leaving the channel unprotected.".to_string(),
-                    evidence: format!(
-                        "Channel \"{}\": dmPolicy = \"{}\", allowlist empty",
-                        ch.name, dm_scope_str
-                    ),
-                    remediation: "Set dmPolicy to \"pairing\" or configure an allowlist".to_string(),
-                    auto_fixable: true,
-                    references: vec![],
-                    owasp_asi: "ASI01".to_string(),
-                    maestro_layer: Some(MaestroLayer::L3),
-                    nist_category: Some(NistAttackType::Evasion),
-                });
+                findings.push(
+                    AuditFinding::builder("SC-AC-004", Severity::High, "access-control")
+                        .title(format!("Channel \"{}\" has no pairing and no allowlist", ch.name))
+                        .description("Neither pairing nor an allowlist is configured, leaving the channel unprotected.")
+                        .evidence(format!(
+                            "Channel \"{}\": dmPolicy = \"{}\", allowlist empty",
+                            ch.name, dm_scope_str
+                        ))
+                        .remediation("Set dmPolicy to \"pairing\" or configure an allowlist")
+                        .auto_fixable(true)
+                        .owasp_asi("ASI01")
+                        .maestro(MaestroLayer::L3)
+                        .nist(NistAttackType::Evasion)
+                        .build(),
+                );
             }
         }
 
@@ -132,24 +121,22 @@ impl Check for AccessControlCheck {
             .as_ref()
             .and_then(|s| s.dm_scope.as_deref());
         if dm_scope != Some("per-channel-peer") && channels.len() > 1 {
-            findings.push(AuditFinding {
-                id: "SC-AC-005".to_string(),
-                severity: Severity::Medium,
-                category: "access-control".to_string(),
-                title: "Session DM scope not isolated per user".to_string(),
-                description: "session.dmScope is not \"per-channel-peer\". With multiple users, context may leak between conversations.".to_string(),
-                evidence: format!(
-                    "session.dmScope = \"{}\", channels: {}",
-                    dm_scope.unwrap_or("undefined"),
-                    channels.len()
-                ),
-                remediation: "Set session.dmScope to \"per-channel-peer\"".to_string(),
-                auto_fixable: true,
-                references: vec![],
-                owasp_asi: "ASI09".to_string(),
-                maestro_layer: Some(MaestroLayer::L3),
-                nist_category: Some(NistAttackType::Evasion),
-            });
+            findings.push(
+                AuditFinding::builder("SC-AC-005", Severity::Medium, "access-control")
+                    .title("Session DM scope not isolated per user")
+                    .description("session.dmScope is not \"per-channel-peer\". With multiple users, context may leak between conversations.")
+                    .evidence(format!(
+                        "session.dmScope = \"{}\", channels: {}",
+                        dm_scope.unwrap_or("undefined"),
+                        channels.len()
+                    ))
+                    .remediation("Set session.dmScope to \"per-channel-peer\"")
+                    .auto_fixable(true)
+                    .owasp_asi("ASI09")
+                    .maestro(MaestroLayer::L3)
+                    .nist(NistAttackType::Evasion)
+                    .build(),
+            );
         }
 
         findings

@@ -130,13 +130,8 @@ pub enum Command {
 }
 
 /// Current UTC timestamp as RFC3339, matching TS `new Date().toISOString()`
-/// (PRODUCT.md A.5 wire format). Falls back to the epoch on the (impossible)
-/// formatting error so an audit never aborts over a clock.
-fn now_timestamp() -> String {
-    time::OffsetDateTime::now_utc()
-        .format(&time::format_description::well_known::Rfc3339)
-        .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
-}
+/// (PRODUCT.md A.5 wire format).
+use secureops_core::now_iso as now_timestamp;
 
 /// Resolve the OpenClaw state dir: `$OPENCLAW_STATE_DIR` else `~/.openclaw`
 /// (same precedence as the TS plugin).
@@ -237,7 +232,7 @@ async fn run_status() -> anyhow::Result<()> {
 /// Handle `secureops behavioral [--window N]` (directive G3).
 async fn run_behavioral(window: i64) -> anyhow::Result<()> {
     let state_dir = resolve_state_dir();
-    let now_ms = time::OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000;
+    let now_ms = secureops_core::now_ms();
     let stats = secureops_fs::behavioral::get_behavioral_baseline(&state_dir, window, now_ms).await;
     println!("Behavioral baseline (last {window} min)");
     println!("  total calls: {}", stats.total_calls);

@@ -1,0 +1,46 @@
+{{- if .Values.networkPolicy.enabled }}
+# Default-deny for API pods, then explicitly allow HTTP ingress (same namespace)
+# and the egress the API needs (DNS + datastores). PRODUCT.md Phase 5: backend
+# stores are never exposed to the ingress network.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "secureops.fullname" . }}
+  labels:
+    {{- include "secureops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "secureops.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        {{- if .Values.networkPolicy.ingressFromSameNamespace }}
+        - podSelector: {}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.api.port }}
+  egress:
+    # DNS
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Datastores + OTel (same namespace)
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 6379
+        - protocol: TCP
+          port: 9000
+        - protocol: TCP
+          port: 4317
+{{- end }}

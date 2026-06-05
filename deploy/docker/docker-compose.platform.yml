@@ -1,0 +1,117 @@
+# SecureOps platform stack (PRODUCT.md Phase 5) — HTTP API + storage.
+#
+# Separate from docker-compose.yml (the host-local daemon/audit tool). Brings up
+# the platform tier: API + Postgres + Redis + MinIO + OTel collector. The scanner
+# worker (P6/P7) is profile-gated off until its binary lands.
+#
+#   docker compose -f deploy/docker/docker-compose.platform.yml --env-file deploy/docker/.env.example up -d
+#
+# Network split: `frontend` carries ingress↔api; `backend` carries api↔datastores
+# and is NOT attached to ingress, so Postgres/Redis/MinIO are never internet-reachable.
+
+services:
+  api:
+    image: secureops-rust:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    command: ["secureops-api"]
+    environment:
+      SECUREOPS_API_ADDR: "0.0.0.0:8080"
+      SECUREOPS_JWT_SECRET: "${SECUREOPS_JWT_SECRET}"
+      SECUREOPS_LICENSE_PUBKEY: "${SECUREOPS_LICENSE_PUBKEY}"
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+      REDIS_URL: "redis://redis:6379"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+    ports:
+      - "8080:8080"
+    networks: [frontend, backend]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/livez"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Scan/bug-hunt worker. Off by default (no `secureops-scanner` binary yet —
+  # P6/P7). Enable with `--profile workers` once it lands; replace `command`.
+  scanner:
+    image: secureops-rust:latest
+    command: ["sh", "-c", "echo 'scanner worker placeholder — implemented in P6/P7'; sleep infinity"]
+    environment:
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+      REDIS_URL: "redis://redis:6379"
+    networks: [backend]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["workers"]
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD}"
+    volumes:
+      - miniodata:/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otel/config.yaml:ro
+    networks: [backend]
+    restart: unless-stopped
+
+networks:
+  frontend:
+  backend:
+    internal: true   # datastores unreachable from the ingress network
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:

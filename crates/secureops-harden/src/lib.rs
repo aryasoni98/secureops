@@ -68,10 +68,8 @@ pub struct HardenOutcome {
 /// absent/invalid (port of the modules' `readConfig`).
 pub async fn read_config(state_dir: &str) -> OpenClawConfig {
     let path = format!("{state_dir}/openclaw.json");
-    match tokio::fs::read_to_string(&path).await {
-        Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
-        Err(_) => OpenClawConfig::default(),
-    }
+    let content = tokio::fs::read_to_string(&path).await.unwrap_or_default();
+    OpenClawConfig::from_json_or_default(&content)
 }
 
 /// Write `<stateDir>/openclaw.json` as 2-space pretty JSON (port of `writeConfig`;

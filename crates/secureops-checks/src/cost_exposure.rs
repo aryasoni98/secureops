@@ -309,25 +309,17 @@ impl Check for CostExposureCheck {
         };
 
         if !has_spending_limits {
-            findings.push(AuditFinding {
-                id: "SC-COST-001".to_string(),
-                severity: Severity::Medium,
-                category: "cost".to_string(),
-                title: "No LLM provider spending limits configured".to_string(),
-                description:
-                    "No spending limit environment variables found. Runaway API costs are possible."
-                        .to_string(),
-                evidence: "No SPENDING_LIMIT, MAX_BUDGET, or COST_LIMIT variables in .env"
-                    .to_string(),
-                remediation:
-                    "Set spending limits via your LLM provider dashboard and add SPENDING_LIMIT to .env"
-                        .to_string(),
-                auto_fixable: false,
-                references: vec![],
-                owasp_asi: "ASI08".to_string(),
-                maestro_layer: Some(MaestroLayer::L5),
-                nist_category: Some(NistAttackType::Misuse),
-            });
+            findings.push(
+                AuditFinding::builder("SC-COST-001", Severity::Medium, "cost")
+                    .title("No LLM provider spending limits configured")
+                    .description("No spending limit environment variables found. Runaway API costs are possible.")
+                    .evidence("No SPENDING_LIMIT, MAX_BUDGET, or COST_LIMIT variables in .env")
+                    .remediation("Set spending limits via your LLM provider dashboard and add SPENDING_LIMIT to .env")
+                    .owasp_asi("ASI08")
+                    .maestro(MaestroLayer::L5)
+                    .nist(NistAttackType::Misuse)
+                    .build(),
+            );
         }
 
         // COST-002: Estimate token usage from session logs
@@ -352,30 +344,25 @@ impl Check for CostExposureCheck {
         }
 
         if total_cost > 0.0 {
-            findings.push(AuditFinding {
-                id: "SC-COST-002".to_string(),
-                severity: Severity::Info,
-                category: "cost".to_string(),
-                title: "API cost usage detected in session logs".to_string(),
-                description: format!(
-                    "Estimated total cost from recent sessions: ${:.2} ({} tokens)",
-                    total_cost,
-                    js_num(total_tokens)
-                ),
-                evidence: format!(
-                    "Total tokens: {}, Estimated cost: ${:.2}",
-                    js_num(total_tokens),
-                    total_cost
-                ),
-                remediation:
-                    "Set SPENDING_LIMIT, MAX_BUDGET, or COST_LIMIT in .env, then run \"secureops monitor\""
-                        .to_string(),
-                auto_fixable: false,
-                references: vec![],
-                owasp_asi: "ASI08".to_string(),
-                maestro_layer: Some(MaestroLayer::L5),
-                nist_category: Some(NistAttackType::Misuse),
-            });
+            findings.push(
+                AuditFinding::builder("SC-COST-002", Severity::Info, "cost")
+                    .title("API cost usage detected in session logs")
+                    .description(format!(
+                        "Estimated total cost from recent sessions: ${:.2} ({} tokens)",
+                        total_cost,
+                        js_num(total_tokens)
+                    ))
+                    .evidence(format!(
+                        "Total tokens: {}, Estimated cost: ${:.2}",
+                        js_num(total_tokens),
+                        total_cost
+                    ))
+                    .remediation("Set SPENDING_LIMIT, MAX_BUDGET, or COST_LIMIT in .env, then run \"secureops monitor\"")
+                    .owasp_asi("ASI08")
+                    .maestro(MaestroLayer::L5)
+                    .nist(NistAttackType::Misuse)
+                    .build(),
+            );
         }
 
         // COST-003: High-frequency cron jobs
@@ -386,24 +373,17 @@ impl Check for CostExposureCheck {
             // Check for intervals less than 5 minutes
             let has_high_freq = HIGH_FREQ_CRON.is_match(cron_config);
             if has_high_freq {
-                findings.push(AuditFinding {
-                    id: "SC-COST-003".to_string(),
-                    severity: Severity::High,
-                    category: "cost".to_string(),
-                    title: "High-frequency agent invocation detected".to_string(),
-                    description:
-                        "Cron jobs invoke the agent every few minutes. This can cause significant API costs."
-                            .to_string(),
-                    evidence: "Crontab contains high-frequency schedules".to_string(),
-                    remediation:
-                        "Increase the cron interval to at least every 15 minutes, or use event-driven triggers"
-                            .to_string(),
-                    auto_fixable: false,
-                    references: vec![],
-                    owasp_asi: "ASI08".to_string(),
-                    maestro_layer: Some(MaestroLayer::L5),
-                    nist_category: Some(NistAttackType::Misuse),
-                });
+                findings.push(
+                    AuditFinding::builder("SC-COST-003", Severity::High, "cost")
+                        .title("High-frequency agent invocation detected")
+                        .description("Cron jobs invoke the agent every few minutes. This can cause significant API costs.")
+                        .evidence("Crontab contains high-frequency schedules")
+                        .remediation("Increase the cron interval to at least every 15 minutes, or use event-driven triggers")
+                        .owasp_asi("ASI08")
+                        .maestro(MaestroLayer::L5)
+                        .nist(NistAttackType::Misuse)
+                        .build(),
+                );
             }
         }
 
@@ -416,30 +396,25 @@ impl Check for CostExposureCheck {
             .and_then(|c| c.daily_limit_usd)
             .unwrap_or(5.0);
         if total_cost > daily_threshold {
-            findings.push(AuditFinding {
-                id: "SC-COST-004".to_string(),
-                severity: Severity::High,
-                category: "cost".to_string(),
-                title: "Daily cost threshold exceeded".to_string(),
-                description: format!(
-                    "Estimated daily cost (${:.2}) exceeds threshold (${}).",
-                    total_cost,
-                    js_num(daily_threshold)
-                ),
-                evidence: format!(
-                    "Daily cost: ${:.2}, Threshold: ${}",
-                    total_cost,
-                    js_num(daily_threshold)
-                ),
-                remediation:
-                    "Review session logs for unexpected usage. Consider enabling the cost circuit breaker."
-                        .to_string(),
-                auto_fixable: false,
-                references: vec![],
-                owasp_asi: "ASI08".to_string(),
-                maestro_layer: Some(MaestroLayer::L5),
-                nist_category: Some(NistAttackType::Misuse),
-            });
+            findings.push(
+                AuditFinding::builder("SC-COST-004", Severity::High, "cost")
+                    .title("Daily cost threshold exceeded")
+                    .description(format!(
+                        "Estimated daily cost (${:.2}) exceeds threshold (${}).",
+                        total_cost,
+                        js_num(daily_threshold)
+                    ))
+                    .evidence(format!(
+                        "Daily cost: ${:.2}, Threshold: ${}",
+                        total_cost,
+                        js_num(daily_threshold)
+                    ))
+                    .remediation("Review session logs for unexpected usage. Consider enabling the cost circuit breaker.")
+                    .owasp_asi("ASI08")
+                    .maestro(MaestroLayer::L5)
+                    .nist(NistAttackType::Misuse)
+                    .build(),
+            );
         }
 
         findings

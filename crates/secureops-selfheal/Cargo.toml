@@ -1,0 +1,20 @@
+[package]
+name = "secureops-selfheal"
+description = "SecureOps self-healing playbook engine (PRODUCT.md §19/Phase 7): YAML playbooks classified safe/reversible/destructive, snapshot→execute→health→rollback, HITL approval for destructive, per-class circuit breaker. All cloud calls behind a CloudBackend trait (mock-injectable)."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.82"
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = "0.9"            # pure-Rust YAML (unsafe-libyaml port; no C/cc)
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

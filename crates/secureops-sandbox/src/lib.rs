@@ -336,20 +336,15 @@ impl SkillSandbox {
                 "skill execution failed",
             ),
         };
-        AuditFinding {
-            id: "SC-SANDBOX-001".into(),
-            severity,
-            category: "execution-sandbox".into(),
-            title: title.into(),
-            description: description.to_string(),
-            evidence: format!("{:?}", err),
-            remediation: "Review skill sandbox policy grants (PRODUCT.md B.7)".into(),
-            auto_fixable: false,
-            references: vec!["PRODUCT.md B.7".into()],
-            owasp_asi: owasp_asi.into(),
-            maestro_layer: self.layer,
-            nist_category: None,
-        }
+        AuditFinding::builder("SC-SANDBOX-001", severity, "execution-sandbox")
+            .title(title)
+            .description(description)
+            .evidence(format!("{:?}", err))
+            .remediation("Review skill sandbox policy grants (PRODUCT.md B.7)")
+            .references(["PRODUCT.md B.7"])
+            .owasp_asi(owasp_asi)
+            .maestro(self.layer)
+            .build()
     }
 }
 

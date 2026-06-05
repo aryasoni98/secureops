@@ -17,16 +17,10 @@ use std::sync::LazyLock;
 pub const MEMORY_FILE_NAMES: [&str; 3] = ["soul.md", "SOUL.md", "MEMORY.md"];
 
 /// Prompt-injection patterns + their JS `.source` strings (output-faithful).
+/// Sources are shared with the credentials/memory checks via [`secureops_core`].
 static PROMPT_INJECTION_PATTERNS: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
-    let raw: &[&str] = &[
-        r"ignore\s+previous\s+instructions",
-        r"you\s+are\s+now",
-        r"new\s+system\s+prompt",
-        r"forward\s+to",
-        r"send\s+to",
-        r"exfiltrate",
-    ];
-    raw.iter()
+    secureops_core::PROMPT_INJECTION_SOURCES
+        .iter()
         .map(|src| {
             (
                 Regex::new(&format!("(?i){src}")).expect("static injection pattern compiles"),

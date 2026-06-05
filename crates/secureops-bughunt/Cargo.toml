@@ -1,0 +1,20 @@
+[package]
+name = "secureops-bughunt"
+description = "SecureOps agentic LLM bug-hunt loop (PRODUCT.md §12/Phase 6): bounded hypothesize→tool→verify, TokenBudget-gated context, strict-JSON FindingReport. Live HTTP providers land in P6b behind a feature."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.82"
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+secureops-tokenbudget = { path = "../secureops-tokenbudget", version = "0.0.1" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

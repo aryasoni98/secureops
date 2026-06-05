@@ -1,0 +1,20 @@
+apiVersion: v2
+name: secureops
+description: >-
+  SecureOps platform umbrella chart (PRODUCT.md Phase 5): the HTTP API plus a
+  default-deny NetworkPolicy. Datastores (Postgres/Redis/MinIO) are referenced
+  by URL in values (point at the compose stack, a managed service, or your own
+  subcharts). The kernel-PEP DaemonSet ships as the `bpf-agent` subchart
+  (charts/bpf-agent), off by default.
+type: application
+version: 0.0.1
+appVersion: "0.0.1"
+dependencies:
+  - name: bpf-agent
+    version: "0.0.1"
+    repository: "file://charts/bpf-agent"
+    condition: bpf-agent.enabled
+  - name: neo4j
+    version: "0.0.1"
+    repository: "file://charts/neo4j"
+    condition: neo4j.enabled

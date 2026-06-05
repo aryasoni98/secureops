@@ -27,6 +27,17 @@ members = [
     "crates/secureops-sandbox",  # execution PEP: wasmtime host, WASI grants, fuel/epoch
     "crates/secureops-auditlog", # append-only hash chain + ed25519 + optional anchor
     "crates/secureops-daemon",   # privileged binary wiring PDP + PEPs + AlertBus + auditlog
+    # ---- Platform services (blueprint Phase 5) ----
+    "crates/secureops-api",      # axum HTTP API: license/auth/Cedar/WS + Postgres/Redis/S3 store
+    # ---- Intelligence layer (blueprint Phase 6) ----
+    "crates/secureops-tokenbudget", # LLM context packing: knapsack + dedup/schema-ref/diff/map-reduce
+    "crates/secureops-graph",       # security knowledge graph: typed edges, attack-path Dijkstra, blast radius
+    "crates/secureops-bughunt",     # bounded agentic LLM bug-hunt loop + strict-JSON FindingReport
+    # ---- Autonomy (blueprint Phase 7) ----
+    "crates/secureops-rl",          # LinUCB finding ranking (Sherman-Morrison online update, NDCG/Precision)
+    "crates/secureops-selfheal",    # YAML self-healing playbooks: safe/reversible/destructive + HITL + circuit breaker
+    # ---- Enterprise (blueprint Phase 8) ----
+    "crates/secureops-license-server", # stateless Ed25519 license heartbeat/revoke server
 ]
 
 [workspace.package]
