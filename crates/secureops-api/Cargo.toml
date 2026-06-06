@@ -64,6 +64,15 @@ hex = "0.4"
 # Stored-only ZIP for signed incident-report exports (default features off → no
 # bzip2/zstd/lzma C deps → cc-safe). Ed25519 signing reuses the existing dep.
 zip = { version = "2", default-features = false }
+# Real OIDC verifier (gated): JWKS fetch. rustls (locked ring) → cc-safe.
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+], optional = true }
+
+[features]
+# Compile the HTTP OIDC verifier (JWKS fetch + RS256 validation).
+live-oidc = ["dep:reqwest"]
 
 [dev-dependencies]
 tokio = { workspace = true }
