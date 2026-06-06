@@ -20,6 +20,10 @@ use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 
 use serde::{Deserialize, Serialize};
 
+/// Live Neo4j backend (gated `neo4j` feature).
+#[cfg(feature = "neo4j")]
+pub mod neo4j;
+
 /// Typed security relationship between two nodes (PRODUCT.md §11).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
