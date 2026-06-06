@@ -9,7 +9,7 @@
 //! PgStore query surface is type-checked on every build.
 
 use secureops_api::license::{License, Tier};
-use secureops_api::models::{Finding, Scan, ScanStatus, Severity};
+use secureops_api::models::{Finding, Remediation, Scan, ScanStatus, Severity};
 use secureops_api::store::pg::PgStore;
 use secureops_api::store::{FindingFilter, Store};
 use uuid::Uuid;
@@ -122,4 +122,40 @@ async fn license_scan_finding_round_trip() {
         .await
         .unwrap();
     assert_eq!(confirmed.len(), 1);
+}
+
+#[tokio::test]
+#[ignore = "needs live Postgres (set DATABASE_URL, run with --ignored)"]
+async fn remediation_and_rl_feedback_persist() {
+    let s = store().await;
+    let tenant = format!("t-{}", Uuid::new_v4());
+
+    let rem = Remediation {
+        id: Uuid::new_v4(),
+        finding_id: "ext-finding-1".into(),
+        playbook_id: "s3-public-acl".into(),
+        class: "reversible".into(),
+        state: "pending".into(),
+    };
+    s.insert_remediation(&tenant, &rem).await.unwrap();
+
+    let listed = s.list_remediations(&tenant).await.unwrap();
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].playbook_id, "s3-public-acl");
+
+    assert!(s
+        .set_remediation_state(&tenant, rem.id, "completed")
+        .await
+        .unwrap());
+    assert!(!s
+        .set_remediation_state("other", rem.id, "aborted")
+        .await
+        .unwrap());
+    let after = s.list_remediations(&tenant).await.unwrap();
+    assert_eq!(after[0].state, "completed");
+
+    // RL feedback row persists (drives offline retraining).
+    s.record_rl_feedback(&tenant, "ext-finding-1", "confirm", 1.0)
+        .await
+        .unwrap();
 }

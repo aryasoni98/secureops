@@ -58,3 +58,16 @@ pub struct Finding {
     /// Reachable sensitive nodes if this asset is compromised (filled by P6).
     pub blast_radius: i64,
 }
+
+/// A queued/finished self-healing remediation (Phase 7b). Persisted via the
+/// `Store` so HITL state survives restarts and is shared across replicas.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct Remediation {
+    pub id: Uuid,
+    pub finding_id: String,
+    pub playbook_id: String,
+    /// `safe | reversible | destructive`.
+    pub class: String,
+    /// `pending | completed | rolled_back | aborted | failed`.
+    pub state: String,
+}

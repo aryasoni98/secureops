@@ -17,7 +17,7 @@ use uuid::Uuid;
 use secureops_api::auth::{issue_jwt, Claims};
 use secureops_api::authz::PolicyEngine;
 use secureops_api::license::License;
-use secureops_api::models::{Finding, Scan};
+use secureops_api::models::{Finding, Remediation, Scan};
 use secureops_api::store::{FindingFilter, InMemoryStore, Store};
 use secureops_api::{build_router, AppState};
 
@@ -53,6 +53,24 @@ impl Store for DeadStore {
         anyhow::bail!("db down")
     }
     async fn insert_finding(&self, _f: &Finding) -> anyhow::Result<()> {
+        anyhow::bail!("db down")
+    }
+    async fn insert_remediation(&self, _t: &str, _r: &Remediation) -> anyhow::Result<()> {
+        anyhow::bail!("db down")
+    }
+    async fn list_remediations(&self, _t: &str) -> anyhow::Result<Vec<Remediation>> {
+        anyhow::bail!("db down")
+    }
+    async fn set_remediation_state(&self, _t: &str, _id: Uuid, _s: &str) -> anyhow::Result<bool> {
+        anyhow::bail!("db down")
+    }
+    async fn record_rl_feedback(
+        &self,
+        _t: &str,
+        _f: &str,
+        _a: &str,
+        _r: f64,
+    ) -> anyhow::Result<()> {
         anyhow::bail!("db down")
     }
 }

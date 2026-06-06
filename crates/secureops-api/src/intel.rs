@@ -21,7 +21,7 @@ use secureops_tokenbudget::{Evidence, EvidenceKind, TokenBudget};
 
 use crate::auth::Authenticated;
 use crate::error::{ApiError, ApiResult};
-use crate::models::{Finding, Severity};
+use crate::models::{Finding, Remediation, Severity};
 use crate::state::AppState;
 use crate::store::FindingFilter;
 
@@ -35,16 +35,6 @@ pub struct BugHuntJob {
     pub status: String,
     pub report: Option<FindingReport>,
     pub iterations: usize,
-}
-
-/// A queued remediation awaiting/finished HITL handling (7b).
-#[derive(Debug, Clone, Serialize)]
-pub struct Remediation {
-    pub id: Uuid,
-    pub finding_id: String,
-    pub playbook_id: String,
-    pub class: String,
-    pub state: String,
 }
 
 /// Default cloud backend: performs **no** real mutations (safe placeholder until
@@ -229,6 +219,8 @@ pub struct FeedbackReq {
     #[serde(default = "default_difficulty")]
     pub recency: f32,
     pub action: String,
+    #[serde(default)]
+    pub finding_id: Option<String>,
 }
 
 /// `POST /api/v1/rl/feedback` — train the ranker from an analyst decision.
@@ -254,13 +246,29 @@ pub async fn rl_feedback(
     .to_vec(&s.feature_spec);
     let reward = decayed_reward(action, 0.0);
 
-    let dim = s.feature_spec.dim();
-    let mut ranker = s.ranker.lock().expect("ranker lock");
-    let model = ranker
-        .entry(claims.tenant.clone())
-        .or_insert_with(|| LinUcb::new(dim, 0.1));
-    model.update(&feats, reward);
-    Ok(Json(json!({ "updates": model.updates })))
+    let updates = {
+        let dim = s.feature_spec.dim();
+        let mut ranker = s.ranker.lock().expect("ranker lock");
+        let model = ranker
+            .entry(claims.tenant.clone())
+            .or_insert_with(|| LinUcb::new(dim, 0.1));
+        model.update(&feats, reward);
+        model.updates
+    };
+    // Persist the feedback event for offline retraining (best-effort).
+    if let Err(e) = s
+        .store
+        .record_rl_feedback(
+            &claims.tenant,
+            req.finding_id.as_deref().unwrap_or(""),
+            &req.action,
+            reward as f64,
+        )
+        .await
+    {
+        tracing::warn!("rl_feedback persist failed (degraded): {e}");
+    }
+    Ok(Json(json!({ "updates": updates })))
 }
 
 /// `GET /api/v1/rl/stats` — ranker telemetry for the tenant.
@@ -361,7 +369,7 @@ pub struct RemediationReq {
     pub playbook_id: String,
 }
 
-/// `POST /api/v1/remediations` — queue a remediation for a finding.
+/// `POST /api/v1/remediations` — queue a remediation for a finding (persisted).
 pub async fn remediation_create(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,
@@ -378,12 +386,10 @@ pub async fn remediation_create(
         class: format!("{:?}", pb.class).to_lowercase(),
         state: "pending".into(),
     };
-    s.remediations
-        .lock()
-        .expect("rem lock")
-        .entry(claims.tenant.clone())
-        .or_default()
-        .push(rem.clone());
+    s.store
+        .insert_remediation(&claims.tenant, &rem)
+        .await
+        .map_err(|e| ApiError::Store(e.to_string()))?;
     Ok(Json(rem))
 }
 
@@ -392,8 +398,11 @@ pub async fn remediations_queue(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,
 ) -> ApiResult<Json<Value>> {
-    let q = s.remediations.lock().expect("rem lock");
-    let items = q.get(&claims.tenant).cloned().unwrap_or_default();
+    let items = s
+        .store
+        .list_remediations(&claims.tenant)
+        .await
+        .map_err(|e| ApiError::Store(e.to_string()))?;
     Ok(Json(json!({ "remediations": items })))
 }
 
@@ -404,17 +413,17 @@ pub async fn remediation_approve(
     Authenticated(claims): Authenticated,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<Value>> {
-    // Locate the playbook id without holding the lock across the await.
-    let playbook_id = {
-        let q = s.remediations.lock().expect("rem lock");
-        q.get(&claims.tenant)
-            .and_then(|v| v.iter().find(|r| r.id == id))
-            .map(|r| r.playbook_id.clone())
-            .ok_or(ApiError::NotFound)?
-    };
+    let rem = s
+        .store
+        .list_remediations(&claims.tenant)
+        .await
+        .map_err(|e| ApiError::Store(e.to_string()))?
+        .into_iter()
+        .find(|r| r.id == id)
+        .ok_or(ApiError::NotFound)?;
     let pb = sample_playbooks()
         .into_iter()
-        .find(|p| p.id == playbook_id)
+        .find(|p| p.id == rem.playbook_id)
         .ok_or(ApiError::NotFound)?;
 
     let audit = VecAudit::new();
@@ -431,7 +440,10 @@ pub async fn remediation_approve(
         .await;
     let state_str = exec_state_str(outcome.state);
 
-    set_remediation_state(&s, &claims.tenant, id, &state_str);
+    s.store
+        .set_remediation_state(&claims.tenant, id, &state_str)
+        .await
+        .map_err(|e| ApiError::Store(e.to_string()))?;
     Ok(Json(
         json!({ "id": id, "state": state_str, "executed": outcome.executed }),
     ))
@@ -443,7 +455,12 @@ pub async fn remediation_deny(
     Authenticated(claims): Authenticated,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<Value>> {
-    if !set_remediation_state(&s, &claims.tenant, id, "aborted") {
+    let updated = s
+        .store
+        .set_remediation_state(&claims.tenant, id, "aborted")
+        .await
+        .map_err(|e| ApiError::Store(e.to_string()))?;
+    if !updated {
         return Err(ApiError::NotFound);
     }
     Ok(Json(json!({ "id": id, "state": "aborted" })))
@@ -457,15 +474,4 @@ fn exec_state_str(state: ExecState) -> String {
         ExecState::Failed => "failed",
     }
     .into()
-}
-
-fn set_remediation_state(state: &AppState, tenant: &str, id: Uuid, new: &str) -> bool {
-    let mut q = state.remediations.lock().expect("rem lock");
-    if let Some(v) = q.get_mut(tenant) {
-        if let Some(r) = v.iter_mut().find(|r| r.id == id) {
-            r.state = new.to_string();
-            return true;
-        }
-    }
-    false
 }

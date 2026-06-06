@@ -13,7 +13,7 @@ use uuid::Uuid;
 
 use crate::auth::Claims;
 use crate::license::License;
-use crate::models::{Finding, Scan};
+use crate::models::{Finding, Remediation, Scan};
 
 /// Postgres-backed [`Store`] (PRODUCT.md Phase 5b).
 pub mod pg;
@@ -53,6 +53,26 @@ pub trait Store: Send + Sync {
     ) -> anyhow::Result<bool>;
     /// Insert a finding (used by scanners and tests).
     async fn insert_finding(&self, finding: &Finding) -> anyhow::Result<()>;
+
+    /// Queue a remediation (7b HITL).
+    async fn insert_remediation(&self, tenant: &str, r: &Remediation) -> anyhow::Result<()>;
+    /// List a tenant's remediations.
+    async fn list_remediations(&self, tenant: &str) -> anyhow::Result<Vec<Remediation>>;
+    /// Update a remediation's state. `false` if not found.
+    async fn set_remediation_state(
+        &self,
+        tenant: &str,
+        id: Uuid,
+        state: &str,
+    ) -> anyhow::Result<bool>;
+    /// Record an RL feedback event (drives the ranker's offline retraining).
+    async fn record_rl_feedback(
+        &self,
+        tenant: &str,
+        finding_id: &str,
+        action: &str,
+        reward: f64,
+    ) -> anyhow::Result<()>;
 }
 
 #[derive(Default)]
@@ -61,6 +81,8 @@ struct Mem {
     api_keys: HashMap<String, Claims>,
     scans: HashMap<Uuid, Scan>,
     findings: Vec<Finding>,
+    remediations: HashMap<String, Vec<Remediation>>,
+    rl_feedback: u64,
 }
 
 /// In-memory [`Store`] for tests / single-node dev (no external infra).
@@ -197,6 +219,55 @@ impl Store for InMemoryStore {
             .expect("mem lock")
             .findings
             .push(finding.clone());
+        Ok(())
+    }
+
+    async fn insert_remediation(&self, tenant: &str, r: &Remediation) -> anyhow::Result<()> {
+        self.inner
+            .lock()
+            .expect("mem lock")
+            .remediations
+            .entry(tenant.to_string())
+            .or_default()
+            .push(r.clone());
+        Ok(())
+    }
+
+    async fn list_remediations(&self, tenant: &str) -> anyhow::Result<Vec<Remediation>> {
+        Ok(self
+            .inner
+            .lock()
+            .expect("mem lock")
+            .remediations
+            .get(tenant)
+            .cloned()
+            .unwrap_or_default())
+    }
+
+    async fn set_remediation_state(
+        &self,
+        tenant: &str,
+        id: Uuid,
+        state: &str,
+    ) -> anyhow::Result<bool> {
+        let mut mem = self.inner.lock().expect("mem lock");
+        if let Some(v) = mem.remediations.get_mut(tenant) {
+            if let Some(r) = v.iter_mut().find(|r| r.id == id) {
+                r.state = state.to_string();
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    async fn record_rl_feedback(
+        &self,
+        _tenant: &str,
+        _finding_id: &str,
+        _action: &str,
+        _reward: f64,
+    ) -> anyhow::Result<()> {
+        self.inner.lock().expect("mem lock").rl_feedback += 1;
         Ok(())
     }
 }

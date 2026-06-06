@@ -47,7 +47,7 @@ pub mod state {
 
     use crate::authz::PolicyEngine;
     use crate::evidence::S3Presigner;
-    use crate::intel::{BugHuntJob, Remediation};
+    use crate::intel::BugHuntJob;
     use crate::redis_queue::RedisQueue;
     use crate::store::Store;
     use crate::ws::Hub;
@@ -78,9 +78,7 @@ pub mod state {
         pub feature_spec: FeatureSpec,
         /// Bug-hunt job results keyed by job id (6b).
         pub bughunt_jobs: Arc<Mutex<HashMap<Uuid, BugHuntJob>>>,
-        /// Per-tenant remediation HITL queue (7b).
-        pub remediations: Arc<Mutex<HashMap<String, Vec<Remediation>>>>,
-        /// Self-healing playbook engine (7b).
+        /// Self-healing playbook engine (7b). Remediation state persists via the [`Store`].
         pub heal: Arc<PlaybookEngine>,
         /// Ed25519 signer for incident-report exports (P8).
         pub export: Arc<crate::export::IncidentExport>,
@@ -112,7 +110,6 @@ pub mod state {
                     n_clouds: 4,
                 },
                 bughunt_jobs: Arc::new(Mutex::new(HashMap::new())),
-                remediations: Arc::new(Mutex::new(HashMap::new())),
                 heal: Arc::new(PlaybookEngine::new()),
                 export: Arc::new(crate::export::IncidentExport::from_seed([9u8; 32])),
                 oidc: None,

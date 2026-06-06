@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::auth::Claims;
 use crate::license::{License, Tier};
-use crate::models::{Finding, Scan, ScanStatus, Severity};
+use crate::models::{Finding, Remediation, Scan, ScanStatus, Severity};
 use crate::store::{FindingFilter, Store};
 
 /// Embedded migrations, applied in order (PRODUCT.md Phase 5).
@@ -320,6 +320,81 @@ impl Store for PgStore {
                     &finding.cloud,
                     &finding.blast_radius,
                 ],
+            )
+            .await?;
+        Ok(())
+    }
+
+    async fn insert_remediation(&self, tenant: &str, r: &Remediation) -> anyhow::Result<()> {
+        let client = self.pool.get().await?;
+        client
+            .execute(
+                "INSERT INTO remediations (id, tenant_id, finding_id, playbook, class, state) \
+                 VALUES ($1,$2,$3,$4,$5,$6)",
+                &[
+                    &r.id,
+                    &tenant,
+                    &r.finding_id,
+                    &r.playbook_id,
+                    &r.class,
+                    &r.state,
+                ],
+            )
+            .await?;
+        Ok(())
+    }
+
+    async fn list_remediations(&self, tenant: &str) -> anyhow::Result<Vec<Remediation>> {
+        let client = self.pool.get().await?;
+        let rows = client
+            .query(
+                "SELECT id, finding_id, playbook, class, state FROM remediations \
+                 WHERE tenant_id = $1 ORDER BY created_at DESC",
+                &[&tenant],
+            )
+            .await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| Remediation {
+                id: r.get("id"),
+                finding_id: r.get("finding_id"),
+                playbook_id: r.get("playbook"),
+                class: r.get("class"),
+                state: r.get("state"),
+            })
+            .collect())
+    }
+
+    async fn set_remediation_state(
+        &self,
+        tenant: &str,
+        id: Uuid,
+        state: &str,
+    ) -> anyhow::Result<bool> {
+        let client = self.pool.get().await?;
+        let n = client
+            .execute(
+                "UPDATE remediations SET state = $3, updated_at = now() \
+                 WHERE id = $1 AND tenant_id = $2",
+                &[&id, &tenant, &state],
+            )
+            .await?;
+        Ok(n > 0)
+    }
+
+    async fn record_rl_feedback(
+        &self,
+        tenant: &str,
+        finding_id: &str,
+        action: &str,
+        reward: f64,
+    ) -> anyhow::Result<()> {
+        let client = self.pool.get().await?;
+        client
+            .execute(
+                "INSERT INTO rl_feedback (tenant_id, finding_id, action, reward) \
+                 VALUES ($1,$2,$3,$4)",
+                &[&tenant, &finding_id, &action, &reward],
             )
             .await?;
         Ok(())
