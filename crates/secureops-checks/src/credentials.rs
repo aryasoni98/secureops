@@ -159,7 +159,10 @@ impl Check for CredentialsCheck {
                 if is_group_or_other_accessible(perms) {
                     findings.push(
                         AuditFinding::builder("SC-CRED-004", Severity::High, "credentials")
-                            .title(format!("Credential file \"{}\" has excessive permissions", file))
+                            .title(format!(
+                                "Credential file \"{}\" has excessive permissions",
+                                file
+                            ))
                             .description(format!(
                                 "Credential file is readable by group/other users ({:o}).",
                                 perms

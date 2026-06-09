@@ -18,8 +18,6 @@
 //! SQLite persistence is live (rusqlite bundled): `init_db` + `run_alert_persistence`.
 //! All 4 monitor implementations and AlertBus are fully operational.
 
-#![allow(dead_code, unused_variables)]
-
 pub mod cost;
 pub mod credential;
 pub mod memory_integrity;

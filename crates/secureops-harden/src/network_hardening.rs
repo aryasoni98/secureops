@@ -328,8 +328,10 @@ mod tests {
 
     /// Module whose IOC database carries C2 IPs.
     fn module_with_c2(ips: &[&str]) -> NetworkHardening {
-        let mut db = IocDatabase::default();
-        db.c2_ips = ips.iter().map(|s| s.to_string()).collect();
+        let db = IocDatabase {
+            c2_ips: ips.iter().map(|s| s.to_string()).collect(),
+            ..Default::default()
+        };
         NetworkHardening::new(Arc::new(db))
     }
 

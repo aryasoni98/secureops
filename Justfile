@@ -210,6 +210,20 @@ platform-status:
 api:
     SECUREOPS_API_ADDR=127.0.0.1:8080 cargo run -p secureops-api
 
+# Run the scan-job worker locally (needs a reachable REDIS_URL).
+scanner:
+    cargo run -p secureops-scanner
+
+# Aliases the prompt-pack expects.
+up: platform-up
+down: platform-down
+
+# Smoke: queue a scan via the API after `just up` (export TOKEN first).
+scan target="all":
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/scans \
+      -H "Authorization: Bearer ${TOKEN:-}" -H 'Content-Type: application/json' \
+      -d '{"scope":"{{target}}"}' | jq .
+
 # Queue a scan via the running API (export TOKEN from /license/activate first).
 platform-scan target="all":
     curl -fsS -X POST http://127.0.0.1:8080/api/v1/scans \
@@ -226,10 +240,11 @@ db-migrate:
 intel-test:
     cargo test -p secureops-tokenbudget -p secureops-graph -p secureops-bughunt
 
-# Rebuild the security knowledge graph from stored assets/identities.
-# NOTE: the API route (/graph/rebuild) lands in P6b; this is the placeholder.
+# Rebuild the security knowledge graph from a sample 2-node topology (demo).
 graph-rebuild:
-    @echo "graph-rebuild: API wiring lands in P6b (POST /api/v1/graph/rebuild)."
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/graph/rebuild \
+      -H "Authorization: Bearer ${TOKEN:-}" -H 'Content-Type: application/json' \
+      -d '{"nodes":[{"id":"internet","kind":"net","exposed":true},{"id":"db","kind":"rds","sensitive":true}],"edges":[{"from":"internet","to":"db","kind":"Exposes","difficulty":1.0}]}' | jq .
 
 # Queue an LLM bug-hunt via the running API (export TOKEN; tier must include 'bughunt').
 bughunt scope="all":
@@ -243,17 +258,34 @@ bughunt scope="all":
 autonomy-test:
     cargo test -p secureops-rl -p secureops-selfheal
 
-# Show the remediation HITL queue (API route lands in P7b).
+# Show the remediation HITL queue + RL stats (export TOKEN; needs running API).
 heal-status:
-    @echo "heal-status: API wiring lands in P7b (GET /api/v1/remediations/queue, /rl/stats)."
+    @curl -fsS http://127.0.0.1:8080/api/v1/remediations/queue \
+      -H "Authorization: Bearer ${TOKEN:-}" | jq . || \
+      echo "heal-status: set TOKEN via /license/activate and start the API (just api)."
+    @curl -fsS http://127.0.0.1:8080/api/v1/rl/stats \
+      -H "Authorization: Bearer ${TOKEN:-}" | jq . || true
 
-# Dry-run a remediation plan for a target (API route lands in P7b).
-heal-dry target="all":
-    @echo "heal-dry {{target}}: API wiring lands in P7b (POST /api/v1/remediations dry-run)."
+# Queue a remediation for finding_id using playbook_id (mock backend, no real cloud).
+heal-dry finding_id="finding-1" playbook="s3-public-acl":
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/remediations \
+      -H "Authorization: Bearer ${TOKEN:-}" -H 'Content-Type: application/json' \
+      -d '{"finding_id":"{{finding_id}}","playbook_id":"{{playbook}}"}' | jq .
 
-# Approve a queued destructive remediation by id (API route lands in P7b).
+# Approve a queued remediation (executes through the playbook engine).
 heal-approve id="":
-    @echo "heal-approve {{id}}: API wiring lands in P7b (POST /api/v1/remediations/{{id}}/approve)."
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/remediations/{{id}}/approve \
+      -H "Authorization: Bearer ${TOKEN:-}" | jq .
+
+# Deny a queued remediation (no cloud call, audit logged).
+heal-deny id="":
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/remediations/{{id}}/deny \
+      -H "Authorization: Bearer ${TOKEN:-}" | jq .
+
+# Reset a halted circuit-breaker class (safe|reversible|destructive).
+heal-reset class="reversible":
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/remediations/circuit/{{class}}/reset \
+      -H "Authorization: Bearer ${TOKEN:-}" | jq .
 
 # --- Enterprise (Phase 8: dashboard + license server) ------------------------
 

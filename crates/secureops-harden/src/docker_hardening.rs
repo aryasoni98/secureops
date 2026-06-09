@@ -39,9 +39,13 @@ impl HardeningModule for DockerHardening {
                 findings.push(
                     AuditFinding::builder("SC-DOCKER-INFO", Severity::Info, "execution")
                         .title("No Docker Compose configuration found")
-                        .description("Docker hardening checks skipped — no docker-compose.yml detected.")
+                        .description(
+                            "Docker hardening checks skipped — no docker-compose.yml detected.",
+                        )
                         .evidence("No docker-compose configuration in context")
-                        .remediation("If using Docker, provide docker-compose.yml for security analysis")
+                        .remediation(
+                            "If using Docker, provide docker-compose.yml for security analysis",
+                        )
                         .owasp_asi("ASI05")
                         .build(),
                 );

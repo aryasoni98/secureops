@@ -29,9 +29,11 @@ anyhow = { workspace = true }
 secureops-proxy = { path = "../secureops-proxy", version = "0.0.1" }       # egress PEP — forward proxy + DNS sinkhole
 secureops-monitors = { path = "../secureops-monitors", version = "0.0.1" } # tokio monitors, AlertBus, SQLite, circuit breaker
 secureops-bpf = { path = "../secureops-bpf", version = "0.0.1" }           # kernel PEP — exfil-chain correlator (P4, light by default)
-# Phase-4 PEPs/PDP (policy, sandbox, auditlog, ipc) are not wired into the
-# daemon yet; re-add their path-deps here when their startup wiring lands so the
-# daemon build doesn't drag wasmtime/regorus/cedar/etc. until then.
+secureops-auditlog = { path = "../secureops-auditlog", version = "0.0.1" } # persisted hash-chain audit log
+serde_json = { workspace = true }                                          # audit payloads
+# Phase-4 PEPs/PDP (policy, sandbox, ipc) are not wired into the daemon yet;
+# re-add their path-deps here when their startup wiring lands so the daemon
+# build doesn't drag wasmtime/regorus/cedar/etc. until then.
 
 [features]
 # Inject a synthetic exfil chain through the kernel-PEP wiring on any OS (no

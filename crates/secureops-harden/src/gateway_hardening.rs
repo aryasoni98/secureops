@@ -54,7 +54,10 @@ impl HardeningModule for GatewayHardening {
                 AuditFinding::builder("SC-GW-002", Severity::Critical, "gateway")
                     .title("Gateway authentication disabled")
                     .description("Will enable password authentication with a strong token.")
-                    .evidence(format!("gateway.auth.mode = \"{}\"", auth_mode.unwrap_or("none")))
+                    .evidence(format!(
+                        "gateway.auth.mode = \"{}\"",
+                        auth_mode.unwrap_or("none")
+                    ))
                     .remediation("Will set gateway.auth.mode to \"password\" and generate a token")
                     .auto_fixable(true)
                     .owasp_asi("ASI03")

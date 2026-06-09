@@ -59,7 +59,9 @@ impl Check for AccessControlCheck {
                 findings.push(
                     AuditFinding::builder("SC-AC-002", Severity::High, "access-control")
                         .title(format!("Channel \"{}\" has open group policy", ch.name))
-                        .description("Anyone in the group can interact with the agent without restrictions.")
+                        .description(
+                            "Anyone in the group can interact with the agent without restrictions.",
+                        )
                         .evidence(format!("Channel \"{}\": groupPolicy = \"open\"", ch.name))
                         .remediation("Set groupPolicy to \"allowlist\" for this channel")
                         .auto_fixable(true)

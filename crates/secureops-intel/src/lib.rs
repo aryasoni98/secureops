@@ -10,7 +10,7 @@
 //! IOC checks" behavior.
 
 #![forbid(unsafe_code)]
-#![allow(dead_code)]
+
 
 pub mod baseline;
 

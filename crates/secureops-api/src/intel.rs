@@ -16,7 +16,10 @@ use uuid::Uuid;
 use secureops_bughunt::{BugHunter, FindingReport, LocalProvider, NoTools};
 use secureops_graph::{EdgeKind, NodeData, SecurityGraph};
 use secureops_rl::{decayed_reward, Action, FindingFeatures, LinUcb};
-use secureops_selfheal::{sample_playbooks, Approval, CloudBackend, ExecState, VecAudit};
+use secureops_selfheal::{
+    azure::AzureCloud, gcp::GcpCloud, sample_playbooks, Approval, CloudBackend, ExecState,
+    Playbook, PlaybookClass, VecAudit,
+};
 use secureops_tokenbudget::{Evidence, EvidenceKind, TokenBudget};
 
 use crate::auth::Authenticated;
@@ -57,6 +60,44 @@ impl CloudBackend for NoopCloud {
     }
     async fn rollback(&self, _step: &str, _snapshot: &str) -> anyhow::Result<()> {
         Ok(())
+    }
+}
+
+/// Resolve the right cloud backend for a playbook by looking at the `execute`
+/// step's provider prefix (e.g. `gcs.bucket.set_acl` → GCP). Unhandled prefixes
+/// fall back to the safe [`NoopCloud`] — no real mutations.
+fn cloud_backend_for(pb: &Playbook) -> Box<dyn CloudBackend> {
+    match pb.execute.split('.').next().unwrap_or("") {
+        "gcs" | "gcp" => Box::new(GcpCloud::new()),
+        "azure" => Box::new(AzureCloud::new()),
+        _ => Box::new(NoopCloud),
+    }
+}
+
+fn parse_finding_action(s: &str) -> Result<Action, ApiError> {
+    match s {
+        "confirm" => Ok(Action::Confirm),
+        "escalate" => Ok(Action::Escalate),
+        "dismiss" => Ok(Action::Dismiss),
+        other => Err(ApiError::BadRequest(format!("unknown action: {other}"))),
+    }
+}
+
+fn parse_playbook_class(s: &str) -> Result<PlaybookClass, ApiError> {
+    match s {
+        "safe" => Ok(PlaybookClass::Safe),
+        "reversible" => Ok(PlaybookClass::Reversible),
+        "destructive" => Ok(PlaybookClass::Destructive),
+        other => Err(ApiError::BadRequest(format!("unknown class: {other}"))),
+    }
+}
+
+fn exec_state_str(state: ExecState) -> &'static str {
+    match state {
+        ExecState::Completed => "completed",
+        ExecState::RolledBack => "rolled_back",
+        ExecState::Aborted => "aborted",
+        ExecState::Failed => "failed",
     }
 }
 
@@ -229,12 +270,7 @@ pub async fn rl_feedback(
     Authenticated(claims): Authenticated,
     Json(req): Json<FeedbackReq>,
 ) -> ApiResult<Json<Value>> {
-    let action = match req.action.as_str() {
-        "confirm" => Action::Confirm,
-        "escalate" => Action::Escalate,
-        "dismiss" => Action::Dismiss,
-        other => return Err(ApiError::BadRequest(format!("unknown action: {other}"))),
-    };
+    let action = parse_finding_action(&req.action)?;
     let feats = FindingFeatures {
         severity: req.severity.min(4),
         blast_radius_norm: req.blast_radius_norm,
@@ -390,7 +426,22 @@ pub async fn remediation_create(
         .insert_remediation(&claims.tenant, &rem)
         .await
         .map_err(|e| ApiError::Store(e.to_string()))?;
+    s.hub.publish(
+        json!({ "event": "remediation.queued", "id": rem.id, "class": rem.class }).to_string(),
+    );
     Ok(Json(rem))
+}
+
+/// `POST /api/v1/remediations/circuit/{class}/reset` — operator-only reset of
+/// a halted playbook class. `class` is one of `safe|reversible|destructive`.
+pub async fn remediation_circuit_reset(
+    State(s): State<AppState>,
+    Authenticated(_claims): Authenticated,
+    Path(class): Path<String>,
+) -> ApiResult<Json<Value>> {
+    let pc = parse_playbook_class(&class)?;
+    s.heal.breaker.reset(pc);
+    Ok(Json(json!({ "class": class, "halted": false })))
 }
 
 /// `GET /api/v1/remediations/queue` — the tenant's remediation queue.
@@ -427,11 +478,12 @@ pub async fn remediation_approve(
         .ok_or(ApiError::NotFound)?;
 
     let audit = VecAudit::new();
+    let backend = cloud_backend_for(&pb);
     let outcome = s
         .heal
         .run(
             &pb,
-            &NoopCloud,
+            backend.as_ref(),
             Some(Approval::Approved {
                 by: claims.sub.clone(),
             }),
@@ -439,9 +491,12 @@ pub async fn remediation_approve(
         )
         .await;
     let state_str = exec_state_str(outcome.state);
+    s.hub.publish(
+        json!({ "event": "remediation.completed", "id": id, "state": state_str }).to_string(),
+    );
 
     s.store
-        .set_remediation_state(&claims.tenant, id, &state_str)
+        .set_remediation_state(&claims.tenant, id, state_str)
         .await
         .map_err(|e| ApiError::Store(e.to_string()))?;
     Ok(Json(
@@ -463,15 +518,8 @@ pub async fn remediation_deny(
     if !updated {
         return Err(ApiError::NotFound);
     }
+    s.hub.publish(
+        json!({ "event": "remediation.denied", "id": id, "state": "aborted" }).to_string(),
+    );
     Ok(Json(json!({ "id": id, "state": "aborted" })))
-}
-
-fn exec_state_str(state: ExecState) -> String {
-    match state {
-        ExecState::Completed => "completed",
-        ExecState::RolledBack => "rolled_back",
-        ExecState::Aborted => "aborted",
-        ExecState::Failed => "failed",
-    }
-    .into()
 }

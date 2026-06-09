@@ -43,7 +43,7 @@
 //! [`secureops-intel`]: https://github.com/aryasoni98/secureops
 //! [`secureops-core`]: secureops_core
 
-#![allow(dead_code, unused_variables)]
+
 #![forbid(unsafe_code)]
 
 use anyhow::Result;

@@ -1,0 +1,6 @@
+id: enable-cloudtrail
+matches: [SC-AWS-CT-001]
+class: safe
+dry_run: "aws cloudtrail get-trail-status --name {trail}"
+execute: "cloudtrail.start_logging name={trail}"
+audit_required: true

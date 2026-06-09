@@ -78,6 +78,10 @@ pub fn build_router(state: AppState) -> Router {
             post(intel::remediation_approve),
         )
         .route("/remediations/{id}/deny", post(intel::remediation_deny))
+        .route(
+            "/remediations/circuit/{class}/reset",
+            post(intel::remediation_circuit_reset),
+        )
         // SSO (P8).
         .route("/auth/oidc/metadata", get(sso::oidc_metadata))
         .route("/auth/oidc/callback", post(sso::oidc_callback))

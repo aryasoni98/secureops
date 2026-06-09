@@ -307,15 +307,17 @@ mod tests {
         let state_dir = dir.path().to_string_lossy().to_string();
 
         // Seed an openclaw.json with invalid root keys present.
-        let mut seed = OpenClawConfig::default();
-        seed.exec = Some(ExecConfig {
-            approvals: Some("off".to_string()),
+        let seed = OpenClawConfig {
+            exec: Some(ExecConfig {
+                approvals: Some("off".to_string()),
+                ..Default::default()
+            }),
+            sandbox: Some(SandboxConfig {
+                mode: Some("workspace".to_string()),
+                ..Default::default()
+            }),
             ..Default::default()
-        });
-        seed.sandbox = Some(SandboxConfig {
-            mode: Some("workspace".to_string()),
-            ..Default::default()
-        });
+        };
         write_config(&state_dir, &seed).await.unwrap();
 
         let backup_dir = dir.path().join("backup");

@@ -99,12 +99,14 @@ mod tests {
 
     #[test]
     fn compare_detects_add_modify_remove() {
-        let mut base = HashBaseline::default();
-        base.files = HashMap::from([
-            ("keep".into(), "h1".into()),
-            ("change".into(), "h2".into()),
-            ("gone".into(), "h3".into()),
-        ]);
+        let base = HashBaseline {
+            files: HashMap::from([
+                ("keep".into(), "h1".into()),
+                ("change".into(), "h2".into()),
+                ("gone".into(), "h3".into()),
+            ]),
+            ..Default::default()
+        };
         let current = HashMap::from([
             ("keep".to_string(), "h1".to_string()),
             ("change".to_string(), "h2-NEW".to_string()),

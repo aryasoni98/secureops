@@ -42,7 +42,7 @@
 //! egress decision (PRODUCT.md B.5 step 3: "this PID `openat`'d a credential
 //! file 200ms ago").
 
-#![allow(dead_code, unused_variables)]
+
 #![forbid(unsafe_code)]
 
 // Re-exported for downstream crates that build [`AuditFinding`]s out of a

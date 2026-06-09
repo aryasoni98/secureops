@@ -1,0 +1,8 @@
+id: sg-open-ssh-world
+matches: [SC-SG-022]
+class: reversible
+snapshot: "capture security group ingress rules"
+execute: "ec2.revoke_ingress sg={sg} cidr=0.0.0.0/0 port=22"
+health_check: "assert no 0.0.0.0/0 on port 22"
+rollback: "re-add captured ingress rules"
+audit_required: true

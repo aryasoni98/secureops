@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+
 #![forbid(unsafe_code)]
 
 //! # secureops-crypto
@@ -629,7 +629,7 @@ mod keystore_tests {
         let params = minimal_params();
         let mut ks = Keystore::new_v2();
         let salt_bytes = from_hex(&ks.salt).unwrap();
-        ks.kdf = params.clone();
+        ks.kdf = params;
         let key = derive_key(b"hunter2", &salt_bytes, &params).unwrap();
         ks.encrypt_secret("db.password", b"supersecret", &key)
             .unwrap();
@@ -642,7 +642,7 @@ mod keystore_tests {
         let params = minimal_params();
         let mut ks = Keystore::new_v2();
         let salt = from_hex(&ks.salt).unwrap();
-        ks.kdf = params.clone();
+        ks.kdf = params;
         let key_right = derive_key(b"correct", &salt, &params).unwrap();
         let key_wrong = derive_key(b"wrong__", &salt, &params).unwrap();
         ks.encrypt_secret("x", b"data", &key_right).unwrap();
@@ -666,7 +666,7 @@ mod keystore_tests {
         let params = minimal_params();
         let mut ks = Keystore::new_v2();
         let salt = from_hex(&ks.salt).unwrap();
-        ks.kdf = params.clone();
+        ks.kdf = params;
         let key = derive_key(b"pw", &salt, &params).unwrap();
         ks.encrypt_secret("token", b"abc123", &key).unwrap();
         let bytes = ks.to_bytes().unwrap();

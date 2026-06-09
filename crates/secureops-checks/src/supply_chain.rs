@@ -119,7 +119,9 @@ impl Check for SupplyChainCheck {
                                     dsp.description, file
                                 ))
                                 .evidence(format!("{}: matches {}", file_path, source))
-                                .remediation("Review the skill source code and remove if suspicious")
+                                .remediation(
+                                    "Review the skill source code and remove if suspicious",
+                                )
                                 .owasp_asi("ASI04")
                                 .maestro(MaestroLayer::L7)
                                 .nist(NistAttackType::Poisoning)
@@ -176,10 +178,17 @@ impl Check for SupplyChainCheck {
             if secureops_intel::matches_typosquat(db, &skill.name) {
                 findings.push(
                     AuditFinding::builder("SC-SKILL-005", Severity::High, "supply-chain")
-                        .title(format!("Skill \"{}\" matches typosquat pattern", skill.name))
-                        .description("This skill name matches known ClawHavoc typosquatting patterns.")
+                        .title(format!(
+                            "Skill \"{}\" matches typosquat pattern",
+                            skill.name
+                        ))
+                        .description(
+                            "This skill name matches known ClawHavoc typosquatting patterns.",
+                        )
                         .evidence(format!("Skill name: {}", skill.name))
-                        .remediation("Verify this is the intended skill and not a malicious impersonator")
+                        .remediation(
+                            "Verify this is the intended skill and not a malicious impersonator",
+                        )
                         .owasp_asi("ASI04")
                         .maestro(MaestroLayer::L7)
                         .nist(NistAttackType::Poisoning)

@@ -264,7 +264,10 @@ impl Check for GatewayCheck {
                             "Browser relay port {} is not currently accepting connections.",
                             browser_relay_port
                         ))
-                        .evidence(format!("Port: {}, Status: closed/unreachable", browser_relay_port))
+                        .evidence(format!(
+                            "Port: {}, Status: closed/unreachable",
+                            browser_relay_port
+                        ))
                         .remediation("No action needed if browser automation is not in use")
                         .owasp_asi("ASI05")
                         .maestro(MaestroLayer::L4)
@@ -386,7 +389,9 @@ impl Check for GatewayCheck {
             findings.push(
                 AuditFinding::builder("SC-GW-010", Severity::Medium, "gateway")
                     .title("Insecure authentication allowed on Control UI")
-                    .description("allowInsecureAuth is enabled, allowing weaker authentication methods.")
+                    .description(
+                        "allowInsecureAuth is enabled, allowing weaker authentication methods.",
+                    )
                     .evidence("gateway.controlUi.allowInsecureAuth = true")
                     .remediation("Set gateway.controlUi.allowInsecureAuth to false")
                     .auto_fixable(true)

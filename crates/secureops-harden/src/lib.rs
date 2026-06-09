@@ -10,7 +10,6 @@
 //! Modules run in **priority order**: gateway(1) → credential(2) → config(3) →
 //! docker(4) → network(5).
 
-#![allow(dead_code, unused_variables)]
 #![forbid(unsafe_code)]
 
 pub mod config_hardening;
@@ -113,7 +112,10 @@ struct Manifest {
 /// writes `manifest.json`.
 pub async fn harden(
     ctx: &dyn AuditContext,
-    full: bool,
+    // TS source carries a `full` flag that toggles destructive modules; the
+    // Rust port runs the same five modules unconditionally for now, so this is
+    // accepted but ignored (kept for the public API of CLI / NAPI callers).
+    _full: bool,
     now: &str,
     ioc: Arc<IocDatabase>,
 ) -> anyhow::Result<HardenOutcome> {

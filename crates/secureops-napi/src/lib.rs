@@ -43,7 +43,7 @@
 //! Treat the JSON field names as frozen.
 
 #![forbid(unsafe_code)]
-#![allow(dead_code, unused_variables)]
+
 
 pub mod napi_surface;
 pub mod plugin;

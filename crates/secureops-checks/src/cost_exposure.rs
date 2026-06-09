@@ -89,6 +89,10 @@ fn parse_log_line(line: &str) -> Option<LogEntry> {
 /// read top-level numeric fields, matching `JSON.parse` accept/reject behavior.
 /// Not a public API; lives only to keep this crate free of a `serde_json` dep.
 mod json {
+    /// All JSON value kinds are represented for parser completeness, but only
+    /// `Object`/`Number` are read by callers — the parser still has to walk
+    /// past strings/bools/nulls/arrays to validate the surrounding object.
+    #[allow(dead_code)]
     pub enum JsonValue {
         Object(Vec<(String, JsonValue)>),
         Array(Vec<JsonValue>),

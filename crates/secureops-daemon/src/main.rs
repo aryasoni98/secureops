@@ -6,8 +6,8 @@
 //!
 //! 1. **Kill switch first** — if `<stateDir>/.secureops/killswitch` exists,
 //!    refuse to bring anything up and exit (B.4 step 1 / B.9).
-//! 2. Open the **AlertBus** and spawn its consumer (print now; SQLite + signed
-//!    audit log are Phase-2-finish / Phase-4 TODO).
+//! 2. Open the persisted hash-chain audit log, then open the **AlertBus** and
+//!    spawn its consumer (prints + appends alerts).
 //! 3. Spawn every [`Monitor`] *by value* into a [`JoinSet`], each holding a
 //!    clone of the bus and a [`CancellationToken`]; publish the circuit-breaker
 //!    `watch` channel and log on trip (B.4 steps 3–4 / B.9 step 2).
@@ -20,11 +20,14 @@
 
 #![forbid(unsafe_code)]
 
-use std::sync::Arc;
+use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
+use serde_json::{json, Value};
 use tokio::task::JoinSet;
 
+use secureops_auditlog::{AuditLog, InMemorySigner};
 use secureops_bpf::chain::EnforcementMode;
 use secureops_monitors::{
     circuit_channel, AlertBus, CancellationToken, CircuitState, CostMonitor, CredentialMonitor,
@@ -49,6 +52,55 @@ fn load_config(state_dir: &str) -> secureops_core::OpenClawConfig {
     secureops_core::OpenClawConfig::from_json_or_default(&content)
 }
 
+fn open_audit_log(state_dir: &str) -> Result<Arc<Mutex<AuditLog>>> {
+    let secureops_dir = Path::new(state_dir).join(".secureops");
+    std::fs::create_dir_all(&secureops_dir)?;
+    let path = secureops_dir.join("audit.jsonl");
+    let log = AuditLog::open(path, Box::new(InMemorySigner::generate()))?;
+    Ok(Arc::new(Mutex::new(log)))
+}
+
+/// Bring up the egress proxy (PRODUCT.md B.5) iff the operator enabled the
+/// allowlist in `openclaw.json`. Fail-closed: any host not in `egressAllowlist`
+/// is denied. No-op (just logs) when the allowlist is disabled or unset.
+fn spawn_egress_proxy(tasks: &mut JoinSet<()>, config: &secureops_core::OpenClawConfig) {
+    let net = config
+        .secureops
+        .as_ref()
+        .and_then(|s| s.network.as_ref())
+        .filter(|n| n.egress_allowlist_enabled == Some(true));
+    let Some(net) = net else {
+        println!(
+            "  egress proxy: off (set secureops.network.egressAllowlistEnabled=true to enforce)"
+        );
+        return;
+    };
+    let hosts = net.egress_allowlist.clone().unwrap_or_default();
+    let pdp: Arc<dyn secureops_proxy::PolicyDecisionPoint> =
+        Arc::new(secureops_proxy::AllowlistPdp::new(hosts.clone()));
+    let addr: std::net::SocketAddr = "127.0.0.1:8889".parse().unwrap();
+    println!(
+        "  egress proxy: ON at {addr} (set agent HTTPS_PROXY) — {} allowlisted host(s), fail-closed",
+        hosts.len()
+    );
+    tasks.spawn(async move {
+        let proxy = secureops_proxy::EgressProxy::new();
+        if let Err(e) = proxy.start(addr, pdp).await {
+            eprintln!("[egress] proxy stopped: {e}");
+        }
+    });
+}
+
+fn append_audit(audit: &Arc<Mutex<AuditLog>>, payload: Value) {
+    let Ok(mut log) = audit.lock() else {
+        eprintln!("[audit] failed to acquire audit-log lock");
+        return;
+    };
+    if let Err(e) = log.append(payload, secureops_core::now_iso()) {
+        eprintln!("[audit] append failed: {e}");
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let state_dir = resolve_state_dir();
@@ -56,8 +108,25 @@ async fn main() -> Result<()> {
     println!("SecureOps daemon — Ring-2 root of trust (PRODUCT.md A.1)");
     println!("  state dir: {state_dir}");
 
+    let audit = open_audit_log(&state_dir)?;
+    append_audit(
+        &audit,
+        json!({
+            "event": "daemon_start",
+            "stateDir": state_dir,
+            "version": env!("CARGO_PKG_VERSION"),
+        }),
+    );
+
     // Step 1 — kill switch first (B.4 step 1 / B.9).
     if secureops_fs::killswitch::is_kill_switch_active(&state_dir).await {
+        append_audit(
+            &audit,
+            json!({
+                "event": "killswitch_active",
+                "action": "daemon_refused_start",
+            }),
+        );
         println!(
             "  kill switch ACTIVE — refusing to bring up monitors/enforcement.\n  \
              Run `secureops kill --deactivate` to resume."
@@ -65,12 +134,28 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    // Step 2 — AlertBus + consumer. SQLite persistence (init_db) + signed audit
-    // log are TODO; for now alerts print to stdout.
+    // Step 2 — AlertBus + consumer. Alerts print to stdout and append to the
+    // persisted hash-chain audit log. Production keychain/TPM signing remains a
+    // follow-up; the current signer is process-local.
     let bus = AlertBus::new();
     let mut rx = bus.subscribe();
+    let audit_for_alerts = audit.clone();
     let consumer = tokio::spawn(async move {
         while let Ok(a) = rx.recv().await {
+            let severity = format!("{:?}", a.severity);
+            let monitor = a.monitor.clone();
+            let message = a.message.clone();
+            append_audit(
+                &audit_for_alerts,
+                json!({
+                    "event": "monitor_alert",
+                    "timestamp": a.timestamp,
+                    "severity": severity,
+                    "monitor": monitor,
+                    "message": message,
+                    "details": a.details,
+                }),
+            );
             let details = a.details.map(|d| format!(" — {d}")).unwrap_or_default();
             println!(
                 "[{:?}] {} :: {}{}",
@@ -104,9 +189,17 @@ async fn main() -> Result<()> {
     }
 
     // Circuit-breaker watch: log on trip (Phase 4 PEPs will hard-refuse here).
+    let audit_for_circuit = audit.clone();
     tasks.spawn(async move {
         while circuit_rx.changed().await.is_ok() {
             if *circuit_rx.borrow() == CircuitState::Tripped {
+                append_audit(
+                    &audit_for_circuit,
+                    json!({
+                        "event": "circuit_tripped",
+                        "action": "new_agent_sessions_refused",
+                    }),
+                );
                 eprintln!(
                     "[circuit] TRIPPED — new agent sessions would be refused (PRODUCT.md B.9 step 2)"
                 );
@@ -117,32 +210,7 @@ async fn main() -> Result<()> {
     // PEP: egress proxy (PRODUCT.md B.5, the P0 enforcement lever). Brought up
     // only when the operator enables the egress allowlist — fail-closed.
     let config = load_config(&state_dir);
-    let egress = config
-        .secureops
-        .as_ref()
-        .and_then(|s| s.network.as_ref())
-        .filter(|n| n.egress_allowlist_enabled == Some(true));
-    match egress {
-        Some(net) => {
-            let hosts = net.egress_allowlist.clone().unwrap_or_default();
-            let pdp: std::sync::Arc<dyn secureops_proxy::PolicyDecisionPoint> =
-                std::sync::Arc::new(secureops_proxy::AllowlistPdp::new(hosts.clone()));
-            let addr: std::net::SocketAddr = "127.0.0.1:8889".parse().unwrap();
-            println!(
-                "  egress proxy: ON at {addr} (set agent HTTPS_PROXY) — {} allowlisted host(s), fail-closed",
-                hosts.len()
-            );
-            tasks.spawn(async move {
-                let proxy = secureops_proxy::EgressProxy::new();
-                if let Err(e) = proxy.start(addr, pdp).await {
-                    eprintln!("[egress] proxy stopped: {e}");
-                }
-            });
-        }
-        None => println!(
-            "  egress proxy: off (set secureops.network.egressAllowlistEnabled=true to enforce)"
-        ),
-    }
+    spawn_egress_proxy(&mut tasks, &config);
 
     // PEP: kernel exfil-chain correlator (PRODUCT.md B.6). Enforce mode (inline
     // LSM-BPF deny) is opt-in via SECUREOPS_BPF_ENFORCE=1 and only real on

@@ -259,6 +259,27 @@ impl PlaybookEngine {
         }
     }
 
+    /// Common terminal handling for an `execute` call: trip the breaker, emit an
+    /// audit record, and return the matching [`ExecOutcome`].
+    fn finalize_execute(
+        &self,
+        pb: &Playbook,
+        audit: &dyn AuditSink,
+        result: anyhow::Result<String>,
+        actor: Option<String>,
+    ) -> ExecOutcome {
+        let (state, after) = match result {
+            Ok(after) => (ExecState::Completed, Some(after)),
+            Err(e) => (ExecState::Failed, Some(e.to_string())),
+        };
+        self.breaker.record(pb.class, state == ExecState::Completed);
+        self.audit(audit, pb, "execute", after, state, actor);
+        ExecOutcome {
+            state,
+            executed: true,
+        }
+    }
+
     /// Run a playbook. `approval` is consulted only for destructive playbooks.
     pub async fn run(
         &self,
@@ -280,38 +301,7 @@ impl PlaybookEngine {
                 if let Some(dr) = &pb.dry_run {
                     let _ = cloud.dry_run(dr).await;
                 }
-                match cloud.execute(&pb.execute).await {
-                    Ok(after) => {
-                        self.breaker.record(pb.class, true);
-                        self.audit(
-                            audit,
-                            pb,
-                            "execute",
-                            Some(after),
-                            ExecState::Completed,
-                            None,
-                        );
-                        ExecOutcome {
-                            state: ExecState::Completed,
-                            executed: true,
-                        }
-                    }
-                    Err(e) => {
-                        self.breaker.record(pb.class, false);
-                        self.audit(
-                            audit,
-                            pb,
-                            "execute",
-                            Some(e.to_string()),
-                            ExecState::Failed,
-                            None,
-                        );
-                        ExecOutcome {
-                            state: ExecState::Failed,
-                            executed: true,
-                        }
-                    }
-                }
+                self.finalize_execute(pb, audit, cloud.execute(&pb.execute).await, None)
             }
 
             PlaybookClass::Reversible => {
@@ -348,38 +338,9 @@ impl PlaybookEngine {
             }
 
             PlaybookClass::Destructive => match approval {
-                Some(Approval::Approved { by }) => match cloud.execute(&pb.execute).await {
-                    Ok(after) => {
-                        self.breaker.record(pb.class, true);
-                        self.audit(
-                            audit,
-                            pb,
-                            "execute",
-                            Some(after),
-                            ExecState::Completed,
-                            Some(by),
-                        );
-                        ExecOutcome {
-                            state: ExecState::Completed,
-                            executed: true,
-                        }
-                    }
-                    Err(e) => {
-                        self.breaker.record(pb.class, false);
-                        self.audit(
-                            audit,
-                            pb,
-                            "execute",
-                            Some(e.to_string()),
-                            ExecState::Failed,
-                            Some(by),
-                        );
-                        ExecOutcome {
-                            state: ExecState::Failed,
-                            executed: true,
-                        }
-                    }
-                },
+                Some(Approval::Approved { by }) => {
+                    self.finalize_execute(pb, audit, cloud.execute(&pb.execute).await, Some(by))
+                }
                 _ => {
                     // Denied / Timeout / no decision → never touch the cloud.
                     self.audit(audit, pb, "await_approval", None, ExecState::Aborted, None);

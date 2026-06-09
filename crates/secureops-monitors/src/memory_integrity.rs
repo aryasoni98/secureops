@@ -238,11 +238,13 @@ mod tests {
 
     #[test]
     fn baseline_mismatch_emits_high() {
-        let mut b = HashBaseline::default();
-        b.files = HashMap::from([(
-            "agents/a/MEMORY.md".to_string(),
-            secureops_intel::hash_string("original"),
-        )]);
+        let b = HashBaseline {
+            files: HashMap::from([(
+                "agents/a/MEMORY.md".to_string(),
+                secureops_intel::hash_string("original"),
+            )]),
+            ..Default::default()
+        };
         let alerts = check_memory_content(
             "MEMORY.md",
             "agents/a/MEMORY.md",
@@ -257,11 +259,13 @@ mod tests {
 
     #[test]
     fn unchanged_file_no_alert() {
-        let mut b = HashBaseline::default();
-        b.files = HashMap::from([(
-            "agents/a/MEMORY.md".to_string(),
-            secureops_intel::hash_string("same"),
-        )]);
+        let b = HashBaseline {
+            files: HashMap::from([(
+                "agents/a/MEMORY.md".to_string(),
+                secureops_intel::hash_string("same"),
+            )]),
+            ..Default::default()
+        };
         let alerts = check_memory_content("MEMORY.md", "agents/a/MEMORY.md", "same", &b, "t");
         assert!(alerts.is_empty());
     }
