@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "description": "SecureOps platform dashboard (PRODUCT.md Phase 8). Vite + React + TS. NOTE: scaffold — not yet covered by CI/Playwright in this repo.",
+  "description": "SecureOps platform dashboard (PRODUCT.md Phase 8). Vite + React + TS + Tailwind (Play CDN) + Playwright E2E.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

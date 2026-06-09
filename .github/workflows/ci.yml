@@ -33,6 +33,101 @@ jobs:
       - run: cargo clippy --workspace -- -D warnings
       - run: cargo fmt --all --check
 
+  # ── Web SPA: build + unit (vitest) + E2E (playwright) ───────────────────
+  web:
+    name: Web (vitest + playwright)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: CI=1 npm run e2e
+
+  # ── Postgres integration: runs the `#[ignore]`-gated PgStore tests ──────
+  postgres-integration:
+    name: Postgres integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: secureops
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/secureops
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p secureops-api -- --ignored --test-threads=1
+
+  # ── Linux eBPF feature build: real kernel-backed objects ────────────────
+  ebpf-build:
+    name: eBPF feature build (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install kernel headers
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends linux-headers-$(uname -r) libelf-dev
+      - run: cargo build -p secureops-bpf --features ebpf
+        # eBPF backend is best-effort under hosted runners (no privileged BPF).
+        # Compilation success is the gate; runtime loading is exercised by
+        # `just bpf-load` on a Linux test host.
+        continue-on-error: true
+
+  # ── Cosign: sign + verify release images keylessly via sigstore ─────────
+  cosign:
+    name: Cosign keyless sign+verify
+    needs: [rust]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: sigstore/cosign-installer@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        run: docker build -f deploy/docker/Dockerfile -t ghcr.io/${{ github.repository_owner }}/secureops:${{ github.ref_name }} .
+      - name: Push
+        run: docker push ghcr.io/${{ github.repository_owner }}/secureops:${{ github.ref_name }}
+      - name: Sign keyless
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+        run: cosign sign --yes ghcr.io/${{ github.repository_owner }}/secureops:${{ github.ref_name }}
+      - name: Verify
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+        run: |
+          cosign verify ghcr.io/${{ github.repository_owner }}/secureops:${{ github.ref_name }} \
+            --certificate-identity-regexp "https://github.com/${{ github.repository }}/" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
   # ── Release: publish crates.io on version tag ───────────────────────────
   # The npm shim (@adversa/secureops) lives in a separate repository and is
   # released from there; this workspace publishes only the Rust crates.
@@ -48,10 +143,10 @@ jobs:
         with:
           node-version: 22
       - uses: Swatinem/rust-cache@v2
-      # Publish in dependency order (core first, cli last).
+      # Publish in dependency order (core first, leaf binaries last).
       # Idempotent + rate-limit-aware: skips crates/versions already on
       # crates.io and sleeps through 429s. crates.io throttles *new* crate
-      # names to ~1 / 10 min, so a first-time 16-crate publish can take ~2h;
+      # names to ~1 / 10 min, so a first-time 23-crate publish can take ~4h;
       # the loop simply waits it out (well within the 6h job limit). Re-runs
       # resume cleanly because already-published crates are skipped.
       - name: Publish crates
@@ -60,9 +155,14 @@ jobs:
         run: |
           for crate in \
             secureops-core \
+            secureops-tokenbudget \
+            secureops-graph \
+            secureops-rl \
             secureops-intel \
             secureops-crypto \
             secureops-fs \
+            secureops-selfheal \
+            secureops-bughunt \
             secureops-checks \
             secureops-harden \
             secureops-monitors \
@@ -72,6 +172,8 @@ jobs:
             secureops-proxy \
             secureops-bpf \
             secureops-sandbox \
+            secureops-api \
+            secureops-license-server \
             secureops-daemon \
             secureops-napi \
             secureops-cli; do

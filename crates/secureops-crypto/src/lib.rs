@@ -518,6 +518,77 @@ pub mod signing {
         }
     }
 
+    /// In-memory TPM emulator (PRODUCT.md A.3 §"hardware-rooted"). Mirrors the
+    /// [`SigningBackend`] contract using a process-local ed25519 keystore so
+    /// integration tests can exercise the TPM-signed audit-log flow without a
+    /// physical TPM 2.0 chip. Production deploys swap in [`TpmSigner`] under
+    /// `--features tpm`.
+    #[derive(Debug, Default)]
+    pub struct InMemoryTpmSigner {
+        cache: Mutex<HashMap<String, [u8; 32]>>,
+    }
+
+    impl InMemoryTpmSigner {
+        fn seed(&self, key_id: &str) -> Result<[u8; 32]> {
+            if let Ok(guard) = self.cache.lock() {
+                if let Some(&seed) = guard.get(key_id) {
+                    return Ok(seed);
+                }
+            }
+            let mut s = [0u8; 32];
+            getrandom::getrandom(&mut s).expect("OS CSPRNG unavailable");
+            if let Ok(mut guard) = self.cache.lock() {
+                guard.insert(key_id.to_string(), s);
+            }
+            Ok(s)
+        }
+    }
+
+    impl SigningBackend for InMemoryTpmSigner {
+        fn backend(&self) -> KeyBackend {
+            KeyBackend::Tpm
+        }
+        fn ensure_key(&self, key_id: &str) -> Result<()> {
+            self.seed(key_id)?;
+            Ok(())
+        }
+        fn sign(&self, key_id: &str, digest: &[u8]) -> Result<Vec<u8>> {
+            let sk = SigningKey::from_bytes(&self.seed(key_id)?);
+            Ok(sk.sign(digest).to_bytes().to_vec())
+        }
+        fn public_key(&self, key_id: &str) -> Result<Vec<u8>> {
+            let sk = SigningKey::from_bytes(&self.seed(key_id)?);
+            Ok(sk.verifying_key().as_bytes().to_vec())
+        }
+    }
+
+    /// Sign a container-image digest the way `cosign sign-blob --key` does:
+    /// raw ed25519 over the hex/SHA256 digest bytes. Provides a local, no-network
+    /// proof of the supply-chain signer flow when sigstore creds are absent.
+    pub fn sign_image_digest(
+        backend: &dyn SigningBackend,
+        key_id: &str,
+        digest_sha256: &[u8; 32],
+    ) -> Result<Vec<u8>> {
+        backend.sign(key_id, digest_sha256)
+    }
+
+    /// Verify a digest signature produced by [`sign_image_digest`].
+    pub fn verify_image_digest(public_key: &[u8], digest_sha256: &[u8; 32], sig: &[u8]) -> bool {
+        use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+        let Ok(pk_array): std::result::Result<[u8; 32], _> = public_key.try_into() else {
+            return false;
+        };
+        let Ok(vk) = VerifyingKey::from_bytes(&pk_array) else {
+            return false;
+        };
+        let Ok(sig_array): std::result::Result<[u8; 64], _> = sig.try_into() else {
+            return false;
+        };
+        let sig = Signature::from_bytes(&sig_array);
+        vk.verify(digest_sha256, &sig).is_ok()
+    }
+
     /// Suppress unused-import warning for the stub backends.
     fn _assert_error_type(_e: CryptoError) {}
 }
@@ -631,5 +702,36 @@ mod keychain_tests {
         let pk1 = s.public_key(key_id).unwrap();
         let pk2 = s.public_key(key_id).unwrap();
         assert_eq!(pk1, pk2); // same key on both calls
+    }
+
+    #[test]
+    fn in_memory_tpm_signer_round_trips() {
+        use super::signing::{InMemoryTpmSigner, KeyBackend};
+        let s = InMemoryTpmSigner::default();
+        let kid = "secureops-tpm-test";
+        s.ensure_key(kid).unwrap();
+        assert_eq!(s.backend(), KeyBackend::Tpm);
+        let sig = s.sign(kid, b"audit-log-segment-42").unwrap();
+        let pk = s.public_key(kid).unwrap();
+        use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+        let vk = VerifyingKey::from_bytes(&pk.try_into().unwrap()).unwrap();
+        let sig = Signature::from_bytes(&sig.try_into().unwrap());
+        assert!(vk.verify(b"audit-log-segment-42", &sig).is_ok());
+    }
+
+    #[test]
+    fn cosign_like_image_digest_sign_verify() {
+        use super::signing::{sign_image_digest, verify_image_digest, InMemoryTpmSigner};
+        // Stand-in for sigstore: same primitive (ed25519 over the image
+        // SHA256), proven without network or sigstore creds.
+        let digest: [u8; 32] = [7u8; 32];
+        let s = InMemoryTpmSigner::default();
+        s.ensure_key("release-image").unwrap();
+        let sig = sign_image_digest(&s, "release-image", &digest).unwrap();
+        let pk = s.public_key("release-image").unwrap();
+        assert!(verify_image_digest(&pk, &digest, &sig));
+        // Tampered digest fails verify (sigstore-equivalent guarantee).
+        let tampered: [u8; 32] = [8u8; 32];
+        assert!(!verify_image_digest(&pk, &tampered, &sig));
     }
 }
