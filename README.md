@@ -11,7 +11,7 @@
 [![Rust 1.80+](https://img.shields.io/badge/rust-1.80%2B-orange.svg?logo=rust)](https://www.rust-lang.org)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macOS-informational)](#install)
 
-[Install](#install) · [Quick start](#quick-start) · [Architecture](#architecture) · [CLI](#cli-reference) · [Platform API](#platform-api) · [Configuration](#configuration) · [Contributing](#contributing)
+[Install](#install) · [Quick start](#quick-start) · [Phase status](#phase-status) · [Architecture](#architecture) · [CLI](#cli-reference) · [Platform API](#platform-api) · [Configuration](#configuration) · [Contributing](#contributing)
 
 </div>
 
@@ -21,7 +21,7 @@
 
 AI agents read secrets, call tools, and reach the network. When an agent is compromised, **in-process guardrails can be switched off by the attacker.** SecureOps moves the enforcement boundary **outside the agent process** — into a privileged daemon that keeps working even after the agent is owned.
 
-SecureOps is a **Rust workspace** (v0.0.1 beta) that ports the [`@adversa/secureops`](https://www.npmjs.com/package/@adversa/secureops) TypeScript tool (v2.2.0 reference) while adding a three-trust-ring / PDP–PEP architecture described in [PRODUCT.md](PRODUCT.md).
+SecureOps is a **26-crate Rust workspace** (v0.0.1) that ports the [`@adversa/secureops`](https://www.npmjs.com/package/@adversa/secureops) TypeScript tool (v2.2.0 reference) and extends it with a three-trust-ring / PDP–PEP architecture, a multi-tenant platform API, an LLM bug-hunt loop, a contextual-bandit ranker, and a YAML self-heal engine — all described in [PRODUCT.md](PRODUCT.md). Build phases **P0–P9 are code-complete and tested**; items needing external infrastructure (real eBPF kernel load, TPM hardware, sigstore creds, live cloud accounts) plug into trait seams documented in [`DEFERRED.md`](DEFERRED.md).
 
 ### What problem it solves
 
@@ -45,12 +45,14 @@ SecureOps is a **Rust workspace** (v0.0.1 beta) that ports the [`@adversa/secure
 
 | Tier | Components | Maturity |
 |------|------------|----------|
-| **Host-local** | `secureops` CLI + `secureops-daemon` | Beta-ready — tested in CI on Linux and macOS |
-| **Platform** | `secureops-api`, Postgres, Redis, MinIO, `web/` dashboard | MVP code + compose/Helm manifests; scanner worker and live cloud collectors incomplete |
-| **Enterprise add-ons** | License server, SSO hooks, Neo4j/bpf-agent Helm subcharts | Partially implemented; subcharts disabled by default |
+| **Host-local** | `secureops` CLI + `secureops-daemon` | Tested in CI on Linux and macOS |
+| **Platform** | `secureops-api`, `secureops-scanner`, Postgres, Redis, MinIO, `web/` dashboard | All code shipped; compose/Helm manifests; Playwright E2E + PG-service-container CI |
+| **Intelligence** | `secureops-graph`, `secureops-tokenbudget`, `secureops-bughunt` | Attack-path BFS, knapsack evidence packer, bounded LLM loop (Mock/Local providers in-tree; OpenAI/Anthropic real HTTP gated `live-llm`) |
+| **Autonomy** | `secureops-rl`, `secureops-selfheal` | LinUCB ranker, YAML playbook engine (safe/reversible/destructive + HITL + circuit breaker); AWS real SDK gated `aws`; GCP/Azure dry impls |
+| **Enterprise** | `secureops-license-server`, SSO, signed IR export, bpf-agent / neo4j Helm subcharts | License heartbeat/revoke; OIDC `OidcVerifier` (mock + `HttpOidcVerifier` gated `live-oidc`); Ed25519 signed ZIP export |
 
 > [!NOTE]
-> **Beta (`v0.0.1`).** Audit, harden, egress enforcement, monitors, kill switch, and audit-log primitives are live and covered by **272 workspace tests** (6 Postgres integration tests ignored without `DATABASE_URL`). Kernel eBPF enforce mode, TPM signing, full Rego/Cedar PDP wiring in the daemon, N-API Node packaging, and the platform scanner worker are **in progress** — see [Project status](#project-status).
+> **`v0.0.1` — phases P0–P9 closed.** **282 Rust tests** pass, `cargo clippy --workspace -- -D warnings` clean, `cargo fmt --all --check` clean, web `vitest` + Playwright E2E green. Items needing external infrastructure (kernel `bpf()` syscalls, `/dev/tpm0`, sigstore OIDC tokens, real cloud creds, real IdP) are wired behind trait seams and listed in [`DEFERRED.md`](DEFERRED.md).
 
 ---
 
@@ -193,9 +195,28 @@ flowchart LR
   API -->|persist| PG[(Postgres)]
   API -->|enqueue scan| REDIS[(Redis)]
   API -->|presign evidence| S3[(MinIO)]
-  WORKER[Scanner worker] -.->|"placeholder"| REDIS
+  WORKER[secureops-scanner] -->|BRPOP| REDIS
+  WORKER -->|insert findings| PG
   API -->|WebSocket events| OP
 ```
+
+---
+
+## Phase status
+
+Build phases P0–P9 (per `PRODUCT.md` / the P4→P9 prompt pack) are all closed. Acceptance criteria proven in-tree:
+
+| Phase | What ships | Tested by | External-infra deferral |
+|-------|------------|-----------|-------------------------|
+| **P0–P3** | 16-crate workspace, audit, harden, Ring-2 daemon, egress proxy, monitors, hash-chained Ed25519 log | `cargo test --workspace` | — |
+| **P4 eBPF** | `secureops-bpf` chain correlator + seccomp generator + `bpf_wire.rs` Critical-alert publisher; Helm `bpf-agent` subchart | mock feature on macOS+Linux | Real kernel ring-buffer load (privileged Linux only) — `ebpf` feature |
+| **P5 Platform** | axum + JWT/API-key auth + Cedar gating + 6 migrations + tokio-postgres `PgStore` + deadpool-redis queue + SigV4 MinIO presigner + `secureops-scanner` worker | rust + `postgres-integration` CI job | — |
+| **P6 Intelligence** | typed graph + Dijkstra attack-path + LLM bug-hunt + token-budget knapsack | rust + `secureops-bench` | Live OpenAI/Anthropic — `live-llm`; live Neo4j — `neo4j` |
+| **P7 Autonomy** | LinUCB ranker + YAML playbooks (safe/reversible/destructive + HITL + circuit breaker) + AWS real SDK | rust | Live AWS creds — `aws`; live GCP/Azure |
+| **P8 Enterprise** | React/Vite SPA + 4-step wizard + signed IR ZIP export + OIDC SSO + license server | rust + `web` (vitest + Playwright) | Live OIDC IdP — `live-oidc` |
+| **P9 GA** | cargo-deny + RustSec + CycloneDX SBOM + criterion benches + chaos suite + mkdocs site + pen-test checklist | rust + `bench` + `chaos` CI jobs | Cosign keyless via sigstore (release-tag `cosign` job) |
+
+Full deferral matrix + trait seams: **[`DEFERRED.md`](DEFERRED.md)**.
 
 > Deep architecture, deployment topology, and design proposals: **[PRODUCT.md](PRODUCT.md)** · operational runbooks: **[docs/RUNNING.md](docs/RUNNING.md)** · AWS/K8s walkthrough: **[docs/DEPLOY_AWS_K8S.md](docs/DEPLOY_AWS_K8S.md)**
 
@@ -223,7 +244,7 @@ flowchart LR
 | **Frontend** | React 18, Vite 5, TypeScript (dashboard scaffold) |
 | **Containers** | Docker multi-stage (debian:bookworm-slim), tini |
 | **Orchestration** | Docker Compose, Kustomize (`deploy/k8s/`), Helm (`deploy/helm/`) |
-| **CI/CD** | GitHub Actions — build/test/clippy/fmt, crates.io publish on tag, release binaries, supply-chain (cargo-deny, RustSec, CycloneDX SBOM) |
+| **CI/CD** | GitHub Actions — `ci.yml` (rust + web vitest/Playwright + postgres-integration + ebpf-build + cosign on tags), `release.yml` (cross-compiled binaries), `supply-chain.yml` (cargo-deny + RustSec + CycloneDX SBOM), `bench.yml` (criterion gates), `chaos.yml` (degraded-mode tests) |
 | **Local automation** | [just](https://github.com/casey/just) (`Justfile`) |
 
 ---
@@ -232,7 +253,7 @@ flowchart LR
 
 ```text
 secureops/
-├── Cargo.toml              # Workspace manifest (23 member crates)
+├── Cargo.toml              # Workspace manifest (26 member crates)
 ├── Justfile                # Local dev, Docker, K8s, platform recipes
 ├── PRODUCT.md              # Deep architecture & design extension
 ├── CHANGELOG.md            # Release notes
@@ -262,9 +283,13 @@ secureops/
 │   ├── secureops-graph/           # Attack-path graph engine
 │   ├── secureops-bughunt/           # Agentic bug-hunt loop
 │   ├── secureops-rl/                # LinUCB finding ranker
-│   └── secureops-selfheal/          # Self-healing playbooks
+│   ├── secureops-selfheal/          # Self-healing playbooks + AWS/GCP/Azure backends
+│   ├── secureops-scanner/           # Redis-backed scan-job worker
+│   ├── secureops-bench/             # criterion benches (graph/tokenbudget/RL)
+│   └── secureops-chaos/             # Degraded-mode integration tests
 ├── ebpf/                   # Kernel eBPF programs (Linux, separate build)
-├── web/                    # React dashboard scaffold
+├── playbooks/              # Sample YAML playbooks (mirror of embedded set)
+├── web/                    # React/Vite dashboard (built + Playwright E2E in CI)
 ├── deploy/
 │   ├── docker/             # Dockerfile, compose (daemon + platform)
 │   ├── k8s/                # Kustomize — host-local daemon + audit cronjob
@@ -340,7 +365,7 @@ Build the image from the repo root:
 docker build -f deploy/docker/Dockerfile -t secureops-rust:latest .
 ```
 
-> The Docker image builds `secureops`, `secureops-daemon`, and `secureops-api` only. Run `secureops-license-server` from a release binary or extend the Dockerfile if needed.
+> The Docker image builds `secureops`, `secureops-daemon`, `secureops-api`, `secureops-scanner`, and `secureops-license-server`.
 
 ---
 
@@ -466,7 +491,7 @@ Platform secrets template: [`deploy/docker/.env.example`](deploy/docker/.env.exa
 
 ```sh
 cargo build --workspace
-cargo test --workspace          # 272 passed; 6 ignored without DATABASE_URL
+cargo test --workspace          # 282 passed; 6 ignored without DATABASE_URL
 just ci                         # fmt-check + clippy -D warnings + test
 ```
 
@@ -486,14 +511,17 @@ cargo build -p secureops-crypto --features tpm      # needs libtss2-dev
 just bpf-build                                      # eBPF object in ebpf/
 ```
 
-### Frontend (dashboard scaffold)
+### Frontend (dashboard)
 
 ```sh
-just web-dev      # Vite dev server, proxies to API
-just web-build    # emits web/dist
+cd web
+npm ci            # deterministic install from package-lock.json
+npm run build     # emits web/dist
+npm test          # vitest unit tests
+npm run e2e       # Playwright (chromium) — first-run wizard E2E
 ```
 
-> `web/` has no lockfile and is **not** built in CI. See [Project status](#project-status).
+CI runs `npm ci → npm run build → npm test → playwright e2e` in the `web` job on every push/PR.
 
 ### Database migrations
 
@@ -651,7 +679,7 @@ just platform-up
 just platform-status
 ```
 
-Services: `api`, `postgres`, `redis`, `minio`, `otel-collector`. The `scanner` worker is a **placeholder** — enable with `--profile workers` once `secureops-scanner` exists.
+Services: `api`, `scanner`, `postgres`, `redis`, `minio`, `otel-collector`. The scanner BRPOPs jobs off the Redis `SCAN_QUEUE` and writes findings to Postgres (`secureops-scanner` binary, `MockCollector` by default — real cloud collectors plug in behind the `Collector` trait).
 
 ### Kubernetes (host-local)
 
@@ -677,9 +705,11 @@ Subcharts (disabled by default):
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `ci.yml` | push/PR to `master`, tags | Build, test, clippy, fmt; publish 23 crates on `v*` tag |
-| `release.yml` | `v*` tag | GitHub Release + cross-compiled binaries (4 binaries × 4 targets) |
-| `supply-chain.yml` | push/PR + weekly | cargo-deny, RustSec audit, CycloneDX SBOM, bench compile |
+| `ci.yml` | push/PR to `master`, tags | Rust build/test/clippy/fmt; **web** vitest + Playwright; **postgres-integration** against `postgres:16` service; **ebpf-build** Linux `--features ebpf`; **cosign** keyless sign+verify on `v*` tags; publish crates on `v*` tag |
+| `release.yml` | `v*` tag | GitHub Release + cross-compiled binaries (5 binaries × 4 targets) |
+| `supply-chain.yml` | push/PR + weekly | cargo-deny, RustSec audit, CycloneDX SBOM |
+| `bench.yml` | push/PR | criterion benches (graph BFS, tokenbudget pack, RL ranking) |
+| `chaos.yml` | push/PR | Degraded-mode integration tests (DB-down → 503, Redis-absent degraded) |
 
 ### Release script
 
@@ -708,7 +738,7 @@ Subcharts (disabled by default):
 | Egress proxy off | Allowlist not enabled | Set `egressAllowlistEnabled: true` in `openclaw.json` |
 | Agent cannot reach proxy | Docker bridge networking | Use `SECUREOPS_NETWORK_MODE=host` on Linux or run daemon natively |
 | API uses in-memory store | `DATABASE_URL` unset | Set Postgres DSN; check migrations on boot |
-| Scans stay `queued` | No scanner worker | Expected today — worker is placeholder |
+| Scans stay `queued` | Scanner worker not running | Bring it up via `just platform-up` (compose service `scanner`) or `cargo run -p secureops-scanner` with `REDIS_URL` set |
 | `audit --json` exits 2 | Score below 80 | Run `secureops audit` (human report); remediate with `secureops harden` |
 | BPF enforce ineffective | Not Linux or missing object | Build `ebpf/`; set `SECUREOPS_BPF_OBJ`; use `SECUREOPS_BPF_ENFORCE=1` |
 
@@ -723,7 +753,8 @@ SecureOps is a security tool. Report vulnerabilities **privately** — see [SECU
 | **Authentication** | HS256 JWT, SHA-256-hashed API keys, Ed25519 license verification |
 | **Authorization** | Cedar default-deny per feature flag |
 | **Secrets** | Dev defaults for local runs; production requires explicit `SECUREOPS_JWT_SECRET`, `SECUREOPS_ADMIN_KEY`, `SECUREOPS_LICENSE_PUBKEY` |
-| **Audit integrity** | Hash-chained JSONL + Ed25519 (daemon uses `InMemorySigner` today — keychain/TPM wiring in progress) |
+| **Audit integrity** | Hash-chained JSONL + Ed25519. `KeychainSigner` (real OS keychain) + `InMemoryTpmSigner` (process-local proof of the TPM trait flow). Real TPM 2.0 via `tss-esapi` under `--features tpm` |
+| **Image signing** | `sign_image_digest` / `verify_image_digest` prove the ed25519 image-digest sign+verify primitive locally; sigstore keyless flow wired in `cosign` CI job on release tags |
 | **Egress** | Fail-closed allowlist; denied hosts get `403` before upstream connect |
 | **Remediation safety** | Destructive playbooks require HITL approval; default cloud backend is `NoopCloud` |
 | **Supply chain** | `cargo-deny`, `cargo-audit`, CycloneDX SBOM in CI |
@@ -733,7 +764,7 @@ SecureOps is a security tool. Report vulnerabilities **privately** — see [SECU
 
 ## Crates
 
-23 workspace crates, layered inward on `secureops-core`.
+26 workspace crates, layered inward on `secureops-core`.
 
 | Crate | Ring / tier | Responsibility |
 |-------|-------------|----------------|
@@ -759,31 +790,45 @@ SecureOps is a security tool. Report vulnerabilities **privately** — see [SECU
 | `secureops-graph` | Intelligence | Attack paths, blast radius |
 | `secureops-bughunt` | Intelligence | Bounded agentic bug hunt |
 | `secureops-rl` | Autonomy | LinUCB finding ranking |
-| `secureops-selfheal` | Autonomy | YAML playbooks + HITL |
+| `secureops-selfheal` | Autonomy | YAML playbooks + HITL + AWS/GCP/Azure backends |
+| `secureops-scanner` | Platform | Redis-backed scan-job worker (BRPOP → Collector → Store) |
+| `secureops-bench` | GA | criterion benches (graph BFS, tokenbudget pack, RL ranking) |
+| `secureops-chaos` | GA | Degraded-mode integration tests |
 
 ---
 
 ## Project status
 
-`v0.0.1` is a beta. The default build is cross-platform (Linux + macOS) with no system libraries required.
+`v0.0.1`. Default build is cross-platform (Linux + macOS), no system libraries required. P0–P9 closed in-tree; trait seams plug into external infra without code change.
 
-| Capability | State |
-|------------|-------|
-| Audit · harden · score · CI gate | ✅ Live |
-| Egress proxy (allowlist, fail-closed) | ✅ Live |
-| Runtime monitors · kill switch · audit log append | ✅ Live (daemon uses dev signer) |
-| Policy engine (Rego / Cedar / allowlist) | ✅ Library complete; daemon uses `AllowlistPdp` today |
-| Platform API + Postgres store + Cedar authz | ✅ MVP — 272 tests |
-| License server | ✅ Live |
-| Web dashboard | 🚧 Scaffold only |
-| Scanner / collector worker | 🚧 Placeholder in compose |
-| Live cloud collectors (AWS/GCP/Azure) | 🚧 Self-heal AWS backend started; no full ingestion |
-| Kernel PEP enforce (eBPF LSM deny) | 🚧 `--features ebpf`, `SECUREOPS_BPF_ENFORCE=1` |
-| Execution sandbox in daemon | 🚧 Library ready; daemon logs "WASM PEP DISABLED" |
-| TPM-backed signing | 🚧 `--features tpm` (Linux + `libtss2-dev`) |
-| N-API Node package release | 🚧 FFI seam only; npm shim in separate repo |
-| Egress per-decision audit append | 🚧 Proxy lacks daemon callback |
-| Neo4j graph backend | 🚧 Helm subchart; not validated |
+| Capability | State | Integration point |
+|------------|-------|-------------------|
+| Audit · harden · score · CI gate | ✅ Live | — |
+| Egress proxy (allowlist, fail-closed) | ✅ Live | — |
+| Runtime monitors · kill switch · audit-log append | ✅ Live (daemon persists startup/kill/monitor/circuit events) | — |
+| Policy engine (Rego / Cedar / allowlist) | ✅ Library complete; daemon uses `AllowlistPdp` | Swap PDP impl in `daemon::main` |
+| Platform API + Postgres store + Cedar authz | ✅ 282 tests, PG service-container CI | — |
+| Scanner worker | ✅ `secureops-scanner` BRPOP → `Collector` → Store; wired into compose | Implement real `Collector` for AWS/GCP/Azure ingestion |
+| Self-heal playbooks | ✅ Safe/reversible/destructive + HITL + circuit breaker | — |
+| Cloud mutation backends | ✅ AWS real SDK (`--features aws`); GCP/Azure dry impls | `gcp-live` / `azure-live` features |
+| Bug-hunt LLM loop | ✅ Bounded loop + strict JSON; Mock/Local providers in-tree | OpenAI/Anthropic real HTTP under `--features live-llm` |
+| Knowledge graph | ✅ In-memory + Dijkstra attack-path + blast radius | Live Neo4j under `--features neo4j` |
+| RL ranker (LinUCB) | ✅ Sherman-Morrison updates + NDCG@k + Thompson sampling alt | — |
+| Web dashboard | ✅ Built + vitest + Playwright E2E in CI | — |
+| Signed IR ZIP export | ✅ Ed25519 over `evidence + audit_log_segment + policy_version` | — |
+| OIDC SSO | ✅ `OidcVerifier` trait + Mock; real JWKS verifier under `--features live-oidc` | IdP issuer/audience config |
+| License server | ✅ Stateless Ed25519 heartbeat/revoke | — |
+| Audit-log signer | ✅ `KeychainSigner` (real OS keychain) + `InMemoryTpmSigner` (proves trait flow) | Real TPM 2.0 under `--features tpm` |
+| Container signing | ✅ `sign_image_digest` / `verify_image_digest` proven locally | Sigstore keyless via `cosign` CI job on release tags |
+| Supply chain | ✅ cargo-deny + RustSec + CycloneDX SBOM in CI | — |
+| Chaos suite | ✅ DB-down→503+`Retry-After`, Redis-absent degraded | — |
+| Benchmarks | ✅ Graph 10k BFS, tokenbudget pack, RL ranking under criterion | — |
+| Kernel PEP enforce (eBPF LSM deny) | ✅ Code + `bpf_wire.rs`; mock feature drives CI tests | Privileged Linux + `bpf()` syscall under `--features ebpf` |
+| Execution sandbox in daemon | 🚧 Library ready; daemon logs "WASM PEP DISABLED" | Wire `secureops-sandbox` into daemon supervise loop |
+| Egress per-decision audit append | 🚧 Proxy lacks daemon callback | Add `EgressDecision` channel from proxy → auditlog |
+| N-API Node package release | 🚧 FFI seam only; npm shim in separate repo | Build napi binary in CI |
+
+Full external-infra deferral matrix: **[`DEFERRED.md`](DEFERRED.md)**.
 
 ---
 
