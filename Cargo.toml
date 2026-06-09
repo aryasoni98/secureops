@@ -29,6 +29,7 @@ members = [
     "crates/secureops-daemon",   # privileged binary wiring PDP + PEPs + AlertBus + auditlog
     # ---- Platform services (blueprint Phase 5) ----
     "crates/secureops-api",      # axum HTTP API: license/auth/Cedar/WS + Postgres/Redis/S3 store
+    "crates/secureops-scanner",  # scan-job worker: BRPOP from Redis → Collector → Store.insert_finding
     # ---- Intelligence layer (blueprint Phase 6) ----
     "crates/secureops-tokenbudget", # LLM context packing: knapsack + dedup/schema-ref/diff/map-reduce
     "crates/secureops-graph",       # security knowledge graph: typed edges, attack-path Dijkstra, blast radius
@@ -38,6 +39,9 @@ members = [
     "crates/secureops-selfheal",    # YAML self-healing playbooks: safe/reversible/destructive + HITL + circuit breaker
     # ---- Enterprise (blueprint Phase 8) ----
     "crates/secureops-license-server", # stateless Ed25519 license heartbeat/revoke server
+    # ---- Hardening + GA (blueprint Phase 9) ----
+    "crates/secureops-chaos",          # controlled-failure drills (Postgres/Redis/LLM/license/MinIO)
+    "crates/secureops-bench",          # criterion perf benchmarks (graph BFS, token packing, RL)
 ]
 
 [workspace.package]

@@ -15,6 +15,14 @@ serde_json = { workspace = true }
 serde_yaml = "0.9"            # pure-Rust YAML (unsafe-libyaml port; no C/cc)
 async-trait = { workspace = true }
 anyhow = { workspace = true }
+# Real AWS backend (gated). aws-sdk v1 pulls aws-lc-rs (cc>=1.1) — usable now
+# that the tree-sitter bump lifted the cc cap. Off by default (heavy).
+aws-config = { version = "1", optional = true }
+aws-sdk-s3 = { version = "1", optional = true }
+aws-sdk-cloudtrail = { version = "1", optional = true }
+
+[features]
+aws = ["dep:aws-config", "dep:aws-sdk-s3", "dep:aws-sdk-cloudtrail"]
 
 [dev-dependencies]
 tokio = { workspace = true }

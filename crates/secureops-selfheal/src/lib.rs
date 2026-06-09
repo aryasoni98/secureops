@@ -393,7 +393,7 @@ impl PlaybookEngine {
     }
 }
 
-/// The five sample playbooks shipped with SecureOps (PRODUCT.md §19).
+/// The six sample playbooks shipped with SecureOps (PRODUCT.md §19).
 pub fn sample_playbooks() -> Vec<Playbook> {
     [
         S3_PUBLIC_ACL,
@@ -401,10 +401,35 @@ pub fn sample_playbooks() -> Vec<Playbook> {
         GCS_PUBLIC_BUCKET,
         K8S_PRIVILEGED_POD,
         ENABLE_CLOUDTRAIL,
+        AZURE_NSG_OPEN_RDP,
     ]
     .iter()
     .map(|y| Playbook::from_yaml(y).expect("embedded playbook parses"))
     .collect()
+}
+
+/// Load every `*.yaml`/`*.yml` playbook under `dir`. Returns the parsed set
+/// alphabetically. Errors are propagated for the first invalid playbook so
+/// operators see a clear failure at startup.
+pub fn load_dir(dir: impl AsRef<std::path::Path>) -> anyhow::Result<Vec<Playbook>> {
+    let mut entries: Vec<std::path::PathBuf> = std::fs::read_dir(dir.as_ref())?
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| {
+            matches!(
+                p.extension().and_then(|s| s.to_str()),
+                Some("yaml") | Some("yml")
+            )
+        })
+        .collect();
+    entries.sort();
+    let mut out = Vec::with_capacity(entries.len());
+    for path in entries {
+        let yaml = std::fs::read_to_string(&path)?;
+        let pb = Playbook::from_yaml(&yaml)
+            .map_err(|e| anyhow::anyhow!("playbook {} failed to parse: {e}", path.display()))?;
+        out.push(pb);
+    }
+    Ok(out)
 }
 
 pub const S3_PUBLIC_ACL: &str = r#"
@@ -413,7 +438,7 @@ matches: [SC-S3-001]
 class: reversible
 dry_run: "aws s3api get-bucket-acl --bucket {bucket}"
 snapshot: "capture current bucket acl"
-execute: "aws s3api put-bucket-acl --bucket {bucket} --acl private"
+execute: "s3.put_bucket_acl bucket={bucket} acl=private"
 health_check: "aws s3api get-bucket-acl --bucket {bucket} | assert not public"
 rollback: "restore bucket acl from snapshot"
 audit_required: true
@@ -424,7 +449,7 @@ id: sg-open-ssh-world
 matches: [SC-SG-022]
 class: reversible
 snapshot: "capture security group ingress rules"
-execute: "revoke ingress 0.0.0.0/0:22 on {sg}"
+execute: "ec2.revoke_ingress sg={sg} cidr=0.0.0.0/0 port=22"
 health_check: "assert no 0.0.0.0/0 on port 22"
 rollback: "re-add captured ingress rules"
 "#;
@@ -434,7 +459,7 @@ id: gcs-public-bucket
 matches: [SC-GCS-003]
 class: reversible
 snapshot: "capture iam policy on {bucket}"
-execute: "gsutil iam ch -d allUsers {bucket}"
+execute: "gcs.remove_iam_member bucket={bucket} member=allUsers"
 health_check: "assert allUsers not present"
 rollback: "restore iam policy from snapshot"
 "#;
@@ -443,7 +468,7 @@ pub const K8S_PRIVILEGED_POD: &str = r#"
 id: k8s-privileged-pod
 matches: [SC-K8S-011]
 class: destructive
-execute: "kubectl delete pod {pod} -n {namespace}"
+execute: "k8s.delete_pod namespace={namespace} pod={pod}"
 audit_required: true
 "#;
 
@@ -452,8 +477,106 @@ id: enable-cloudtrail
 matches: [SC-AWS-CT-001]
 class: safe
 dry_run: "aws cloudtrail get-trail-status --name {trail}"
-execute: "aws cloudtrail start-logging --name {trail}"
+execute: "cloudtrail.start_logging name={trail}"
 "#;
+
+pub const AZURE_NSG_OPEN_RDP: &str = r#"
+id: azure-nsg-open-rdp
+matches: [SC-AZ-NSG-014]
+class: reversible
+snapshot: "capture nsg inbound rules"
+execute: "azure.nsg_revoke_rule nsg={nsg} cidr=0.0.0.0/0 port=3389"
+health_check: "assert no 0.0.0.0/0 on port 3389"
+rollback: "re-add captured nsg rules"
+audit_required: true
+"#;
+
+/// A typed cloud remediation action parsed from a playbook step. Lets a real
+/// provider backend (e.g. [`aws::AwsCloud`]) execute structured operations
+/// instead of interpreting opaque strings. Step format: `service.op k=v k=v`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CloudAction {
+    PutBucketAcl {
+        bucket: String,
+        acl: String,
+    },
+    RevokeSecurityGroupIngress {
+        sg: String,
+        cidr: String,
+        port: String,
+    },
+    StartCloudTrail {
+        name: String,
+    },
+    GcsRemoveIamMember {
+        bucket: String,
+        member: String,
+    },
+    DeleteK8sPod {
+        namespace: String,
+        pod: String,
+    },
+    AzureNsgRevokeRule {
+        nsg: String,
+        cidr: String,
+        port: String,
+    },
+    GcpFirewallRevoke {
+        firewall: String,
+        cidr: String,
+    },
+    /// Unrecognized op — carries the raw step (a backend may log/skip it).
+    Unknown(String),
+}
+
+/// Parse a structured playbook step (`"service.op key=value ..."`) into a
+/// [`CloudAction`]. Unrecognized ops map to [`CloudAction::Unknown`].
+pub fn parse_step(step: &str) -> CloudAction {
+    let mut parts = step.split_whitespace();
+    let op = parts.next().unwrap_or("");
+    let kv: std::collections::HashMap<&str, &str> =
+        parts.filter_map(|p| p.split_once('=')).collect();
+    let g = |k: &str| kv.get(k).copied().unwrap_or("").to_string();
+    match op {
+        "s3.put_bucket_acl" => CloudAction::PutBucketAcl {
+            bucket: g("bucket"),
+            acl: g("acl"),
+        },
+        "ec2.revoke_ingress" => CloudAction::RevokeSecurityGroupIngress {
+            sg: g("sg"),
+            cidr: g("cidr"),
+            port: g("port"),
+        },
+        "cloudtrail.start_logging" => CloudAction::StartCloudTrail { name: g("name") },
+        "gcs.remove_iam_member" => CloudAction::GcsRemoveIamMember {
+            bucket: g("bucket"),
+            member: g("member"),
+        },
+        "k8s.delete_pod" => CloudAction::DeleteK8sPod {
+            namespace: g("namespace"),
+            pod: g("pod"),
+        },
+        "azure.nsg_revoke_rule" => CloudAction::AzureNsgRevokeRule {
+            nsg: g("nsg"),
+            cidr: g("cidr"),
+            port: g("port"),
+        },
+        "gcp.firewall_revoke" => CloudAction::GcpFirewallRevoke {
+            firewall: g("firewall"),
+            cidr: g("cidr"),
+        },
+        _ => CloudAction::Unknown(step.to_string()),
+    }
+}
+
+/// Live AWS backend (gated `aws` feature): executes parsed [`CloudAction`]s via
+/// the AWS SDK. Unblocked by the tree-sitter bump (cc≥1.1). Gated so the default
+/// build stays light; non-AWS actions (GCP/K8s) return an unsupported error.
+#[cfg(feature = "aws")]
+pub mod aws;
+
+pub mod azure;
+pub mod gcp;
 
 #[cfg(test)]
 mod tests {
@@ -521,7 +644,8 @@ mod tests {
         assert_eq!(pb("s3-public-acl").class, PlaybookClass::Reversible);
         assert_eq!(pb("k8s-privileged-pod").class, PlaybookClass::Destructive);
         assert_eq!(pb("enable-cloudtrail").class, PlaybookClass::Safe);
-        assert_eq!(sample_playbooks().len(), 5);
+        assert_eq!(sample_playbooks().len(), 6);
+        assert_eq!(pb("azure-nsg-open-rdp").class, PlaybookClass::Reversible);
     }
 
     #[tokio::test]
@@ -637,5 +761,62 @@ mod tests {
         let out = eng.run(&pb("s3-public-acl"), &cloud, None, &audit).await;
         assert_eq!(out.state, ExecState::Aborted);
         assert_eq!(cloud.execute_calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn parse_step_maps_sample_playbook_actions() {
+        assert_eq!(
+            parse_step("s3.put_bucket_acl bucket=b1 acl=private"),
+            CloudAction::PutBucketAcl {
+                bucket: "b1".into(),
+                acl: "private".into()
+            }
+        );
+        assert_eq!(
+            parse_step("ec2.revoke_ingress sg=sg-1 cidr=0.0.0.0/0 port=22"),
+            CloudAction::RevokeSecurityGroupIngress {
+                sg: "sg-1".into(),
+                cidr: "0.0.0.0/0".into(),
+                port: "22".into()
+            }
+        );
+        assert_eq!(
+            parse_step("cloudtrail.start_logging name=trail-1"),
+            CloudAction::StartCloudTrail {
+                name: "trail-1".into()
+            }
+        );
+        assert!(matches!(
+            parse_step("totally unknown step"),
+            CloudAction::Unknown(_)
+        ));
+    }
+
+    #[test]
+    fn load_dir_reads_yaml_playbooks_from_disk() {
+        let dir = std::env::temp_dir().join(format!("secureops-selfheal-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("a.yaml"), S3_PUBLIC_ACL).unwrap();
+        std::fs::write(dir.join("b.yml"), ENABLE_CLOUDTRAIL).unwrap();
+        std::fs::write(dir.join("ignored.txt"), "not a playbook").unwrap();
+        let pbs = load_dir(&dir).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(pbs.len(), 2);
+        assert!(pbs.iter().any(|p| p.id == "s3-public-acl"));
+        assert!(pbs.iter().any(|p| p.id == "enable-cloudtrail"));
+    }
+
+    #[test]
+    fn every_sample_playbook_step_parses_to_a_known_action() {
+        // The shipped playbooks must use the structured format AwsCloud expects.
+        for pb in sample_playbooks() {
+            assert!(
+                !matches!(parse_step(&pb.execute), CloudAction::Unknown(_)),
+                "playbook {} has an unparseable execute step: {}",
+                pb.id,
+                pb.execute
+            );
+        }
     }
 }

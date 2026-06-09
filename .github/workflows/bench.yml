@@ -1,0 +1,27 @@
+name: Performance benchmarks
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    paths:
+      - 'crates/secureops-graph/**'
+      - 'crates/secureops-tokenbudget/**'
+      - 'crates/secureops-rl/**'
+      - 'crates/secureops-bench/**'
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Compile-test benches
+        # `--test` runs each criterion bench once to assert it still compiles
+        # and the in-bench `assert!`s hold. Full regression runs land in a
+        # nightly job once a baseline is recorded.
+        run: |
+          cargo bench -p secureops-bench --bench graph_bfs -- --test
+          cargo bench -p secureops-bench --bench tokenbudget -- --test
+          cargo bench -p secureops-bench --bench rl_ranking -- --test

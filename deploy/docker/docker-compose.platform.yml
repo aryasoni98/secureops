@@ -38,19 +38,21 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # Scan/bug-hunt worker. Off by default (no `secureops-scanner` binary yet —
-  # P6/P7). Enable with `--profile workers` once it lands; replace `command`.
+  # Scan-job worker (PRODUCT.md Phase 5b). BRPOPs scan jobs off the Redis
+  # SCAN_QUEUE, runs the configured collector, and writes Findings to Postgres.
   scanner:
     image: secureops-rust:latest
-    command: ["sh", "-c", "echo 'scanner worker placeholder — implemented in P6/P7'; sleep infinity"]
+    command: ["secureops-scanner"]
     environment:
       DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
       REDIS_URL: "redis://redis:6379"
+      SECUREOPS_SCAN_QUEUE: "secureops:scans"
     networks: [backend]
     depends_on:
       postgres:
         condition: service_healthy
-    profiles: ["workers"]
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
   postgres:
