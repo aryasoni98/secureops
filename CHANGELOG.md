@@ -1,5 +1,71 @@
 # Changelog
 
+## Unreleased — P4–P9 closure (2026-06-10)
+
+Phases P4–P9 from the build pack closed in-tree: **282 Rust tests** pass, `cargo clippy --workspace -- -D warnings` clean, `cargo fmt --all --check` clean, web `vitest` + Playwright E2E green.
+
+### New crates
+
+- `secureops-scanner` — Redis-backed scan-job worker (BRPOP → `Collector` trait → Store). Ships with `MockCollector`; wired into `docker-compose.platform.yml` and the platform Dockerfile.
+- `secureops-bench` — criterion benches: `graph_bfs` (10k-node Dijkstra), `tokenbudget` pack ratio, `rl_ranking` LinUCB throughput.
+- `secureops-chaos` — degraded-mode integration suite: DB-down → `503` + `Retry-After`, Redis-absent enqueue degrades, store errors surface as 503 not 500.
+
+### Cloud self-heal backends (`secureops-selfheal`)
+
+- `aws::AwsCloud` — real `aws-sdk-s3` / `aws-sdk-cloudtrail` backend gated `--features aws`. Executes parsed `CloudAction::PutBucketAcl` / `StartCloudTrail`.
+- `GcpCloud` / `AzureCloud` — dry, in-process impls that log every parsed `CloudAction`. Ready for `gcp-live` / `azure-live` SDK swap-in without touching the engine.
+- 6 sample playbooks shipped both embedded (`sample_playbooks()`) and as standalone files under `playbooks/` (`s3-public-acl`, `sg-open-ssh-world`, `gcs-public-bucket`, `k8s-privileged-pod`, `enable-cloudtrail`, `azure-nsg-open-rdp`).
+- `Playbook::load_dir` reads YAML playbooks from disk.
+
+### Crypto signers (`secureops-crypto`)
+
+- `signing::InMemoryTpmSigner` — process-local ed25519 emulator that mirrors the `SigningBackend` trait. Proves the TPM-signed audit-log flow without `/dev/tpm0`.
+- `signing::sign_image_digest` / `signing::verify_image_digest` — cosign-equivalent ed25519 image-digest sign+verify. Local proof of the supply-chain signer; tampered digest fails verify.
+- 3 new tests in `keychain_tests`.
+
+### CI workflows (`.github/workflows/`)
+
+- `ci.yml` gains four jobs:
+  - **`web`** — `npm ci` → `npm run build` → `vitest` → `playwright install chromium` → E2E first-run wizard.
+  - **`postgres-integration`** — `postgres:16` service container; runs `cargo test -p secureops-api -- --ignored` against `DATABASE_URL`.
+  - **`ebpf-build`** — Linux runner builds `secureops-bpf --features ebpf` (continue-on-error since hosted runners can't load BPF).
+  - **`cosign`** (release-tag only) — sigstore keyless sign + verify of `ghcr.io/{owner}/secureops:{tag}` with OIDC token.
+- New `bench.yml` and `chaos.yml` workflows.
+- `release.yml` cross-compiles 5 binaries (CLI, daemon, API, scanner, license-server) for Linux+macOS × x86_64+arm64.
+
+### Web dashboard (`web/`)
+
+- Split monolithic `App.tsx` into `wizard.tsx`, `pages.tsx`, `components.tsx`, `setup.ts`; `App.tsx` becomes a thin router with a `RouteSpec` table.
+- `vitest.config.ts` + `src/api.test.ts` (token round-trip smoke test).
+- `playwright.config.ts` + `tests/wizard.spec.ts` (end-to-end first-run wizard: license → LLM keys → cloud → scan → dashboard).
+- `package-lock.json` committed for deterministic `npm ci` in CI.
+
+### Platform API (`secureops-api`)
+
+- `intel.rs` wires the four intelligence engines into per-tenant `AppState`:
+  - `/graph/rebuild`, `/graph/paths`, `/graph/blast-radius/{node}`
+  - `/rl/feedback`, `/rl/stats` + LinUCB re-ranking inside `/findings`
+  - `/bughunt` runs `LocalProvider`; `/bughunt/{job_id}` polls status
+  - `/remediations`, `/remediations/queue`, `/remediations/{id}/approve|deny`
+- Remediations + RL feedback now persisted via the Store (tables `005_remediations_feedback`).
+- Live OpenAI / Anthropic HTTP providers under `--features live-llm`.
+- Live Neo4j graph backend under `--features neo4j`.
+- Real OIDC `HttpOidcVerifier` (JWKS fetch + RS256) under `--features live-oidc`.
+- SPA embedding via `tower-http::ServeDir`.
+
+### Docs
+
+- `DEFERRED.md` — 9 items needing external infrastructure (eBPF kernel load, TPM hardware, sigstore creds, live LLM/OIDC/cloud accounts, live Neo4j/Redis/MinIO), each mapped to its trait seam + verification matrix per phase.
+- `docs/` mkdocs site: `api.md`, `architecture.md`, `deploy-{aws,gcp,azure}.md`, `playbooks.md`, `rl-feedback.md`, `license.md`, `pen-test-checklist.md`.
+- README upgraded with Phase status table, refreshed project status, integration points.
+- Dropped stale `LAUNCH_REPORT.md` / `REPORT.md`.
+
+### Dependencies
+
+- `tree-sitter` 0.22 → 0.24, `tree-sitter-javascript` 0.21 → 0.23 (lifts workspace `cc < 1.1` cap; unblocks `aws-sdk` and other cc-heavy deps).
+
+---
+
 ## v0.0.1 — Rust rewrite: production-grade PDP/PEP enforcement (2026-06-01)
 
 Full TypeScript → Rust migration. Feature-complete, TS-faithful, zero `todo!()` panics.
