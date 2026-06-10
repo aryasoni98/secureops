@@ -24,7 +24,7 @@
 
 AI agents read secrets, call tools, and reach the network. When an agent is compromised, **in-process guardrails can be switched off by the attacker.** SecureOps moves the enforcement boundary **outside the agent process** - into a privileged daemon that keeps working even after the agent is owned.
 
-SecureOps is a **26-crate Rust workspace** (v0.0.1) that ports the [`@aryasoni98/secureops`](https://www.npmjs.com/package/@aryasoni98/secureops) TypeScript tool (v2.2.0 reference) and extends it with a three-trust-ring / PDP–PEP architecture, a multi-tenant platform API, an LLM bug-hunt loop, a contextual-bandit ranker, and a YAML self-heal engine - all described in [PRODUCT.md](PRODUCT.md). Build phases **P0–P9 are code-complete and tested**; items needing external infrastructure (real eBPF kernel load, TPM hardware, sigstore creds, live cloud accounts) plug into trait seams documented in [`DEFERRED.md`](DEFERRED.md).
+SecureOps is a **26-crate Rust workspace** (v0.0.2) that ports the [`@aryasoni98/secureops`](https://www.npmjs.com/package/@aryasoni98/secureops) TypeScript tool (v2.2.0 reference) and extends it with a three-trust-ring / PDP–PEP architecture, a multi-tenant platform API, an LLM bug-hunt loop, a contextual-bandit ranker, and a YAML self-heal engine - all described in [PRODUCT.md](PRODUCT.md). Build phases **P0–P9 are code-complete and tested**; items needing external infrastructure (real eBPF kernel load, TPM hardware, sigstore creds, live cloud accounts) plug into trait seams documented in [`DEFERRED.md`](DEFERRED.md).
 
 ### What problem it solves
 
@@ -55,7 +55,7 @@ SecureOps is a **26-crate Rust workspace** (v0.0.1) that ports the [`@aryasoni98
 | **Enterprise** | `secureops-license-server`, SSO, signed IR export, bpf-agent / neo4j Helm subcharts | License heartbeat/revoke; OIDC `OidcVerifier` (mock + `HttpOidcVerifier` gated `live-oidc`); Ed25519 signed ZIP export |
 
 > [!NOTE]
-> **`v0.0.1` - phases P0–P9 closed.** **282 Rust tests** pass, `cargo clippy --workspace -- -D warnings` clean, `cargo fmt --all --check` clean, web `vitest` + Playwright E2E green. Items needing external infrastructure (kernel `bpf()` syscalls, `/dev/tpm0`, sigstore OIDC tokens, real cloud creds, real IdP) are wired behind trait seams and listed in [`DEFERRED.md`](DEFERRED.md).
+> **`v0.0.2` - phases P0–P9 closed.** **298 Rust tests** pass, `cargo clippy --workspace -- -D warnings` clean, `cargo fmt --all --check` clean, web `vitest` + Playwright E2E green. Items needing external infrastructure (kernel `bpf()` syscalls, `/dev/tpm0`, sigstore OIDC tokens, real cloud creds, real IdP) are wired behind trait seams and listed in [`DEFERRED.md`](DEFERRED.md).
 
 ---
 
@@ -319,7 +319,7 @@ Download a release archive for your platform from **[Releases](https://github.co
 
 ```sh
 # linux-x86_64 · linux-arm64 · macos-x86_64 · macos-arm64
-TAG=v0.0.1
+TAG=v0.0.2
 curl -L "https://github.com/aryasoni98/secureops/releases/download/${TAG}/secureops-${TAG}-linux-x86_64.tar.gz" | tar xz
 sudo mv secureops-cli /usr/local/bin/secureops
 sudo mv secureops-daemon /usr/local/bin/secureops-daemon
@@ -349,8 +349,8 @@ Depend on individual workspace crates (23 published on tag push). Example:
 
 ```toml
 [dependencies]
-secureops-core = "0.0.1"
-secureops-checks = "0.0.1"
+secureops-core = "0.0.2"
+secureops-checks = "0.0.2"
 ```
 
 ### Container / Kubernetes
@@ -804,7 +804,7 @@ SecureOps is a security tool. Report vulnerabilities **privately** - see [SECURI
 
 ## Project status
 
-`v0.0.1`. Default build is cross-platform (Linux + macOS), no system libraries required. P0–P9 closed in-tree; trait seams plug into external infra without code change.
+`v0.0.2`. Default build is cross-platform (Linux + macOS), no system libraries required. P0–P9 closed in-tree; trait seams plug into external infra without code change.
 
 | Capability | State | Integration point |
 |------------|-------|-------------------|

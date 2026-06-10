@@ -1,7 +1,7 @@
 {
   "name": "secureops-landing",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "description": "SecureOps marketing landing page - Vite + React + Framer Motion, deployed to GitHub Pages.",
   "scripts": {

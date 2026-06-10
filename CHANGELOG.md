@@ -1,8 +1,42 @@
 # Changelog
 
-## Unreleased - beta-launch hardening (2026-06-10)
+## 0.0.2 (2026-06-10)
 
-Gap-audit sweep ahead of the beta tag. 285 Rust tests pass, clippy `-D warnings` clean, web build + vitest + Playwright green.
+First versioned release after the P0-P9 closure. Rolls up the two
+previously-unreleased sweeps below plus a reality-gap pass. Final state:
+**298 Rust tests** pass (0 failed, 6 live-Postgres ignored locally), clippy
+`-D warnings` clean, fmt clean, web build + vitest (10) + Playwright E2E green.
+
+### Reality-gap closure
+
+- **AWS read-only scan collector** (`secureops-scanner`, gated `--features aws`,
+  selected via `SECUREOPS_COLLECTOR=aws`): S3 public-access-block + default
+  encryption, world-open security groups (SSH/RDP critical), CloudTrail
+  coverage, root-MFA. Rule logic lives in SDK-free `aws_rules` (unit-tested on
+  every CI leg); fetch layer is fail-honest - findings only on positive
+  evidence, never on fetch errors. Minimal read-only IAM policy documented in
+  the module docs.
+- **Server-enforced first-run wizard**: until a license is activated, every SPA
+  route except `/license` answers a redirect to `/license` (new
+  `Store::any_license`, memoized after first activation). Deep links can no
+  longer skip the wizard.
+- **Force-directed attack-path graph** in the dashboard: zero-dependency
+  deterministic Fruchterman-Reingold layout (`web/src/graphLayout.ts`, vitest
+  covered), SVG render with entry/target coloring, click-a-node blast-radius
+  lookup.
+- **Argon2id host calibration**: `KdfParams::calibrated(target_ms)` probes the
+  host and scales memory cost, clamped to [19 MiB (OWASP min), 256 MiB]
+  (closes the Phase 3 TODO).
+- **Runtime image pinned by digest**: `debian:bookworm-slim@sha256:0104b...`
+  (builder + MinIO + OTel were already pinned).
+- Live `docker compose` platform-stack validation (API + scanner + Postgres +
+  Redis + MinIO + OTel) - see release notes.
+- Version bump to 0.0.2 across workspace crates, Helm charts, web/site
+  packages, and the OpenAPI document.
+
+## Beta-launch hardening (2026-06-10)
+
+Gap-audit sweep ahead of the beta tag. 285 Rust tests passed at the time of this sweep, clippy `-D warnings` clean, web build + vitest + Playwright green.
 
 ### Security (breaking defaults)
 
@@ -52,9 +86,9 @@ Gap-audit sweep ahead of the beta tag. 285 Rust tests pass, clippy `-D warnings`
 - Helm image tags default to the chart `appVersion` instead of `latest`.
 - `.env.example` documents `SECUREOPS_DEV_MODE` / `SECUREOPS_CORS_ORIGINS`; platform compose passes both through.
 
-## Unreleased - P4–P9 closure (2026-06-10)
+## P4–P9 closure (2026-06-10)
 
-Phases P4–P9 from the build pack closed in-tree: **282 Rust tests** pass, `cargo clippy --workspace -- -D warnings` clean, `cargo fmt --all --check` clean, web `vitest` + Playwright E2E green.
+Phases P4–P9 from the build pack closed in-tree: **282 Rust tests** passed at the time of this sweep, `cargo clippy --workspace -- -D warnings` clean, `cargo fmt --all --check` clean, web `vitest` + Playwright E2E green.
 
 ### New crates
 

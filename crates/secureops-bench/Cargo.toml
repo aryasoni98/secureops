@@ -10,9 +10,9 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-secureops-graph = { path = "../secureops-graph", version = "0.0.1" }
-secureops-tokenbudget = { path = "../secureops-tokenbudget", version = "0.0.1" }
-secureops-rl = { path = "../secureops-rl", version = "0.0.1" }
+secureops-graph = { path = "../secureops-graph", version = "0.0.2" }
+secureops-tokenbudget = { path = "../secureops-tokenbudget", version = "0.0.2" }
+secureops-rl = { path = "../secureops-rl", version = "0.0.2" }
 
 [dev-dependencies]
 criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }

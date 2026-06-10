@@ -10,7 +10,7 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-secureops-tokenbudget = { path = "../secureops-tokenbudget", version = "0.0.1" }
+secureops-tokenbudget = { path = "../secureops-tokenbudget", version = "0.0.2" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 async-trait = { workspace = true }

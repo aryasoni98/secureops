@@ -11,8 +11,8 @@ homepage.workspace = true
 
 [dependencies]
 secureops-core = { workspace = true }
-secureops-intel = { path = "../secureops-intel", version = "0.0.1" }   # IOC matchers + hash_string (ioc, supply_chain, memory_integrity)
-secureops-fs = { path = "../secureops-fs", version = "0.0.1" }          # probe_port for gateway --deep + RealAuditContext in tests
+secureops-intel = { path = "../secureops-intel", version = "0.0.2" }   # IOC matchers + hash_string (ioc, supply_chain, memory_integrity)
+secureops-fs = { path = "../secureops-fs", version = "0.0.2" }          # probe_port for gateway --deep + RealAuditContext in tests
 async-trait = { workspace = true }
 regex = { workspace = true }                            # API-key / injection / dangerous-skill pattern matching
 

@@ -5,8 +5,8 @@ description: >-
   Enterprise tier only - requires hostPID + BPF/NET_RAW/SYS_ADMIN capabilities
   on Linux nodes (PRODUCT.md B.6). No-op on non-Linux nodes.
 type: application
-version: 0.0.1
-appVersion: "0.0.1"
+version: 0.0.2
+appVersion: "0.0.2"
 keywords:
   - ebpf
   - security
