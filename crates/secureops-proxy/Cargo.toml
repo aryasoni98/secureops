@@ -11,8 +11,8 @@ homepage.workspace = true
 
 [dependencies]
 secureops-core.workspace = true
-# PDP sibling — the proxy asks it allow/deny/escalate per connection (PRODUCT.md B.5 step 2-3).
-secureops-policy = { path = "../secureops-policy", version = "0.0.1" }
+# The proxy defines its own minimal PolicyDecisionPoint trait (the slice it needs);
+# the daemon injects a concrete secureops-policy engine, so no direct dep here.
 tokio = { workspace = true, features = ["io-util"] }   # CONNECT tunnel: read/write + copy_bidirectional
 anyhow.workspace = true
 async-trait.workspace = true
@@ -26,5 +26,4 @@ tracing.workspace = true
 # rustls           = "0.23"        # parse ClientHello / SNI without MITM (no cert interception)
 # tokio-rustls     = "0.26"        # async TLS plumbing for the proxy listener
 hickory-proto = { version = "0.24", default-features = false }
-hickory-resolver = { version = "0.24", default-features = false, features = ["tokio-runtime"] }
-# hickory-server = "0.24"          # full authority server (future)
+# hickory-resolver / hickory-server — full async resolver + authority server (future B.5)

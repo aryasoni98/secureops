@@ -36,22 +36,19 @@ impl HardeningModule for DockerHardening {
         let services = match dc.and_then(|c| c.services.as_ref()) {
             Some(s) => s,
             None => {
-                findings.push(AuditFinding {
-                    id: "SC-DOCKER-INFO".into(),
-                    severity: Severity::Info,
-                    category: "execution".into(),
-                    title: "No Docker Compose configuration found".into(),
-                    description:
-                        "Docker hardening checks skipped — no docker-compose.yml detected.".into(),
-                    evidence: "No docker-compose configuration in context".into(),
-                    remediation:
-                        "If using Docker, provide docker-compose.yml for security analysis".into(),
-                    auto_fixable: false,
-                    references: Vec::new(),
-                    owasp_asi: "ASI05".into(),
-                    maestro_layer: None,
-                    nist_category: None,
-                });
+                findings.push(
+                    AuditFinding::builder("SC-DOCKER-INFO", Severity::Info, "execution")
+                        .title("No Docker Compose configuration found")
+                        .description(
+                            "Docker hardening checks skipped — no docker-compose.yml detected.",
+                        )
+                        .evidence("No docker-compose configuration in context")
+                        .remediation(
+                            "If using Docker, provide docker-compose.yml for security analysis",
+                        )
+                        .owasp_asi("ASI05")
+                        .build(),
+                );
                 return findings;
             }
         };
@@ -59,36 +56,28 @@ impl HardeningModule for DockerHardening {
         for (name, svc) in services.iter() {
             // `!svc.read_only` — missing OR false.
             if svc.read_only != Some(true) {
-                findings.push(AuditFinding {
-                    id: "SC-EXEC-004".into(),
-                    severity: Severity::Medium,
-                    category: "execution".into(),
-                    title: format!("Service \"{name}\" not read-only"),
-                    description: "Will add read_only: true.".into(),
-                    evidence: "read_only not set".into(),
-                    remediation: "Add read_only: true".into(),
-                    auto_fixable: true,
-                    references: Vec::new(),
-                    owasp_asi: "ASI05".into(),
-                    maestro_layer: None,
-                    nist_category: None,
-                });
+                findings.push(
+                    AuditFinding::builder("SC-EXEC-004", Severity::Medium, "execution")
+                        .title(format!("Service \"{name}\" not read-only"))
+                        .description("Will add read_only: true.")
+                        .evidence("read_only not set")
+                        .remediation("Add read_only: true")
+                        .auto_fixable(true)
+                        .owasp_asi("ASI05")
+                        .build(),
+                );
             }
             if svc.network_mode.as_deref() == Some("host") {
-                findings.push(AuditFinding {
-                    id: "SC-EXEC-007".into(),
-                    severity: Severity::High,
-                    category: "execution".into(),
-                    title: format!("Service \"{name}\" uses host network"),
-                    description: "Will switch to bridge network.".into(),
-                    evidence: "network_mode = \"host\"".into(),
-                    remediation: "Remove host network mode".into(),
-                    auto_fixable: true,
-                    references: Vec::new(),
-                    owasp_asi: "ASI05".into(),
-                    maestro_layer: None,
-                    nist_category: None,
-                });
+                findings.push(
+                    AuditFinding::builder("SC-EXEC-007", Severity::High, "execution")
+                        .title(format!("Service \"{name}\" uses host network"))
+                        .description("Will switch to bridge network.")
+                        .evidence("network_mode = \"host\"")
+                        .remediation("Remove host network mode")
+                        .auto_fixable(true)
+                        .owasp_asi("ASI05")
+                        .build(),
+                );
             }
         }
 
@@ -131,13 +120,19 @@ impl HardeningModule for DockerHardening {
 async fn write_override(ctx: &dyn AuditContext, backup_dir: &Path) -> std::io::Result<()> {
     let override_path = Path::new(ctx.state_dir()).join("docker-compose.secureops.yml");
 
-    // Backup existing override if present (TS swallows the "no existing override"
-    // error in its inner try/catch).
-    let _ = tokio::fs::copy(
+    // Backup existing override if present. Missing file is fine (no override
+    // yet, like the TS inner try/catch); any other I/O failure aborts so we
+    // never overwrite an override we could not back up.
+    if let Err(e) = tokio::fs::copy(
         &override_path,
         backup_dir.join("docker-compose.secureops.yml"),
     )
-    .await;
+    .await
+    {
+        if e.kind() != std::io::ErrorKind::NotFound {
+            return Err(e);
+        }
+    }
 
     let override_config = hardened_override_config();
 

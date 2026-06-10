@@ -15,7 +15,10 @@
 
 use crate::HardeningModule;
 use async_trait::async_trait;
-use secureops_core::{AuditContext, AuditFinding, HardeningAction, HardeningResult, Severity};
+use secureops_core::{
+    is_group_or_other_accessible, AuditContext, AuditFinding, HardeningAction, HardeningResult,
+    Severity,
+};
 use std::path::Path;
 
 /// API-key prefixes redacted from memory/soul files (port of `API_KEY_PATTERNS`).
@@ -106,21 +109,17 @@ impl HardeningModule for CredentialHardening {
 
         let state_dir_perms = ctx.get_file_permissions(ctx.state_dir()).await;
         if let Some(perms) = state_dir_perms {
-            if (perms & 0o077) != 0 {
-                findings.push(AuditFinding {
-                    id: "SC-CRED-001".to_string(),
-                    severity: Severity::High,
-                    category: "credentials".to_string(),
-                    title: "State directory permissions too open".to_string(),
-                    description: "Will chmod 700 the state directory.".to_string(),
-                    evidence: format!("Permissions: {:o}", perms),
-                    remediation: "chmod 700".to_string(),
-                    auto_fixable: true,
-                    references: vec![],
-                    owasp_asi: "ASI03".to_string(),
-                    maestro_layer: None,
-                    nist_category: None,
-                });
+            if is_group_or_other_accessible(perms) {
+                findings.push(
+                    AuditFinding::builder("SC-CRED-001", Severity::High, "credentials")
+                        .title("State directory permissions too open")
+                        .description("Will chmod 700 the state directory.")
+                        .evidence(format!("Permissions: {:o}", perms))
+                        .remediation("chmod 700")
+                        .auto_fixable(true)
+                        .owasp_asi("ASI03")
+                        .build(),
+                );
             }
         }
 
@@ -273,11 +272,22 @@ impl CredentialHardening {
                     if let Ok(content) = tokio::fs::read_to_string(&mem_path).await {
                         let redacted = redact_api_keys(&content);
                         if redacted != content {
-                            let _ = tokio::fs::copy(
+                            // Redaction rewrites the file; without a backup the
+                            // original is unrecoverable. Never mutate unless
+                            // the backup copy landed.
+                            if let Err(e) = tokio::fs::copy(
                                 &mem_path,
                                 backup_dir.join(format!("{agent}-{mem_file}")),
                             )
-                            .await;
+                            .await
+                            {
+                                return Err(std::io::Error::new(
+                                    e.kind(),
+                                    format!(
+                                        "refusing to redact {mem_file} for agent {agent}: backup failed: {e}"
+                                    ),
+                                ));
+                            }
                             tokio::fs::write(&mem_path, &redacted).await?;
                             applied.push(HardeningAction {
                                 id: format!("cred-redact-{agent}-{mem_file}"),

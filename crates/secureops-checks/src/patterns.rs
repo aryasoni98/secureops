@@ -23,18 +23,12 @@ pub static API_KEY_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
 });
 
 /// Prompt injection patterns (`PROMPT_INJECTION_PATTERNS`), all case-insensitive.
+/// Sources are shared with the memory-integrity monitor via [`secureops_core`].
 pub static PROMPT_INJECTION_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
-    [
-        r"(?i)ignore\s+previous\s+instructions",
-        r"(?i)you\s+are\s+now",
-        r"(?i)new\s+system\s+prompt",
-        r"(?i)forward\s+to",
-        r"(?i)send\s+to",
-        r"(?i)exfiltrate",
-    ]
-    .iter()
-    .map(|p| Regex::new(p).expect("static injection pattern compiles"))
-    .collect()
+    secureops_core::PROMPT_INJECTION_SOURCES
+        .iter()
+        .map(|p| Regex::new(&format!("(?i){p}")).expect("static injection pattern compiles"))
+        .collect()
 });
 
 /// Long base64 block (`BASE64_BLOCK_PATTERN`).

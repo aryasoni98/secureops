@@ -1,0 +1,30 @@
+[package]
+name = "secureops-bench"
+description = "SecureOps performance benchmarks (PRODUCT.md Phase 9). Criterion-driven gates for graph BFS p95, TokenBudget compression ratio, RL ranking, and scanner throughput."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.82"
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+secureops-graph = { path = "../secureops-graph", version = "0.0.1" }
+secureops-tokenbudget = { path = "../secureops-tokenbudget", version = "0.0.1" }
+secureops-rl = { path = "../secureops-rl", version = "0.0.1" }
+
+[dev-dependencies]
+criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }
+
+[[bench]]
+name = "graph_bfs"
+harness = false
+
+[[bench]]
+name = "tokenbudget"
+harness = false
+
+[[bench]]
+name = "rl_ranking"
+harness = false

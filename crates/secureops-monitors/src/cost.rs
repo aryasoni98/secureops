@@ -88,11 +88,7 @@ pub fn parse_session_log(content: &str, now: &str) -> Vec<CostEntry> {
     entries
 }
 
-fn timestamp_ms(ts: &str) -> Option<i128> {
-    OffsetDateTime::parse(ts, &Rfc3339)
-        .ok()
-        .map(|t| t.unix_timestamp_nanos() / 1_000_000)
-}
+use secureops_core::parse_ms as timestamp_ms;
 
 /// Sum cost of entries within `window_ms` of `now_ms` (port of
 /// `calculateCostForWindow`; unparseable timestamps are excluded, as in TS).

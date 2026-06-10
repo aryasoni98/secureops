@@ -27,14 +27,16 @@ secureops-fs = { path = "../secureops-fs", version = "0.0.1" }
 secureops-intel = { path = "../secureops-intel", version = "0.0.1" }   # load the bundled IOC database
 secureops-harden = { path = "../secureops-harden", version = "0.0.1" } # harden + rollback engine
 secureops-monitors = { path = "../secureops-monitors", version = "0.0.1" } # live monitor daemon
-secureops-crypto = { path = "../secureops-crypto", version = "0.0.1" }     # keystore init
+secureops-crypto = { path = "../secureops-crypto", version = "0.0.1" }     # keystore init + keychain signer
+secureops-auditlog = { path = "../secureops-auditlog", version = "0.0.1" } # hash-chain incident anchor (B.9)
 
 # CLI plumbing.
 clap = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
-time = { workspace = true }                            # RFC3339 audit timestamp (wire-compatible)
 serde_json = { workspace = true }                      # parse openclaw.json config
+sha2 = { workspace = true }                            # incident manifest digests (B.9)
+ed25519-dalek = "2"                                    # verify half of the keychain signer adapter
 
 # --- Heavier deps the real CLI impl will pull in (commented until their phase) ---
 # tracing = { workspace = true }                 # structured logs / --verbose (Part G)

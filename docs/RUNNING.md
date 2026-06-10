@@ -6,11 +6,11 @@ Step-by-step guide for **local development**, **AWS EC2 + Docker**, and **Kubern
 
 | Environment | One-command entry | Full path |
 |-------------|-------------------|-----------|
-| **Local (macOS/Linux)** | `just setup` | [§1 Local](#1-local-development-macos--linux) |
-| **AWS EC2 + Docker** | `just docker-up` (on the instance) | [§2 EC2 + Docker](#2-aws-ec2--docker--docker-compose) |
+| **Local (macOS/Linux)** | `just setup` | [§1 Local](#1-local-development-macos-linux) |
+| **AWS EC2 + Docker** | `just docker-up` (on the instance) | [§2 EC2 + Docker](#2-aws-ec2-docker-docker-compose) |
 | **Kubernetes** | `just k8s-apply` (after image load) | [§3 Kubernetes](#3-kubernetes) |
 
-Prerequisites for all paths: **[README.md](../README.md)** (crate map, tests, N-API).
+Prerequisites for all paths: **[README.md](https://github.com/aryasoni98/secureops/blob/master/README.md)** (crate map, tests, N-API).
 
 ---
 
@@ -137,7 +137,7 @@ cargo test -p secureops-policy -- rego_pdp_tests
 cargo test -p secureops-policy -- cedar_tests
 ```
 
-See [README.md § Selected test targets](../README.md#selected-test-targets).
+See [README.md § Selected test targets](https://github.com/aryasoni98/secureops/blob/master/README.md#selected-test-targets).
 
 ### 1.6 eBPF (Linux only)
 
@@ -163,10 +163,9 @@ On **macOS**, skip eBPF; the workspace builds and tests without it.
 
 ```sh
 just napi
-# Copy dylib/so to ../secureops/secureops.node per README
+# Copy the built dylib/so (target/release/libsecureops_napi.*) to your TS
+# package as secureops.node.
 ```
-
-TS vs Rust findings diff: [README.md § TS faithfulness](../README.md#ts-faithfulness-cross-check).
 
 ---
 
@@ -436,4 +435,4 @@ secureops/                      # repo root = Rust workspace
       cronjob-audit.yaml
 ```
 
-CI reference: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) (`cargo build/test/clippy/fmt` on ubuntu + macOS).
+CI reference: [`.github/workflows/ci.yml`](https://github.com/aryasoni98/secureops/blob/master/.github/workflows/ci.yml) (`cargo build/test/clippy/fmt` on ubuntu + macOS).

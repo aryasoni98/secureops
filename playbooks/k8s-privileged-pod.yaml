@@ -1,0 +1,5 @@
+id: k8s-privileged-pod
+matches: [SC-K8S-011]
+class: destructive
+execute: "k8s.delete_pod namespace={namespace} pod={pod}"
+audit_required: true

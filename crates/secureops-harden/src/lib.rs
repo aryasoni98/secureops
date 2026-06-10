@@ -10,7 +10,6 @@
 //! Modules run in **priority order**: gateway(1) → credential(2) → config(3) →
 //! docker(4) → network(5).
 
-#![allow(dead_code, unused_variables)]
 #![forbid(unsafe_code)]
 
 pub mod config_hardening;
@@ -68,10 +67,8 @@ pub struct HardenOutcome {
 /// absent/invalid (port of the modules' `readConfig`).
 pub async fn read_config(state_dir: &str) -> OpenClawConfig {
     let path = format!("{state_dir}/openclaw.json");
-    match tokio::fs::read_to_string(&path).await {
-        Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
-        Err(_) => OpenClawConfig::default(),
-    }
+    let content = tokio::fs::read_to_string(&path).await.unwrap_or_default();
+    OpenClawConfig::from_json_or_default(&content)
 }
 
 /// Write `<stateDir>/openclaw.json` as 2-space pretty JSON (port of `writeConfig`;
@@ -115,7 +112,10 @@ struct Manifest {
 /// writes `manifest.json`.
 pub async fn harden(
     ctx: &dyn AuditContext,
-    full: bool,
+    // TS source carries a `full` flag that toggles destructive modules; the
+    // Rust port runs the same five modules unconditionally for now, so this is
+    // accepted but ignored (kept for the public API of CLI / NAPI callers).
+    _full: bool,
     now: &str,
     ioc: Arc<IocDatabase>,
 ) -> anyhow::Result<HardenOutcome> {
@@ -219,7 +219,10 @@ pub async fn rollback(state_dir: &str, timestamp: Option<&str>) -> anyhow::Resul
         ));
     }
 
-    // Restore any other backed-up files.
+    // Restore any other backed-up files. A failed restore must surface — a
+    // rollback that silently skips files leaves the host in a state the
+    // operator believes was reverted.
+    let mut failed: Vec<String> = Vec::new();
     let mut rd = match tokio::fs::read_dir(&backup_dir).await {
         Ok(rd) => rd,
         Err(_) => return Ok(()),
@@ -237,10 +240,14 @@ pub async fn rollback(state_dir: &str, timestamp: Option<&str>) -> anyhow::Resul
 
         if let Some(name) = file.strip_prefix("cred-") {
             let dest = PathBuf::from(state_dir).join("credentials").join(name);
-            let _ = tokio::fs::copy(&src, &dest).await;
+            if let Err(e) = tokio::fs::copy(&src, &dest).await {
+                failed.push(format!("{file}: {e}"));
+            }
         }
         if file == ".env" {
-            let _ = tokio::fs::copy(&src, PathBuf::from(state_dir).join(".env")).await;
+            if let Err(e) = tokio::fs::copy(&src, PathBuf::from(state_dir).join(".env")).await {
+                failed.push(format!("{file}: {e}"));
+            }
         }
         if let Some(rest) = file.strip_prefix("auth-profiles-") {
             let agent = rest.strip_suffix(".json").unwrap_or(rest);
@@ -249,7 +256,9 @@ pub async fn rollback(state_dir: &str, timestamp: Option<&str>) -> anyhow::Resul
                 .join(agent)
                 .join("agent")
                 .join("auth-profiles.json");
-            let _ = tokio::fs::copy(&src, &dest).await;
+            if let Err(e) = tokio::fs::copy(&src, &dest).await {
+                failed.push(format!("{file}: {e}"));
+            }
         }
         for mem in ["soul.md", "SOUL.md", "MEMORY.md"] {
             if let Some(agent) = file.strip_suffix(&format!("-{mem}")) {
@@ -257,10 +266,19 @@ pub async fn rollback(state_dir: &str, timestamp: Option<&str>) -> anyhow::Resul
                     .join("agents")
                     .join(agent)
                     .join(mem);
-                let _ = tokio::fs::copy(&src, &dest).await;
+                if let Err(e) = tokio::fs::copy(&src, &dest).await {
+                    failed.push(format!("{file}: {e}"));
+                }
                 break;
             }
         }
+    }
+    if !failed.is_empty() {
+        return Err(anyhow::anyhow!(
+            "rollback restored the config but {} file(s) failed: {}",
+            failed.len(),
+            failed.join("; ")
+        ));
     }
     Ok(())
 }

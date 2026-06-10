@@ -1,0 +1,28 @@
+# neo4j subchart — graph backend (Pro/Enterprise). Off by default.
+enabled: false
+
+image:
+  repository: neo4j
+  tag: "5"
+  pullPolicy: IfNotPresent
+
+# Auth as user/password. Provide via a Secret in production; this default is dev.
+auth:
+  username: neo4j
+  password: change-me-neo4j
+
+ports:
+  bolt: 7687
+  http: 7474
+
+persistence:
+  size: 10Gi
+  storageClassName: ""
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "2"
+    memory: 2Gi

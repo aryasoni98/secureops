@@ -43,7 +43,6 @@
 //! Treat the JSON field names as frozen.
 
 #![forbid(unsafe_code)]
-#![allow(dead_code, unused_variables)]
 
 pub mod napi_surface;
 pub mod plugin;
@@ -60,18 +59,11 @@ pub const SECUREOPS_VERSION: &str = "2.2.0";
 /// matches the CLI's IOC coverage.
 pub(crate) const BUNDLED_IOC: &str = include_str!("../../secureops-cli/assets/indicators.json");
 
-pub(crate) fn now_iso() -> String {
-    use time::{format_description::well_known::Rfc3339, OffsetDateTime};
-    OffsetDateTime::now_utc()
-        .format(&Rfc3339)
-        .unwrap_or_default()
-}
+pub(crate) use secureops_core::now_iso;
 
 pub(crate) fn load_config(state_dir: &str) -> OpenClawConfig {
-    match std::fs::read_to_string(format!("{state_dir}/openclaw.json")) {
-        Ok(c) => serde_json::from_str(&c).unwrap_or_default(),
-        Err(_) => OpenClawConfig::default(),
-    }
+    let content = std::fs::read_to_string(format!("{state_dir}/openclaw.json")).unwrap_or_default();
+    OpenClawConfig::from_json_or_default(&content)
 }
 
 /// Run a full read-only audit and return the report as pretty JSON.

@@ -65,20 +65,17 @@ impl Check for MultiFrameworkCheck {
         let killswitch_path = format!("{}/.secureops/killswitch", ctx.state_dir());
         let kill_active = ctx.file_exists(&killswitch_path).await;
         if kill_active {
-            findings.push(AuditFinding {
-                id: "SC-KILL-001".to_string(),
-                severity: Severity::Info,
-                category: "kill-switch".to_string(),
-                title: "Kill switch is active".to_string(),
-                description: "The SecureOps kill switch is currently active. All agent operations should be suspended.".to_string(),
-                evidence: format!("Kill switch file: {killswitch_path}"),
-                remediation: "Run \"secureops kill --deactivate\" to deactivate".to_string(),
-                auto_fixable: false,
-                references: vec![],
-                owasp_asi: "ASI10".to_string(),
-                maestro_layer: Some(MaestroLayer::L5),
-                nist_category: Some(NistAttackType::Misuse),
-            });
+            findings.push(
+                AuditFinding::builder("SC-KILL-001", Severity::Info, "kill-switch")
+                    .title("Kill switch is active")
+                    .description("The SecureOps kill switch is currently active. All agent operations should be suspended.")
+                    .evidence(format!("Kill switch file: {killswitch_path}"))
+                    .remediation("Run \"secureops kill --deactivate\" to deactivate")
+                    .owasp_asi("ASI10")
+                    .maestro(MaestroLayer::L5)
+                    .nist(NistAttackType::Misuse)
+                    .build(),
+            );
         }
 
         // TRUST-001: Memory trust — scan workspace cognitive files for injection
@@ -99,27 +96,25 @@ impl Check for MultiFrameworkCheck {
             }
             for pattern in patterns::PROMPT_INJECTION_PATTERNS.iter() {
                 if pattern.is_match(&content) {
-                    findings.push(AuditFinding {
-                        id: "SC-TRUST-001".to_string(),
-                        severity: Severity::Critical,
-                        category: "memory-trust".to_string(),
-                        title: format!("Injected instructions in {cog_file}"),
-                        description: format!(
-                            "Workspace cognitive file contains prompt injection pattern: \"{}\". This may indicate context poisoning (MITRE ATLAS AML.CS0051).",
-                            pattern_source(pattern)
-                        ),
-                        evidence: format!(
-                            "File: {}, Pattern: {}",
-                            cog_file,
-                            pattern_source(pattern)
-                        ),
-                        remediation: "Review and clean this file. Run emergency-response.sh if compromise suspected.".to_string(),
-                        auto_fixable: false,
-                        references: vec!["AML.CS0051".to_string()],
-                        owasp_asi: "ASI06".to_string(),
-                        maestro_layer: Some(MaestroLayer::L2),
-                        nist_category: Some(NistAttackType::Poisoning),
-                    });
+                    findings.push(
+                        AuditFinding::builder("SC-TRUST-001", Severity::Critical, "memory-trust")
+                            .title(format!("Injected instructions in {cog_file}"))
+                            .description(format!(
+                                "Workspace cognitive file contains prompt injection pattern: \"{}\". This may indicate context poisoning (MITRE ATLAS AML.CS0051).",
+                                pattern_source(pattern)
+                            ))
+                            .evidence(format!(
+                                "File: {}, Pattern: {}",
+                                cog_file,
+                                pattern_source(pattern)
+                            ))
+                            .remediation("Review and clean this file. Run emergency-response.sh if compromise suspected.")
+                            .references(["AML.CS0051"])
+                            .owasp_asi("ASI06")
+                            .maestro(MaestroLayer::L2)
+                            .nist(NistAttackType::Poisoning)
+                            .build(),
+                    );
                 }
             }
         }
@@ -130,20 +125,18 @@ impl Check for MultiFrameworkCheck {
             .await;
         if let Some(config_content) = config_content {
             if !config_content.contains("\"controlTokens\"") {
-                findings.push(AuditFinding {
-                    id: "SC-CTRL-001".to_string(),
-                    severity: Severity::Medium,
-                    category: "control-tokens".to_string(),
-                    title: "Default control tokens in use".to_string(),
-                    description: "Control tokens have not been customized. Attackers can spoof model control tokens (MITRE AML.CS0051).".to_string(),
-                    evidence: "No \"controlTokens\" key in openclaw.json".to_string(),
-                    remediation: "Customize controlTokens in openclaw.json to non-default values".to_string(),
-                    auto_fixable: false,
-                    references: vec!["AML.CS0051".to_string()],
-                    owasp_asi: "ASI01".to_string(),
-                    maestro_layer: Some(MaestroLayer::L3),
-                    nist_category: Some(NistAttackType::Evasion),
-                });
+                findings.push(
+                    AuditFinding::builder("SC-CTRL-001", Severity::Medium, "control-tokens")
+                        .title("Default control tokens in use")
+                        .description("Control tokens have not been customized. Attackers can spoof model control tokens (MITRE AML.CS0051).")
+                        .evidence("No \"controlTokens\" key in openclaw.json")
+                        .remediation("Customize controlTokens in openclaw.json to non-default values")
+                        .references(["AML.CS0051"])
+                        .owasp_asi("ASI01")
+                        .maestro(MaestroLayer::L3)
+                        .nist(NistAttackType::Evasion)
+                        .build(),
+                );
             }
         }
 
@@ -155,20 +148,17 @@ impl Check for MultiFrameworkCheck {
             .and_then(|s| s.failure_mode)
             .is_none()
         {
-            findings.push(AuditFinding {
-                id: "SC-DEGRAD-001".to_string(),
-                severity: Severity::Low,
-                category: "degradation".to_string(),
-                title: "No graceful degradation mode configured".to_string(),
-                description: "No failureMode is set. When issues are detected, the system has no predefined degradation strategy.".to_string(),
-                evidence: "secureops.failureMode is not set".to_string(),
-                remediation: "Set secureops.failureMode to \"block_all\", \"safe_mode\", or \"read_only\"".to_string(),
-                auto_fixable: false,
-                references: vec![],
-                owasp_asi: "ASI08".to_string(),
-                maestro_layer: Some(MaestroLayer::L5),
-                nist_category: Some(NistAttackType::Misuse),
-            });
+            findings.push(
+                AuditFinding::builder("SC-DEGRAD-001", Severity::Low, "degradation")
+                    .title("No graceful degradation mode configured")
+                    .description("No failureMode is set. When issues are detected, the system has no predefined degradation strategy.")
+                    .evidence("secureops.failureMode is not set")
+                    .remediation("Set secureops.failureMode to \"block_all\", \"safe_mode\", or \"read_only\"")
+                    .owasp_asi("ASI08")
+                    .maestro(MaestroLayer::L5)
+                    .nist(NistAttackType::Misuse)
+                    .build(),
+            );
         }
 
         findings

@@ -32,7 +32,7 @@ rm -f Cargo.toml.bak
 #     version on every published dependency; these are pinned inline next to
 #     `path = "..."`). Updates the version literal inside any secureops-* dep.
 for f in Cargo.toml crates/*/Cargo.toml; do
-  perl -i -pe 's/(secureops-[a-z]+\s*=\s*\{[^}]*version\s*=\s*")[0-9]+\.[0-9]+\.[0-9]+(")/${1}'"$VERSION"'${2}/g if /secureops-/' "$f"
+  perl -i -pe 's/(secureops-[A-Za-z0-9_-]+\s*=\s*\{[^}]*version\s*=\s*")[0-9]+\.[0-9]+\.[0-9]+(")/${1}'"$VERSION"'${2}/g if /secureops-/' "$f"
 done
 
 # 3. Build + test gate (matches CI).
@@ -46,7 +46,7 @@ cargo fmt --all --check
 cargo generate-lockfile
 
 # 5. Commit version bump.
-git add Cargo.toml Cargo.lock
+git add Cargo.toml Cargo.lock crates/*/Cargo.toml
 git commit -m "chore: release v$VERSION"
 
 # 6. Tag.

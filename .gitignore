@@ -3,3 +3,18 @@
 Cargo.lock.orig
 .DS_Store
 **/.DS_Store
+
+# Web build artifacts
+web/node_modules/
+web/dist/
+web/test-results/
+web/tsconfig.tsbuildinfo
+web/playwright-report/
+
+# Landing page build artifacts
+site/node_modules/
+site/dist/
+site/tsconfig.tsbuildinfo
+
+# Tool outputs
+graphify-out/

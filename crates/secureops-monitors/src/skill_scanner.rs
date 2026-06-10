@@ -339,8 +339,10 @@ mod tests {
 
     #[test]
     fn typosquat_and_critical_flag_unsafe() {
-        let mut db = IocDatabase::default();
-        db.typosquat_patterns = vec!["clawhub".to_string()];
+        let db = IocDatabase {
+            typosquat_patterns: vec!["clawhub".to_string()],
+            ..Default::default()
+        };
         let r = scan_skill_content(
             "claw-hub",
             &files(&[("x.js", "eval(atob('...'))")]),
@@ -370,8 +372,10 @@ mod tests {
     fn malicious_hash_matches_campaign() {
         let content = "payload";
         let h = secureops_intel::hash_string(content);
-        let mut db = IocDatabase::default();
-        db.malicious_skill_hashes = HashMap::from([(h.clone(), "CampaignZ".to_string())]);
+        let db = IocDatabase {
+            malicious_skill_hashes: HashMap::from([(h.clone(), "CampaignZ".to_string())]),
+            ..Default::default()
+        };
         let r = scan_skill_content("ok", &files(&[("m.js", content)]), Some(&db));
         assert!(!r.safe);
         assert!(r.ioc_matches.iter().any(|m| m.contains("CampaignZ")));

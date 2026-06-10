@@ -1,0 +1,54 @@
+{{- if .Values.enabled }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Release.Name }}-bpf-agent
+  labels:
+    app.kubernetes.io/name: secureops-bpf-agent
+    app.kubernetes.io/part-of: secureops
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    tier: enterprise
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: secureops-bpf-agent
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: secureops-bpf-agent
+        app.kubernetes.io/part-of: secureops
+        tier: enterprise
+    spec:
+      # Kernel PEP must see host PIDs to correlate syscalls per process.
+      hostPID: true
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+        {{- with .Values.extraNodeSelector }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: bpf-agent
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["secureops-daemon"]
+          env:
+            - name: SECUREOPS_BPF_OBJ
+              value: {{ .Values.bpfObjectPath | quote }}
+            - name: SECUREOPS_BPF_ENFORCE
+              value: {{ if .Values.enforce }}"1"{{ else }}"0"{{ end }}
+          securityContext:
+            # eBPF load + LSM hook + raw socket inspection.
+            capabilities:
+              add: ["BPF", "NET_RAW", "SYS_ADMIN"]
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            runAsNonRoot: false
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      terminationGracePeriodSeconds: 10
+{{- end }}

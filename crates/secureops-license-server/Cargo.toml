@@ -1,0 +1,36 @@
+[package]
+name = "secureops-license-server"
+description = "SecureOps stateless license server (PRODUCT.md Phase 8): Ed25519 heartbeat verification + in-memory revocation, no DB. Single-VPS deployable."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.82"
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[[bin]]
+name = "secureops-license-server"
+path = "src/main.rs"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+# Reuse the Ed25519 license verification from the API crate's license module.
+secureops-api = { path = "../secureops-api", version = "0.0.1" }
+axum = "0.8"
+clap = { version = "4", features = ["derive"] }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+ed25519-dalek = "2"          # dev key derivation in main + license signing in tests
+base64 = "0.22"              # decode SECUREOPS_LICENSE_PUBKEY
+
+[dev-dependencies]
+tokio = { workspace = true }
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"

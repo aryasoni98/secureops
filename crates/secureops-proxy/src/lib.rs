@@ -407,8 +407,6 @@ impl PolicyDecisionPoint for AllowlistPdp {
 /// Fail-closed: an unknown name resolves to a sinkhole / `NXDOMAIN`, never to the
 /// real address (PRODUCT.md W0).
 pub struct DnsSinkhole {
-    /// Behavior for names not explicitly allowed. Defaults to fail-closed.
-    fail_mode: FailMode,
     /// Hostnames this sinkhole resolves upstream (everything else → NXDOMAIN).
     allow_hosts: HashSet<String>,
     /// Upstream recursive resolver (default: 8.8.8.8:53).
@@ -416,10 +414,11 @@ pub struct DnsSinkhole {
 }
 
 impl DnsSinkhole {
-    /// Construct a fail-closed DNS sinkhole with an empty allowlist (PRODUCT.md W0).
+    /// Construct a fail-closed DNS sinkhole with an empty allowlist: any name not
+    /// on the allowlist resolves to `NXDOMAIN`, never to the real address
+    /// (PRODUCT.md W0 — fail-closed by construction).
     pub fn new() -> Self {
         Self {
-            fail_mode: FailMode::Closed,
             allow_hosts: HashSet::new(),
             upstream: "8.8.8.8:53".parse().unwrap(),
         }
@@ -565,8 +564,8 @@ pub fn egress_finding(req: &ConnectionRequest, decision: Decision) -> secureops_
         ),
     };
 
-    AuditFinding {
-        id: format!(
+    AuditFinding::builder(
+        format!(
             "SC-EGRESS-{:03}",
             match decision {
                 Decision::Allow => 0,
@@ -575,25 +574,24 @@ pub fn egress_finding(req: &ConnectionRequest, decision: Decision) -> secureops_
             }
         ),
         severity,
-        category: "egress".into(),
-        title: title.into(),
-        description,
-        evidence: format!(
-            "SNI={:?} requested_host={:?} pid={pid_str} dest={}",
-            req.host.sni, req.host.requested_host, req.host.dest
-        ),
-        remediation: "Review egress allowlist and check for prompt injection (PRODUCT.md B.5/B.6)"
-            .into(),
-        auto_fixable: false,
-        references: vec!["PRODUCT.md B.5".into(), "OWASP ASI-05".into()],
-        owasp_asi: owasp_asi.into(),
-        maestro_layer: Some(MaestroLayer::L4),
-        nist_category: if decision != Decision::Allow {
-            Some(NistAttackType::Evasion)
-        } else {
-            None
-        },
-    }
+        "egress",
+    )
+    .title(title)
+    .description(description)
+    .evidence(format!(
+        "SNI={:?} requested_host={:?} pid={pid_str} dest={}",
+        req.host.sni, req.host.requested_host, req.host.dest
+    ))
+    .remediation("Review egress allowlist and check for prompt injection (PRODUCT.md B.5/B.6)")
+    .references(["PRODUCT.md B.5", "OWASP ASI-05"])
+    .owasp_asi(owasp_asi)
+    .maestro(MaestroLayer::L4)
+    .nist(if decision != Decision::Allow {
+        Some(NistAttackType::Evasion)
+    } else {
+        None
+    })
+    .build()
 }
 
 #[cfg(test)]

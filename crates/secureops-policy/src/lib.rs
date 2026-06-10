@@ -610,7 +610,6 @@ mod tests {
 /// the richer Rego/Cedar engine reserved for the full Phase-4 policy language.
 pub struct AllowlistEngine {
     allow_hosts: std::collections::HashSet<String>,
-    version: String,
 }
 
 impl AllowlistEngine {
@@ -621,7 +620,6 @@ impl AllowlistEngine {
     {
         Self {
             allow_hosts: hosts.into_iter().map(Into::into).collect(),
-            version: "allowlist-v1".to_string(),
         }
     }
 }

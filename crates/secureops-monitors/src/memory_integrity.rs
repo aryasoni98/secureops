@@ -17,16 +17,10 @@ use std::sync::LazyLock;
 pub const MEMORY_FILE_NAMES: [&str; 3] = ["soul.md", "SOUL.md", "MEMORY.md"];
 
 /// Prompt-injection patterns + their JS `.source` strings (output-faithful).
+/// Sources are shared with the credentials/memory checks via [`secureops_core`].
 static PROMPT_INJECTION_PATTERNS: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
-    let raw: &[&str] = &[
-        r"ignore\s+previous\s+instructions",
-        r"you\s+are\s+now",
-        r"new\s+system\s+prompt",
-        r"forward\s+to",
-        r"send\s+to",
-        r"exfiltrate",
-    ];
-    raw.iter()
+    secureops_core::PROMPT_INJECTION_SOURCES
+        .iter()
         .map(|src| {
             (
                 Regex::new(&format!("(?i){src}")).expect("static injection pattern compiles"),
@@ -244,11 +238,13 @@ mod tests {
 
     #[test]
     fn baseline_mismatch_emits_high() {
-        let mut b = HashBaseline::default();
-        b.files = HashMap::from([(
-            "agents/a/MEMORY.md".to_string(),
-            secureops_intel::hash_string("original"),
-        )]);
+        let b = HashBaseline {
+            files: HashMap::from([(
+                "agents/a/MEMORY.md".to_string(),
+                secureops_intel::hash_string("original"),
+            )]),
+            ..Default::default()
+        };
         let alerts = check_memory_content(
             "MEMORY.md",
             "agents/a/MEMORY.md",
@@ -263,11 +259,13 @@ mod tests {
 
     #[test]
     fn unchanged_file_no_alert() {
-        let mut b = HashBaseline::default();
-        b.files = HashMap::from([(
-            "agents/a/MEMORY.md".to_string(),
-            secureops_intel::hash_string("same"),
-        )]);
+        let b = HashBaseline {
+            files: HashMap::from([(
+                "agents/a/MEMORY.md".to_string(),
+                secureops_intel::hash_string("same"),
+            )]),
+            ..Default::default()
+        };
         let alerts = check_memory_content("MEMORY.md", "agents/a/MEMORY.md", "same", &b, "t");
         assert!(alerts.is_empty());
     }

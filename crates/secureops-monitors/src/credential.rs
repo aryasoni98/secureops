@@ -7,13 +7,9 @@
 
 use crate::{now_iso, AlertBus, CancellationToken, Monitor};
 use async_trait::async_trait;
-use secureops_core::{MonitorAlert, Severity};
+use secureops_core::{basename, is_group_or_other_accessible, MonitorAlert, Severity};
 use std::collections::HashMap;
 use std::path::Path;
-
-fn basename(path: &str) -> &str {
-    path.rsplit('/').next().unwrap_or(path)
-}
 
 #[cfg(unix)]
 async fn file_mode(path: &Path) -> Option<u32> {
@@ -53,7 +49,7 @@ pub async fn scan_credentials(state_dir: &str) -> HashMap<String, u32> {
 /// (`(mode & 0o077) != 0`) — port of the chokidar `change` handler check.
 /// `mode` is the permission bits (already masked to `0o777`).
 pub fn permission_alert(path: &str, mode: u32, now_iso: &str) -> Option<MonitorAlert> {
-    if mode & 0o077 != 0 {
+    if is_group_or_other_accessible(mode) {
         Some(MonitorAlert {
             timestamp: now_iso.to_string(),
             severity: Severity::Critical,

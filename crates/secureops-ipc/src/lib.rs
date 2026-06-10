@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_variables)]
 //! # secureops-ipc
 //!
 //! Unix-domain-socket JSON-RPC protocol and peer-credential authentication for

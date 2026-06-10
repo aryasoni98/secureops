@@ -44,23 +44,22 @@ impl Check for GatewayCheck {
         // gw?.bind !== 'loopback'
         let bind = gw.and_then(|g| g.bind.as_deref());
         if bind != Some("loopback") {
-            findings.push(AuditFinding {
-                id: "SC-GW-001".to_string(),
-                severity: Severity::Critical,
-                category: "gateway".to_string(),
-                title: "Gateway not bound to loopback".to_string(),
-                description: format!(
-                    "Gateway is bound to \"{}\" instead of loopback. This exposes the gateway to network attacks.",
-                    bind.unwrap_or("all interfaces")
-                ),
-                evidence: format!("gateway.bind = \"{}\"", bind.unwrap_or("undefined")),
-                remediation: "Set gateway.bind to \"loopback\" in openclaw.json".to_string(),
-                auto_fixable: true,
-                references: vec!["CVE-2026-25253".to_string()],
-                owasp_asi: "ASI03".to_string(),
-                maestro_layer: Some(MaestroLayer::L4),
-                nist_category: Some(NistAttackType::Evasion),
-            });
+            findings.push(
+                AuditFinding::builder("SC-GW-001", Severity::Critical, "gateway")
+                    .title("Gateway not bound to loopback")
+                    .description(format!(
+                        "Gateway is bound to \"{}\" instead of loopback. This exposes the gateway to network attacks.",
+                        bind.unwrap_or("all interfaces")
+                    ))
+                    .evidence(format!("gateway.bind = \"{}\"", bind.unwrap_or("undefined")))
+                    .remediation("Set gateway.bind to \"loopback\" in openclaw.json")
+                    .auto_fixable(true)
+                    .references(["CVE-2026-25253"])
+                    .owasp_asi("ASI03")
+                    .maestro(MaestroLayer::L4)
+                    .nist(NistAttackType::Evasion)
+                    .build(),
+            );
         }
 
         // GW-002: Gateway auth mode (supports legacy "authToken" and modern "auth.mode")
@@ -77,25 +76,22 @@ impl Check for GatewayCheck {
                 }
             });
         if auth_mode != Some("password") && auth_mode != Some("token") {
-            findings.push(AuditFinding {
-                id: "SC-GW-002".to_string(),
-                severity: Severity::Critical,
-                category: "gateway".to_string(),
-                title: "Gateway authentication disabled".to_string(),
-                description: format!(
-                    "Gateway authentication mode is \"{}\". Anyone with network access can control this instance.",
-                    auth_mode.unwrap_or("none")
-                ),
-                evidence: format!("gateway.auth.mode = \"{}\"", auth_mode.unwrap_or("undefined")),
-                remediation:
-                    "Set gateway.auth.mode to \"password\" or \"token\" and configure a strong credential"
-                        .to_string(),
-                auto_fixable: true,
-                references: vec!["CVE-2026-25253".to_string()],
-                owasp_asi: "ASI03".to_string(),
-                maestro_layer: Some(MaestroLayer::L4),
-                nist_category: Some(NistAttackType::Evasion),
-            });
+            findings.push(
+                AuditFinding::builder("SC-GW-002", Severity::Critical, "gateway")
+                    .title("Gateway authentication disabled")
+                    .description(format!(
+                        "Gateway authentication mode is \"{}\". Anyone with network access can control this instance.",
+                        auth_mode.unwrap_or("none")
+                    ))
+                    .evidence(format!("gateway.auth.mode = \"{}\"", auth_mode.unwrap_or("undefined")))
+                    .remediation("Set gateway.auth.mode to \"password\" or \"token\" and configure a strong credential")
+                    .auto_fixable(true)
+                    .references(["CVE-2026-25253"])
+                    .owasp_asi("ASI03")
+                    .maestro(MaestroLayer::L4)
+                    .nist(NistAttackType::Evasion)
+                    .build(),
+            );
         }
 
         // GW-003: Auth token length (supports legacy "authToken" and modern "auth.token")
@@ -112,24 +108,21 @@ impl Check for GatewayCheck {
         if auth_mode == Some("token") || auth_mode == Some("password") {
             let token_len = token.chars().count();
             if token_len > 0 && token_len < 32 {
-                findings.push(AuditFinding {
-                    id: "SC-GW-003".to_string(),
-                    severity: Severity::Medium,
-                    category: "gateway".to_string(),
-                    title: "Weak gateway authentication token".to_string(),
-                    description: format!(
-                        "Gateway auth token/password is only {} characters. Minimum 32 recommended.",
-                        token_len
-                    ),
-                    evidence: format!("Token length: {} characters", token_len),
-                    remediation: "Generate a token of at least 32 characters using a CSPRNG"
-                        .to_string(),
-                    auto_fixable: true,
-                    references: vec![],
-                    owasp_asi: "ASI03".to_string(),
-                    maestro_layer: Some(MaestroLayer::L4),
-                    nist_category: Some(NistAttackType::Evasion),
-                });
+                findings.push(
+                    AuditFinding::builder("SC-GW-003", Severity::Medium, "gateway")
+                        .title("Weak gateway authentication token")
+                        .description(format!(
+                            "Gateway auth token/password is only {} characters. Minimum 32 recommended.",
+                            token_len
+                        ))
+                        .evidence(format!("Token length: {} characters", token_len))
+                        .remediation("Generate a token of at least 32 characters using a CSPRNG")
+                        .auto_fixable(true)
+                        .owasp_asi("ASI03")
+                        .maestro(MaestroLayer::L4)
+                        .nist(NistAttackType::Evasion)
+                        .build(),
+                );
             }
         }
 
@@ -145,20 +138,18 @@ impl Check for GatewayCheck {
                 let bind_mode = bind.unwrap_or("all");
                 let is_loopback =
                     bind_mode == "loopback" || bind_mode == "127.0.0.1" || bind_mode == "localhost";
-                findings.push(AuditFinding {
-                    id: "SC-GW-004".to_string(),
-                    severity: if is_loopback {
-                        Severity::Low
+                findings.push(
+                    AuditFinding::builder(
+                        "SC-GW-004",
+                        if is_loopback { Severity::Low } else { Severity::High },
+                        "gateway",
+                    )
+                    .title(if is_loopback {
+                        "Gateway port open on loopback only"
                     } else {
-                        Severity::High
-                    },
-                    category: "gateway".to_string(),
-                    title: if is_loopback {
-                        "Gateway port open on loopback only".to_string()
-                    } else {
-                        "Gateway port open and bound to non-loopback interface".to_string()
-                    },
-                    description: if is_loopback {
+                        "Gateway port open and bound to non-loopback interface"
+                    })
+                    .description(if is_loopback {
                         format!(
                             "Port {} is listening on loopback (localhost). This is the recommended configuration.",
                             gateway_port
@@ -168,57 +159,50 @@ impl Check for GatewayCheck {
                             "Port {} is listening and bound to \"{}\". It may be accessible from other machines on the network.",
                             gateway_port, bind_mode
                         )
-                    },
-                    evidence: format!("Port: {}, Bind: {}, Status: open", gateway_port, bind_mode),
-                    remediation: if is_loopback {
-                        "No action needed — loopback binding is secure".to_string()
+                    })
+                    .evidence(format!("Port: {}, Bind: {}, Status: open", gateway_port, bind_mode))
+                    .remediation(if is_loopback {
+                        "No action needed — loopback binding is secure"
                     } else {
                         "Set gateway.bind to \"loopback\" to restrict access to localhost only"
-                            .to_string()
-                    },
-                    auto_fixable: !is_loopback,
-                    references: vec![],
-                    owasp_asi: "ASI05".to_string(),
-                    maestro_layer: Some(MaestroLayer::L4),
-                    nist_category: Some(NistAttackType::Evasion),
-                });
+                    })
+                    .auto_fixable(!is_loopback)
+                    .owasp_asi("ASI05")
+                    .maestro(MaestroLayer::L4)
+                    .nist(NistAttackType::Evasion)
+                    .build(),
+                );
             } else {
-                findings.push(AuditFinding {
-                    id: "SC-GW-004".to_string(),
-                    severity: Severity::Info,
-                    category: "gateway".to_string(),
-                    title: "Gateway port not listening".to_string(),
-                    description: format!(
-                        "Port {} is not currently accepting connections. Gateway may not be running.",
-                        gateway_port
-                    ),
-                    evidence: format!("Port: {}, Status: closed/unreachable", gateway_port),
-                    remediation: "Start the gateway if it should be running".to_string(),
-                    auto_fixable: false,
-                    references: vec![],
-                    owasp_asi: "ASI05".to_string(),
-                    maestro_layer: Some(MaestroLayer::L4),
-                    nist_category: Some(NistAttackType::Evasion),
-                });
+                findings.push(
+                    AuditFinding::builder("SC-GW-004", Severity::Info, "gateway")
+                        .title("Gateway port not listening")
+                        .description(format!(
+                            "Port {} is not currently accepting connections. Gateway may not be running.",
+                            gateway_port
+                        ))
+                        .evidence(format!("Port: {}, Status: closed/unreachable", gateway_port))
+                        .remediation("Start the gateway if it should be running")
+                        .owasp_asi("ASI05")
+                        .maestro(MaestroLayer::L4)
+                        .nist(NistAttackType::Evasion)
+                        .build(),
+                );
             }
         } else {
-            findings.push(AuditFinding {
-                id: "SC-GW-004".to_string(),
-                severity: Severity::Info,
-                category: "gateway".to_string(),
-                title: "Gateway port accessibility check".to_string(),
-                description: format!(
-                    "Port {} remote accessibility requires deep scan mode (--deep) for active probing.",
-                    gateway_port
-                ),
-                evidence: format!("Port: {}", gateway_port),
-                remediation: "Run audit with --deep flag for active network probing".to_string(),
-                auto_fixable: false,
-                references: vec![],
-                owasp_asi: "ASI05".to_string(),
-                maestro_layer: Some(MaestroLayer::L4),
-                nist_category: Some(NistAttackType::Evasion),
-            });
+            findings.push(
+                AuditFinding::builder("SC-GW-004", Severity::Info, "gateway")
+                    .title("Gateway port accessibility check")
+                    .description(format!(
+                        "Port {} remote accessibility requires deep scan mode (--deep) for active probing.",
+                        gateway_port
+                    ))
+                    .evidence(format!("Port: {}", gateway_port))
+                    .remediation("Run audit with --deep flag for active network probing")
+                    .owasp_asi("ASI05")
+                    .maestro(MaestroLayer::L4)
+                    .nist(NistAttackType::Evasion)
+                    .build(),
+            );
         }
 
         // GW-005: Browser relay port
@@ -235,20 +219,18 @@ impl Check for GatewayCheck {
                 let bind_mode = bind.unwrap_or("all");
                 let is_loopback =
                     bind_mode == "loopback" || bind_mode == "127.0.0.1" || bind_mode == "localhost";
-                findings.push(AuditFinding {
-                    id: "SC-GW-005".to_string(),
-                    severity: if is_loopback {
-                        Severity::Low
+                findings.push(
+                    AuditFinding::builder(
+                        "SC-GW-005",
+                        if is_loopback { Severity::Low } else { Severity::Medium },
+                        "gateway",
+                    )
+                    .title(if is_loopback {
+                        "Browser relay port open on loopback only"
                     } else {
-                        Severity::Medium
-                    },
-                    category: "gateway".to_string(),
-                    title: if is_loopback {
-                        "Browser relay port open on loopback only".to_string()
-                    } else {
-                        "Browser relay port open and may be network-accessible".to_string()
-                    },
-                    description: if is_loopback {
+                        "Browser relay port open and may be network-accessible"
+                    })
+                    .description(if is_loopback {
                         format!(
                             "Browser relay port {} is listening on loopback. This is safe.",
                             browser_relay_port
@@ -258,60 +240,56 @@ impl Check for GatewayCheck {
                             "Browser relay port {} is listening and bound to \"{}\". The browser automation surface may be reachable from the network.",
                             browser_relay_port, bind_mode
                         )
-                    },
-                    evidence: format!(
+                    })
+                    .evidence(format!(
                         "Port: {}, Bind: {}, Status: open",
                         browser_relay_port, bind_mode
-                    ),
-                    remediation: if is_loopback {
-                        "No action needed".to_string()
+                    ))
+                    .remediation(if is_loopback {
+                        "No action needed"
                     } else {
                         "Set gateway.bind to \"loopback\" to restrict the browser relay to localhost"
-                            .to_string()
-                    },
-                    auto_fixable: !is_loopback,
-                    references: vec![],
-                    owasp_asi: "ASI05".to_string(),
-                    maestro_layer: Some(MaestroLayer::L4),
-                    nist_category: Some(NistAttackType::Evasion),
-                });
+                    })
+                    .auto_fixable(!is_loopback)
+                    .owasp_asi("ASI05")
+                    .maestro(MaestroLayer::L4)
+                    .nist(NistAttackType::Evasion)
+                    .build(),
+                );
             } else {
-                findings.push(AuditFinding {
-                    id: "SC-GW-005".to_string(),
-                    severity: Severity::Info,
-                    category: "gateway".to_string(),
-                    title: "Browser relay port not listening".to_string(),
-                    description: format!(
-                        "Browser relay port {} is not currently accepting connections.",
-                        browser_relay_port
-                    ),
-                    evidence: format!("Port: {}, Status: closed/unreachable", browser_relay_port),
-                    remediation: "No action needed if browser automation is not in use".to_string(),
-                    auto_fixable: false,
-                    references: vec![],
-                    owasp_asi: "ASI05".to_string(),
-                    maestro_layer: Some(MaestroLayer::L4),
-                    nist_category: Some(NistAttackType::Evasion),
-                });
+                findings.push(
+                    AuditFinding::builder("SC-GW-005", Severity::Info, "gateway")
+                        .title("Browser relay port not listening")
+                        .description(format!(
+                            "Browser relay port {} is not currently accepting connections.",
+                            browser_relay_port
+                        ))
+                        .evidence(format!(
+                            "Port: {}, Status: closed/unreachable",
+                            browser_relay_port
+                        ))
+                        .remediation("No action needed if browser automation is not in use")
+                        .owasp_asi("ASI05")
+                        .maestro(MaestroLayer::L4)
+                        .nist(NistAttackType::Evasion)
+                        .build(),
+                );
             }
         } else {
-            findings.push(AuditFinding {
-                id: "SC-GW-005".to_string(),
-                severity: Severity::Info,
-                category: "gateway".to_string(),
-                title: "Browser relay port check".to_string(),
-                description: format!(
-                    "Browser relay port {} accessibility requires deep scan mode.",
-                    browser_relay_port
-                ),
-                evidence: format!("Port: {}", browser_relay_port),
-                remediation: "Run audit with --deep flag for active network probing".to_string(),
-                auto_fixable: false,
-                references: vec![],
-                owasp_asi: "ASI05".to_string(),
-                maestro_layer: Some(MaestroLayer::L4),
-                nist_category: Some(NistAttackType::Evasion),
-            });
+            findings.push(
+                AuditFinding::builder("SC-GW-005", Severity::Info, "gateway")
+                    .title("Browser relay port check")
+                    .description(format!(
+                        "Browser relay port {} accessibility requires deep scan mode.",
+                        browser_relay_port
+                    ))
+                    .evidence(format!("Port: {}", browser_relay_port))
+                    .remediation("Run audit with --deep flag for active network probing")
+                    .owasp_asi("ASI05")
+                    .maestro(MaestroLayer::L4)
+                    .nist(NistAttackType::Evasion)
+                    .build(),
+            );
         }
 
         // GW-006: TLS enabled
@@ -321,22 +299,17 @@ impl Check for GatewayCheck {
             .and_then(|t| t.enabled)
             .unwrap_or(false);
         if !tls_enabled {
-            findings.push(AuditFinding {
-                id: "SC-GW-006".to_string(),
-                severity: Severity::Medium,
-                category: "gateway".to_string(),
-                title: "TLS not enabled on gateway".to_string(),
-                description:
-                    "Gateway traffic is unencrypted. Credentials and conversation data are transmitted in plaintext."
-                        .to_string(),
-                evidence: "gateway.tls is not configured".to_string(),
-                remediation: "Configure gateway.tls with a valid certificate and key".to_string(),
-                auto_fixable: false,
-                references: vec![],
-                owasp_asi: "ASI03".to_string(),
-                maestro_layer: Some(MaestroLayer::L4),
-                nist_category: Some(NistAttackType::Evasion),
-            });
+            findings.push(
+                AuditFinding::builder("SC-GW-006", Severity::Medium, "gateway")
+                    .title("TLS not enabled on gateway")
+                    .description("Gateway traffic is unencrypted. Credentials and conversation data are transmitted in plaintext.")
+                    .evidence("gateway.tls is not configured")
+                    .remediation("Configure gateway.tls with a valid certificate and key")
+                    .owasp_asi("ASI03")
+                    .maestro(MaestroLayer::L4)
+                    .nist(NistAttackType::Evasion)
+                    .build(),
+            );
         }
 
         // GW-007: mDNS/Bonjour mode
@@ -344,26 +317,19 @@ impl Check for GatewayCheck {
         if let Some(mdns) = gw.and_then(|g| g.mdns.as_ref()) {
             let mdns_mode = mdns.mode.as_deref();
             if mdns_mode != Some("minimal") {
-                findings.push(AuditFinding {
-                    id: "SC-GW-007".to_string(),
-                    severity: Severity::Medium,
-                    category: "gateway".to_string(),
-                    title: "mDNS broadcasting in full mode".to_string(),
-                    description:
-                        "mDNS is broadcasting sensitive instance information on the local network."
-                            .to_string(),
-                    // `gateway.mdns.mode = "${gw.mdns.mode}"` — an absent mode
-                    // renders as "undefined" in a JS template literal.
-                    evidence: format!("gateway.mdns.mode = \"{}\"", mdns_mode.unwrap_or("undefined")),
-                    remediation:
-                        "Manually set gateway.mdns.mode to \"minimal\" (not auto-fixable — key not in OpenClaw config schema)"
-                            .to_string(),
-                    auto_fixable: false,
-                    references: vec![],
-                    owasp_asi: "ASI05".to_string(),
-                    maestro_layer: Some(MaestroLayer::L4),
-                    nist_category: Some(NistAttackType::Evasion),
-                });
+                findings.push(
+                    AuditFinding::builder("SC-GW-007", Severity::Medium, "gateway")
+                        .title("mDNS broadcasting in full mode")
+                        .description("mDNS is broadcasting sensitive instance information on the local network.")
+                        // `gateway.mdns.mode = "${gw.mdns.mode}"` — an absent mode
+                        // renders as "undefined" in a JS template literal.
+                        .evidence(format!("gateway.mdns.mode = \"{}\"", mdns_mode.unwrap_or("undefined")))
+                        .remediation("Manually set gateway.mdns.mode to \"minimal\" (not auto-fixable — key not in OpenClaw config schema)")
+                        .owasp_asi("ASI05")
+                        .maestro(MaestroLayer::L4)
+                        .nist(NistAttackType::Evasion)
+                        .build(),
+                );
             }
         }
 
@@ -374,27 +340,22 @@ impl Check for GatewayCheck {
             .map(|p| p.is_empty())
             .unwrap_or(true);
         if bind != Some("loopback") && trusted_proxies_empty {
-            findings.push(AuditFinding {
-                id: "SC-GW-008".to_string(),
-                severity: Severity::Critical,
-                category: "gateway".to_string(),
-                title: "Reverse proxy without trustedProxies configuration".to_string(),
-                description:
-                    "Gateway is network-accessible without trustedProxies set. All connections appear as localhost, bypassing authentication."
-                        .to_string(),
-                evidence: format!(
-                    "gateway.bind = \"{}\", trustedProxies = []",
-                    bind.unwrap_or("all")
-                ),
-                remediation:
-                    "Set gateway.trustedProxies to the IP of your reverse proxy, e.g., [\"127.0.0.1\"]"
-                        .to_string(),
-                auto_fixable: true,
-                references: vec!["CVE-2026-25253".to_string()],
-                owasp_asi: "ASI03".to_string(),
-                maestro_layer: Some(MaestroLayer::L4),
-                nist_category: Some(NistAttackType::Evasion),
-            });
+            findings.push(
+                AuditFinding::builder("SC-GW-008", Severity::Critical, "gateway")
+                    .title("Reverse proxy without trustedProxies configuration")
+                    .description("Gateway is network-accessible without trustedProxies set. All connections appear as localhost, bypassing authentication.")
+                    .evidence(format!(
+                        "gateway.bind = \"{}\", trustedProxies = []",
+                        bind.unwrap_or("all")
+                    ))
+                    .remediation("Set gateway.trustedProxies to the IP of your reverse proxy, e.g., [\"127.0.0.1\"]")
+                    .auto_fixable(true)
+                    .references(["CVE-2026-25253"])
+                    .owasp_asi("ASI03")
+                    .maestro(MaestroLayer::L4)
+                    .nist(NistAttackType::Evasion)
+                    .build(),
+            );
         }
 
         // GW-009: dangerouslyDisableDeviceAuth
@@ -404,23 +365,18 @@ impl Check for GatewayCheck {
             .and_then(|c| c.dangerously_disable_device_auth)
             .unwrap_or(false);
         if disable_device_auth {
-            findings.push(AuditFinding {
-                id: "SC-GW-009".to_string(),
-                severity: Severity::Critical,
-                category: "gateway".to_string(),
-                title: "Device authentication disabled on Control UI".to_string(),
-                description:
-                    "dangerouslyDisableDeviceAuth is enabled, bypassing all device-level authentication for the Control UI."
-                        .to_string(),
-                evidence: "gateway.controlUi.dangerouslyDisableDeviceAuth = true".to_string(),
-                remediation: "Set gateway.controlUi.dangerouslyDisableDeviceAuth to false"
-                    .to_string(),
-                auto_fixable: true,
-                references: vec![],
-                owasp_asi: "ASI03".to_string(),
-                maestro_layer: Some(MaestroLayer::L4),
-                nist_category: Some(NistAttackType::Evasion),
-            });
+            findings.push(
+                AuditFinding::builder("SC-GW-009", Severity::Critical, "gateway")
+                    .title("Device authentication disabled on Control UI")
+                    .description("dangerouslyDisableDeviceAuth is enabled, bypassing all device-level authentication for the Control UI.")
+                    .evidence("gateway.controlUi.dangerouslyDisableDeviceAuth = true")
+                    .remediation("Set gateway.controlUi.dangerouslyDisableDeviceAuth to false")
+                    .auto_fixable(true)
+                    .owasp_asi("ASI03")
+                    .maestro(MaestroLayer::L4)
+                    .nist(NistAttackType::Evasion)
+                    .build(),
+            );
         }
 
         // GW-010: allowInsecureAuth
@@ -430,22 +386,20 @@ impl Check for GatewayCheck {
             .and_then(|c| c.allow_insecure_auth)
             .unwrap_or(false);
         if allow_insecure_auth {
-            findings.push(AuditFinding {
-                id: "SC-GW-010".to_string(),
-                severity: Severity::Medium,
-                category: "gateway".to_string(),
-                title: "Insecure authentication allowed on Control UI".to_string(),
-                description:
-                    "allowInsecureAuth is enabled, allowing weaker authentication methods."
-                        .to_string(),
-                evidence: "gateway.controlUi.allowInsecureAuth = true".to_string(),
-                remediation: "Set gateway.controlUi.allowInsecureAuth to false".to_string(),
-                auto_fixable: true,
-                references: vec![],
-                owasp_asi: "ASI03".to_string(),
-                maestro_layer: Some(MaestroLayer::L4),
-                nist_category: Some(NistAttackType::Evasion),
-            });
+            findings.push(
+                AuditFinding::builder("SC-GW-010", Severity::Medium, "gateway")
+                    .title("Insecure authentication allowed on Control UI")
+                    .description(
+                        "allowInsecureAuth is enabled, allowing weaker authentication methods.",
+                    )
+                    .evidence("gateway.controlUi.allowInsecureAuth = true")
+                    .remediation("Set gateway.controlUi.allowInsecureAuth to false")
+                    .auto_fixable(true)
+                    .owasp_asi("ASI03")
+                    .maestro(MaestroLayer::L4)
+                    .nist(NistAttackType::Evasion)
+                    .build(),
+            );
         }
 
         findings

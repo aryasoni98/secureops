@@ -85,8 +85,13 @@ pub enum Command {
         #[arg(long)]
         deep: bool,
         /// Emit JSON and act as the CI/CD gate (maps to `AuditOptions::json`).
+        /// With `--json`, the process exits 2 when the score is below the
+        /// threshold so pipelines fail the build.
         #[arg(long)]
         json: bool,
+        /// Minimum passing score for the `--json` CI/CD gate.
+        #[arg(long, default_value_t = DEFAULT_SCORE_THRESHOLD)]
+        threshold: u32,
     },
 
     /// Apply auto-fixable remediations (PRODUCT.md B.3).
@@ -130,13 +135,8 @@ pub enum Command {
 }
 
 /// Current UTC timestamp as RFC3339, matching TS `new Date().toISOString()`
-/// (PRODUCT.md A.5 wire format). Falls back to the epoch on the (impossible)
-/// formatting error so an audit never aborts over a clock.
-fn now_timestamp() -> String {
-    time::OffsetDateTime::now_utc()
-        .format(&time::format_description::well_known::Rfc3339)
-        .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
-}
+/// (PRODUCT.md A.5 wire format).
+use secureops_core::now_iso as now_timestamp;
 
 /// Resolve the OpenClaw state dir: `$OPENCLAW_STATE_DIR` else `~/.openclaw`
 /// (same precedence as the TS plugin).
@@ -171,8 +171,40 @@ pub fn audit_exit_code(score: u32, threshold: u32) -> i32 {
     }
 }
 
-/// Handle `secureops init` (PRODUCT.md B.1): create `<stateDir>/.secureops/`
-/// and the machine-keyed keystore.
+/// Starter `secureops` config block written by `init` when no `openclaw.json`
+/// exists. Values mirror the runtime defaults (cost 2/10/100 USD + breaker on,
+/// all monitors on, egress allowlist present but disabled) so the file is a
+/// template to edit, not a behaviour change.
+fn starter_config() -> OpenClawConfig {
+    use secureops_core::config::{CostLimits, MonitorsToggle, NetworkSettings, SecureOpsConfig};
+    OpenClawConfig {
+        secureops: Some(SecureOpsConfig {
+            monitors: Some(MonitorsToggle {
+                credentials: Some(true),
+                memory: Some(true),
+                skills: Some(true),
+                cost: Some(true),
+            }),
+            cost: Some(CostLimits {
+                hourly_limit_usd: Some(2.0),
+                daily_limit_usd: Some(10.0),
+                monthly_limit_usd: Some(100.0),
+                circuit_breaker_enabled: Some(true),
+            }),
+            network: Some(NetworkSettings {
+                egress_allowlist_enabled: Some(false),
+                egress_allowlist: Some(vec!["api.anthropic.com".into(), "api.openai.com".into()]),
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Handle `secureops init` (PRODUCT.md B.1): create `<stateDir>/.secureops/`,
+/// the machine-keyed keystore, and — only when absent — a starter
+/// `openclaw.json`. An existing config file is never touched: it may belong to
+/// the agent runtime SecureOps is auditing.
 async fn run_init() -> anyhow::Result<()> {
     let state_dir = resolve_state_dir();
     let (machine_id, keystore_path) =
@@ -180,6 +212,16 @@ async fn run_init() -> anyhow::Result<()> {
     println!("Initialized SecureOps state at {state_dir}/.secureops/");
     println!("  keystore: {}", keystore_path.display());
     println!("  machine id: {}…", &machine_id[..machine_id.len().min(12)]);
+
+    let config_path = format!("{state_dir}/openclaw.json");
+    if tokio::fs::try_exists(&config_path).await.unwrap_or(false) {
+        println!("  config: {config_path} (existing — left untouched)");
+    } else {
+        let json = serde_json::to_string_pretty(&starter_config())?;
+        tokio::fs::write(&config_path, format!("{json}\n")).await?;
+        println!("  config: {config_path} (starter defaults written — edit to taste)");
+    }
+
     println!("  next: run `secureops audit` to score your config.");
     Ok(())
 }
@@ -237,7 +279,7 @@ async fn run_status() -> anyhow::Result<()> {
 /// Handle `secureops behavioral [--window N]` (directive G3).
 async fn run_behavioral(window: i64) -> anyhow::Result<()> {
     let state_dir = resolve_state_dir();
-    let now_ms = time::OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000;
+    let now_ms = secureops_core::now_ms();
     let stats = secureops_fs::behavioral::get_behavioral_baseline(&state_dir, window, now_ms).await;
     println!("Behavioral baseline (last {window} min)");
     println!("  total calls: {}", stats.total_calls);
@@ -254,7 +296,7 @@ async fn run_behavioral(window: i64) -> anyhow::Result<()> {
 ///
 /// When wired up this is also the CI/CD gate: in `--json` mode it prints the
 /// report to stdout and exits non-zero when the score is below threshold.
-async fn run_audit_cmd(deep: bool, json: bool) -> anyhow::Result<()> {
+async fn run_audit_cmd(deep: bool, json: bool, threshold: u32) -> anyhow::Result<()> {
     let state_dir = resolve_state_dir();
     let config = load_config(&state_dir).await;
 
@@ -276,7 +318,7 @@ async fn run_audit_cmd(deep: bool, json: bool) -> anyhow::Result<()> {
         // Machine-readable report on stdout for the pipeline to capture.
         println!("{}", report.to_json_pretty());
         // CI/CD gate (PRODUCT.md Part C): fail the build on a low score.
-        std::process::exit(audit_exit_code(report.score, DEFAULT_SCORE_THRESHOLD));
+        std::process::exit(audit_exit_code(report.score, threshold));
     } else {
         println!("{}", console::format_console_report(&report));
     }
@@ -412,6 +454,93 @@ async fn run_kill(reason: Option<String>, deactivate: bool) -> anyhow::Result<()
     Ok(())
 }
 
+/// Adapter: drive the hash-chain [`secureops_auditlog::Signer`] contract with
+/// the OS-keychain ed25519 backend (PRODUCT.md A.3), so incident-export chain
+/// entries are signed with a key that survives process restarts.
+struct KeychainAuditSigner {
+    backend: secureops_crypto::signing::KeychainSigner,
+    key_id: &'static str,
+}
+
+impl KeychainAuditSigner {
+    const KEY_ID: &'static str = "secureops-incident-export";
+
+    fn new() -> anyhow::Result<Self> {
+        use secureops_crypto::signing::SigningBackend as _;
+        let backend = secureops_crypto::signing::KeychainSigner::default();
+        backend.ensure_key(Self::KEY_ID)?;
+        Ok(Self {
+            backend,
+            key_id: Self::KEY_ID,
+        })
+    }
+
+    fn public_key_hex(&self) -> anyhow::Result<String> {
+        use secureops_crypto::signing::SigningBackend as _;
+        Ok(hex_encode(&self.backend.public_key(self.key_id)?))
+    }
+
+    fn sign_bytes(&self, data: &[u8]) -> anyhow::Result<Vec<u8>> {
+        use secureops_crypto::signing::SigningBackend as _;
+        Ok(self.backend.sign(self.key_id, data)?)
+    }
+}
+
+impl secureops_auditlog::Signer for KeychainAuditSigner {
+    fn sign(&self, hash: &str) -> Result<String, secureops_auditlog::AuditLogError> {
+        self.sign_bytes(hash.as_bytes())
+            .map(|sig| hex_encode(&sig))
+            .map_err(|e| secureops_auditlog::AuditLogError::Signing(e.to_string()))
+    }
+
+    fn verify(
+        &self,
+        hash: &str,
+        signature: &str,
+    ) -> Result<bool, secureops_auditlog::AuditLogError> {
+        use ed25519_dalek::Verifier as _;
+        let err = |m: &str| secureops_auditlog::AuditLogError::Signing(m.to_string());
+        let pk_bytes = {
+            use secureops_crypto::signing::SigningBackend as _;
+            self.backend
+                .public_key(self.key_id)
+                .map_err(|e| err(&e.to_string()))?
+        };
+        let pk_arr: [u8; 32] = pk_bytes
+            .as_slice()
+            .try_into()
+            .map_err(|_| err("public key not 32 bytes"))?;
+        let vk = ed25519_dalek::VerifyingKey::from_bytes(&pk_arr)
+            .map_err(|_| err("invalid public key"))?;
+        let sig_bytes = hex_decode(signature).ok_or_else(|| err("signature not hex"))?;
+        let sig_arr: [u8; 64] = sig_bytes
+            .as_slice()
+            .try_into()
+            .map_err(|_| err("signature not 64 bytes"))?;
+        let sig = ed25519_dalek::Signature::from_bytes(&sig_arr);
+        Ok(vk.verify(hash.as_bytes(), &sig).is_ok())
+    }
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn hex_decode(s: &str) -> Option<Vec<u8>> {
+    if s.len() % 2 != 0 {
+        return None;
+    }
+    (0..s.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&s[i..i + 2], 16).ok())
+        .collect()
+}
+
+fn sha256_hex(data: &[u8]) -> String {
+    use sha2::Digest as _;
+    hex_encode(&sha2::Sha256::digest(data))
+}
+
 /// Handle `secureops export-incident` (PRODUCT.md B.9).
 async fn run_export_incident() -> anyhow::Result<()> {
     let state_dir = resolve_state_dir();
@@ -437,7 +566,8 @@ async fn run_export_incident() -> anyhow::Result<()> {
         SECUREOPS_VERSION,
     )
     .await;
-    tokio::fs::write(format!("{bundle}/audit.json"), report.to_json_pretty()).await?;
+    let audit_json = report.to_json_pretty();
+    tokio::fs::write(format!("{bundle}/audit.json"), &audit_json).await?;
 
     // Kill-switch state + behavioral snapshot.
     let kill = secureops_fs::killswitch::is_kill_switch_active(&state_dir).await;
@@ -448,11 +578,39 @@ async fn run_export_incident() -> anyhow::Result<()> {
         "score": report.score,
         "secureopsVersion": SECUREOPS_VERSION,
     });
-    tokio::fs::write(
-        format!("{bundle}/incident.json"),
-        serde_json::to_string_pretty(&meta)?,
-    )
-    .await?;
+    let incident_json = serde_json::to_string_pretty(&meta)?;
+    tokio::fs::write(format!("{bundle}/incident.json"), &incident_json).await?;
+
+    // Sign the bundle (PRODUCT.md B.9): a manifest commits to the SHA-256 of
+    // every file, and an ed25519 signature over the manifest bytes — keyed in
+    // the OS keychain — makes tampering with the bundle detectable.
+    let signer = KeychainAuditSigner::new()?;
+    let manifest = serde_json::json!({
+        "timestamp": ts,
+        "algorithm": "ed25519",
+        "publicKey": signer.public_key_hex()?,
+        "files": {
+            "audit.json": sha256_hex(audit_json.as_bytes()),
+            "incident.json": sha256_hex(incident_json.as_bytes()),
+        },
+    });
+    let manifest_json = serde_json::to_string_pretty(&manifest)?;
+    let manifest_sig = hex_encode(&signer.sign_bytes(manifest_json.as_bytes())?);
+    tokio::fs::write(format!("{bundle}/manifest.json"), &manifest_json).await?;
+    tokio::fs::write(format!("{bundle}/manifest.sig"), &manifest_sig).await?;
+
+    // Anchor the export into the hash-chained audit log so the incident export
+    // itself is a tamper-evident event (same chain the daemon appends to).
+    let log_path = format!("{state_dir}/.secureops/audit.jsonl");
+    let mut log = secureops_auditlog::AuditLog::open(&log_path, Box::new(signer))?;
+    let entry = log.append(
+        serde_json::json!({
+            "event": "incident_exported",
+            "bundle": bundle,
+            "manifestSha256": sha256_hex(manifest_json.as_bytes()),
+        }),
+        ts.clone(),
+    )?;
 
     println!("Incident bundle written: {bundle}");
     println!(
@@ -461,7 +619,8 @@ async fn run_export_incident() -> anyhow::Result<()> {
         report.score
     );
     println!("  incident.json (kill switch: {kill})");
-    // TODO(Phase 4): ed25519-sign + hash-chain anchor via secureops-auditlog (B.9).
+    println!("  manifest.json + manifest.sig (ed25519, OS-keychain key)");
+    println!("  audit-log anchor: seq {} in {log_path}", entry.seq);
     Ok(())
 }
 
@@ -475,7 +634,11 @@ async fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Command::Init => run_init().await,
-        Command::Audit { deep, json } => run_audit_cmd(deep, json).await,
+        Command::Audit {
+            deep,
+            json,
+            threshold,
+        } => run_audit_cmd(deep, json, threshold).await,
         Command::Harden { full, rollback } => run_harden(full, rollback).await,
         Command::Monitor => run_monitor().await,
         Command::Kill { reason, deactivate } => run_kill(reason, deactivate).await,
@@ -506,5 +669,35 @@ mod tests {
         );
         assert_eq!(audit_exit_code(80, DEFAULT_SCORE_THRESHOLD), 0);
         assert_eq!(audit_exit_code(100, DEFAULT_SCORE_THRESHOLD), 0);
+    }
+
+    #[test]
+    fn hex_helpers_round_trip() {
+        let data = [0u8, 1, 0xab, 0xff];
+        let hex = hex_encode(&data);
+        assert_eq!(hex, "0001abff");
+        assert_eq!(hex_decode(&hex).unwrap(), data);
+        assert!(hex_decode("abc").is_none()); // odd length
+        assert!(hex_decode("zz").is_none()); // non-hex
+    }
+
+    /// The keychain-backed audit signer must verify its own signatures and
+    /// reject a signature for a different message (B.9 incident anchoring).
+    #[test]
+    fn keychain_audit_signer_round_trip() {
+        use secureops_auditlog::Signer as _;
+        let signer = KeychainAuditSigner::new().expect("keychain signer");
+        let sig = signer.sign("chain-hash-abc").expect("sign");
+        assert!(signer.verify("chain-hash-abc", &sig).expect("verify"));
+        assert!(!signer.verify("different-hash", &sig).expect("verify"));
+    }
+
+    #[test]
+    fn sha256_hex_is_stable() {
+        // Known SHA-256 of the empty string.
+        assert_eq!(
+            sha256_hex(b""),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
     }
 }

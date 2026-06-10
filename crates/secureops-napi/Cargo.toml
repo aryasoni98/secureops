@@ -26,7 +26,6 @@ secureops-intel = { path = "../secureops-intel", version = "0.0.1" }   # bundled
 secureops-harden = { path = "../secureops-harden", version = "0.0.1" } # harden command
 secureops-monitors = { path = "../secureops-monitors", version = "0.0.1" } # skill-scan + cost-report commands
 serde_json = { workspace = true }
-time = { workspace = true }                            # RFC3339 audit timestamp
 
 napi = { version = "2", default-features = false, features = ["napi6", "async", "serde-json"] }
 napi-derive = "2"

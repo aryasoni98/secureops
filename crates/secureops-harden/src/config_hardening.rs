@@ -32,66 +32,44 @@ impl HardeningModule for ConfigHardening {
 
         // exec.approvals === 'off'
         if config.exec.as_ref().and_then(|e| e.approvals.as_deref()) == Some("off") {
-            findings.push(AuditFinding {
-                id: "SC-EXEC-001".to_string(),
-                severity: Severity::Critical,
-                category: "execution".to_string(),
-                title: "Execution approvals disabled".to_string(),
-                description:
-                    "Execution approvals are disabled. This allows commands to run without user confirmation."
-                        .to_string(),
-                evidence: "exec.approvals = \"off\"".to_string(),
-                remediation:
-                    "Manually set exec.approvals to \"always\" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)"
-                        .to_string(),
-                auto_fixable: false,
-                references: Vec::new(),
-                owasp_asi: "ASI02".to_string(),
-                maestro_layer: None,
-                nist_category: None,
-            });
+            findings.push(
+                AuditFinding::builder("SC-EXEC-001", Severity::Critical, "execution")
+                    .title("Execution approvals disabled")
+                    .description("Execution approvals are disabled. This allows commands to run without user confirmation.")
+                    .evidence("exec.approvals = \"off\"")
+                    .remediation("Manually set exec.approvals to \"always\" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)")
+                    .owasp_asi("ASI02")
+                    .build(),
+            );
         }
 
         // sandbox.mode !== 'all'
         let sandbox_mode = config.sandbox.as_ref().and_then(|s| s.mode.as_deref());
         if sandbox_mode != Some("all") {
-            findings.push(AuditFinding {
-                id: "SC-EXEC-003".to_string(),
-                severity: Severity::Medium,
-                category: "execution".to_string(),
-                title: "Sandbox not set to all".to_string(),
-                description:
-                    "Sandbox mode is not set to \"all\". Not all commands run in a sandboxed environment."
-                        .to_string(),
-                evidence: format!("sandbox.mode = \"{}\"", sandbox_mode.unwrap_or("undefined")),
-                remediation:
-                    "Manually set sandbox.mode to \"all\" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)"
-                        .to_string(),
-                auto_fixable: false,
-                references: Vec::new(),
-                owasp_asi: "ASI05".to_string(),
-                maestro_layer: None,
-                nist_category: None,
-            });
+            findings.push(
+                AuditFinding::builder("SC-EXEC-003", Severity::Medium, "execution")
+                    .title("Sandbox not set to all")
+                    .description("Sandbox mode is not set to \"all\". Not all commands run in a sandboxed environment.")
+                    .evidence(format!("sandbox.mode = \"{}\"", sandbox_mode.unwrap_or("undefined")))
+                    .remediation("Manually set sandbox.mode to \"all\" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)")
+                    .owasp_asi("ASI05")
+                    .build(),
+            );
         }
 
         // Per-channel: dmPolicy === 'open'
         for ch in ctx.channels() {
             if ch.dm_policy.as_deref() == Some("open") {
-                findings.push(AuditFinding {
-                    id: "SC-AC-001".to_string(),
-                    severity: Severity::High,
-                    category: "access-control".to_string(),
-                    title: format!("Channel \"{}\" has open DM policy", ch.name),
-                    description: "Will set to \"pairing\".".to_string(),
-                    evidence: "dmPolicy = \"open\"".to_string(),
-                    remediation: "Set dmPolicy to \"pairing\"".to_string(),
-                    auto_fixable: true,
-                    references: Vec::new(),
-                    owasp_asi: "ASI01".to_string(),
-                    maestro_layer: None,
-                    nist_category: None,
-                });
+                findings.push(
+                    AuditFinding::builder("SC-AC-001", Severity::High, "access-control")
+                        .title(format!("Channel \"{}\" has open DM policy", ch.name))
+                        .description("Will set to \"pairing\".")
+                        .evidence("dmPolicy = \"open\"")
+                        .remediation("Set dmPolicy to \"pairing\"")
+                        .auto_fixable(true)
+                        .owasp_asi("ASI01")
+                        .build(),
+                );
             }
         }
 
@@ -329,15 +307,17 @@ mod tests {
         let state_dir = dir.path().to_string_lossy().to_string();
 
         // Seed an openclaw.json with invalid root keys present.
-        let mut seed = OpenClawConfig::default();
-        seed.exec = Some(ExecConfig {
-            approvals: Some("off".to_string()),
+        let seed = OpenClawConfig {
+            exec: Some(ExecConfig {
+                approvals: Some("off".to_string()),
+                ..Default::default()
+            }),
+            sandbox: Some(SandboxConfig {
+                mode: Some("workspace".to_string()),
+                ..Default::default()
+            }),
             ..Default::default()
-        });
-        seed.sandbox = Some(SandboxConfig {
-            mode: Some("workspace".to_string()),
-            ..Default::default()
-        });
+        };
         write_config(&state_dir, &seed).await.unwrap();
 
         let backup_dir = dir.path().join("backup");

@@ -1,0 +1,123 @@
+# SecureOps platform stack (PRODUCT.md Phase 5) — HTTP API + storage.
+#
+# Separate from docker-compose.yml (the host-local daemon/audit tool). Brings up
+# the platform tier: API + scanner worker + Postgres + Redis + MinIO + OTel collector.
+#
+#   docker compose -f deploy/docker/docker-compose.platform.yml --env-file deploy/docker/.env.example up -d
+#
+# Network split: `frontend` carries ingress↔api; `backend` carries api↔datastores
+# and is NOT attached to ingress, so Postgres/Redis/MinIO are never internet-reachable.
+
+services:
+  api:
+    image: secureops-rust:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    command: ["secureops-api"]
+    environment:
+      SECUREOPS_API_ADDR: "0.0.0.0:8080"
+      SECUREOPS_JWT_SECRET: "${SECUREOPS_JWT_SECRET}"
+      SECUREOPS_LICENSE_PUBKEY: "${SECUREOPS_LICENSE_PUBKEY}"
+      SECUREOPS_DEV_MODE: "${SECUREOPS_DEV_MODE:-0}"
+      SECUREOPS_CORS_ORIGINS: "${SECUREOPS_CORS_ORIGINS:-}"
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+      REDIS_URL: "redis://redis:6379"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+    ports:
+      - "8080:8080"
+    networks: [frontend, backend]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/livez"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Scan-job worker (PRODUCT.md Phase 5b). BRPOPs scan jobs off the Redis
+  # SCAN_QUEUE, runs the configured collector, and writes Findings to Postgres.
+  scanner:
+    image: secureops-rust:latest
+    command: ["secureops-scanner"]
+    environment:
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+      REDIS_URL: "redis://redis:6379"
+      SECUREOPS_SCAN_QUEUE: "secureops:scans"
+    networks: [backend]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  minio:
+    # Pinned by digest: the upstream MinIO repo was archived in April 2026 and
+    # images stopped being published — `latest` can vanish or go stale.
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z@sha256:3f97c5651cb6662b880c787a232b6b34fec8d8922e08d6617b25d241a21164bb
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD}"
+    volumes:
+      - miniodata:/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  otel-collector:
+    # Pinned by digest for reproducible stacks; bump deliberately.
+    image: otel/opentelemetry-collector-contrib:0.127.0@sha256:9d34f146d53dd4f10573d62cba31d5ec1f75f310f57006e28ab666437fc1aacd
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otel/config.yaml:ro
+    networks: [backend]
+    restart: unless-stopped
+
+networks:
+  frontend:
+  backend:
+    internal: true   # datastores unreachable from the ingress network
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:

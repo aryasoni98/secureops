@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_variables)]
 #![forbid(unsafe_code)]
 
 //! # secureops-auditlog

@@ -3,7 +3,10 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      # Strict semver (with optional pre-release, e.g. v0.1.0-beta.1) so a typo
+      # tag can never cut a release.
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
 
 # Run bundled JS actions (checkout/setup-node/gh-release) on Node 24, ahead of
 # the Node 20 removal from runners (Sept 2026). Silences deprecation warnings.
@@ -70,24 +73,90 @@ jobs:
         if: matrix.cross
         run: cargo install cross --git https://github.com/cross-rs/cross
 
-      - name: Build CLI binary
+      - name: Install cargo-auditable
+        run: cargo install cargo-auditable --locked
+
+      - name: Set SOURCE_DATE_EPOCH from the tagged commit
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+
+      - name: Build release binaries
         run: |
+          PACKAGES="-p secureops-cli -p secureops-daemon -p secureops-api -p secureops-license-server -p secureops-scanner"
           if [ "${{ matrix.cross }}" = "true" ]; then
-            cross build --release -p secureops-cli --target ${{ matrix.target }}
+            cross auditable build --release $PACKAGES --target ${{ matrix.target }}
           else
-            cargo build --release -p secureops-cli --target ${{ matrix.target }}
+            cargo auditable build --release $PACKAGES --target ${{ matrix.target }}
           fi
 
-      - name: Package binary
+      - name: Package binaries
         run: |
           TAG=${GITHUB_REF#refs/tags/}
           BIN_DIR="target/${{ matrix.target }}/release"
           ARCHIVE="secureops-${TAG}-${{ matrix.suffix }}.tar.gz"
           cp "$BIN_DIR/secureops" secureops-cli
-          tar czf "$ARCHIVE" secureops-cli
+          cp "$BIN_DIR/secureops-daemon" secureops-daemon
+          cp "$BIN_DIR/secureops-api" secureops-api
+          cp "$BIN_DIR/secureops-license-server" secureops-license-server
+          cp "$BIN_DIR/secureops-scanner" secureops-scanner
+          tar czf "$ARCHIVE" secureops-cli secureops-daemon secureops-api secureops-license-server secureops-scanner
+          sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
           echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+
+      - name: Upload checksum to release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: ${{ env.ARCHIVE }}.sha256
 
       - name: Upload binary to release
         uses: softprops/action-gh-release@v3
         with:
           files: ${{ env.ARCHIVE }}
+
+  container-image:
+    name: Build, sign, attest container image
+    needs: create-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write   # cosign keyless OIDC
+      attestations: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/secureops:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}/secureops:latest
+          provenance: true
+          sbom: true
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image (keyless, sigstore)
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign sign --yes ghcr.io/${{ github.repository }}/secureops@${{ steps.build.outputs.digest }}
+
+      - name: Attest SBOM + SLSA provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ github.repository }}/secureops
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true

@@ -10,15 +10,15 @@
 //! IOC checks" behavior.
 
 #![forbid(unsafe_code)]
-#![allow(dead_code)]
 
 pub mod baseline;
 
 use anyhow::Result;
 use secureops_core::IocDatabase;
 use sha2::{Digest, Sha256};
+use streaming_iterator::StreamingIterator;
 use strsim::jaro_winkler as jaro_winkler_similarity;
-use tree_sitter::{Parser, Query, QueryCursor};
+use tree_sitter::{Language, Parser, Query, QueryCursor};
 
 /// SHA-256 hex of a UTF-8 string. Port of `hashString`.
 pub fn hash_string(content: &str) -> String {
@@ -272,7 +272,7 @@ fn looks_like_js(src: &str) -> bool {
 
 /// tree-sitter AST-based scan for the canonical JS exfil patterns.
 fn ast_scan_js(src: &str, findings: &mut Vec<String>, patterns: &mut Vec<String>) {
-    let lang = tree_sitter_javascript::language();
+    let lang: Language = tree_sitter_javascript::LANGUAGE.into();
     let mut parser = Parser::new();
     if parser.set_language(&lang).is_err() {
         return;
@@ -288,8 +288,7 @@ fn ast_scan_js(src: &str, findings: &mut Vec<String>, patterns: &mut Vec<String>
     let eval_query = r#"(call_expression function: (identifier) @fn (#eq? @fn "eval"))"#;
     if let Ok(q) = Query::new(&lang, eval_query) {
         let mut cur = QueryCursor::new();
-        for m in cur.matches(&q, root, bytes) {
-            let _ = m; // any match = eval call present
+        if cur.matches(&q, root, bytes).next().is_some() {
             add_unique(
                 "ast:eval-call",
                 findings,
@@ -307,8 +306,7 @@ fn ast_scan_js(src: &str, findings: &mut Vec<String>, patterns: &mut Vec<String>
   (#match? @str "child_process"))"#;
     if let Ok(q) = Query::new(&lang, require_query) {
         let mut cur = QueryCursor::new();
-        for m in cur.matches(&q, root, bytes) {
-            let _ = m;
+        if cur.matches(&q, root, bytes).next().is_some() {
             add_unique(
                 "ast:child_process-require",
                 findings,
@@ -322,8 +320,7 @@ fn ast_scan_js(src: &str, findings: &mut Vec<String>, patterns: &mut Vec<String>
     let import_query = r#"(import_statement source: (string) @src (#match? @src "child_process"))"#;
     if let Ok(q) = Query::new(&lang, import_query) {
         let mut cur = QueryCursor::new();
-        for m in cur.matches(&q, root, bytes) {
-            let _ = m;
+        if cur.matches(&q, root, bytes).next().is_some() {
             add_unique(
                 "ast:child_process-import",
                 findings,
@@ -341,8 +338,7 @@ fn ast_scan_js(src: &str, findings: &mut Vec<String>, patterns: &mut Vec<String>
   (#eq? @prop "env"))"#;
     if let Ok(q) = Query::new(&lang, env_query) {
         let mut cur = QueryCursor::new();
-        for m in cur.matches(&q, root, bytes) {
-            let _ = m;
+        if cur.matches(&q, root, bytes).next().is_some() {
             add_unique(
                 "ast:process-env-access",
                 findings,
@@ -359,8 +355,7 @@ fn ast_scan_js(src: &str, findings: &mut Vec<String>, patterns: &mut Vec<String>
   (#eq? @fn "require"))"#;
     if let Ok(q) = Query::new(&lang, dynreq_query) {
         let mut cur = QueryCursor::new();
-        for m in cur.matches(&q, root, bytes) {
-            let _ = m;
+        if cur.matches(&q, root, bytes).next().is_some() {
             add_unique(
                 "ast:dynamic-require",
                 findings,
@@ -377,8 +372,7 @@ fn ast_scan_js(src: &str, findings: &mut Vec<String>, patterns: &mut Vec<String>
     (#match? @method "^(exec|spawn|execSync|spawnSync|execFile|fork)$")))"#;
     if let Ok(q) = Query::new(&lang, exec_query) {
         let mut cur = QueryCursor::new();
-        for m in cur.matches(&q, root, bytes) {
-            let _ = m;
+        if cur.matches(&q, root, bytes).next().is_some() {
             add_unique(
                 "ast:exec-spawn-call",
                 findings,

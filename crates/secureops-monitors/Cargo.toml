@@ -12,7 +12,6 @@ homepage.workspace = true
 [dependencies]
 secureops-core = { workspace = true }
 secureops-intel = { path = "../secureops-intel", version = "0.0.1" }   # hash_string + IOC matchers (skill scanner)
-serde = { workspace = true }
 serde_json = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }
@@ -21,7 +20,13 @@ tracing = { workspace = true }
 regex = { workspace = true }                            # dangerous-skill + prompt-injection patterns
 time = { workspace = true, features = ["parsing"] }     # parse entry timestamps for cost windows
 
-rusqlite = { version = "0.32", features = ["bundled"] }   # SQLite: alerts + audit-log tables
+# Pinned to keep libsqlite3-sys at 0.30.0: 0.30.1 requires cc >=1.1.6, which
+# conflicts with tree-sitter-javascript's `cc <1.1` cap (secureops-intel). 0.30.0
+# accepts cc ^1.0. The libsqlite3-sys pin is the real lever (rusqlite 0.32.0
+# allows ^0.30.0 and the resolver otherwise greedily takes 0.30.1); rusqlite is
+# pinned to the matching 0.32.0. All versions current/unyanked.
+rusqlite = { version = "=0.32.0", features = ["bundled"] }   # SQLite: alerts + audit-log tables
+libsqlite3-sys = "=0.30.0"                                   # version pin only (rusqlite drives features)
 
 [dev-dependencies]
 tokio = { workspace = true }

@@ -1,0 +1,58 @@
+# SecureOps platform (Phase 5) — umbrella values.
+
+replicaCount: 2
+
+image:
+  repository: secureops-rust
+  # Defaults to the chart appVersion; override for a specific build.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+api:
+  port: 8080
+  addr: "0.0.0.0:8080"
+  # Reference secrets/datastores by value. In real deploys, source jwtSecret and
+  # licensePubkey from a Secret (see api-deployment.yaml envFrom note).
+  jwtSecretName: secureops-api
+  databaseUrl: "postgres://secureops_app:change-me@postgres:5432/secureops"
+  redisUrl: "redis://redis:6379"
+  otelEndpoint: "http://otel-collector:4317"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+# Restricted Pod Security Standard.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  seccompProfile:
+    type: RuntimeDefault
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+networkPolicy:
+  enabled: true
+  # CIDR/namespace selectors that may reach the API (default: same namespace).
+  ingressFromSameNamespace: true
+
+# Kernel-PEP DaemonSet subchart (charts/bpf-agent). Enterprise tier only.
+bpf-agent:
+  enabled: false
+
+# Graph backend subchart (charts/neo4j). Pro/Enterprise; Community uses pg-CTE.
+neo4j:
+  enabled: false

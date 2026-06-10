@@ -22,9 +22,7 @@ fn ctx_for(state_dir: &str) -> secureops_fs::RealAuditContext {
     )
 }
 
-fn now_ms() -> i128 {
-    time::OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000
-}
+use secureops_core::now_ms;
 
 /// The plugin manifest (port of `legacyPlugin` name/version/description +
 /// command names + MCP `tools[]`). The TS shim registers each command/tool with

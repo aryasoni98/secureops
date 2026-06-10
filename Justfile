@@ -156,6 +156,168 @@ bpf-daemon:
     SECUREOPS_BPF_OBJ=ebpf/target/bpfel-unknown-none/release/secureops-ebpf \
       OPENCLAW_STATE_DIR="{{state_dir}}" {{daemon}}
 
+# Build + attach the kernel PEP (Linux only; no-op elsewhere).
+bpf-load:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! uname -s | grep -qi linux; then
+      echo "bpf-load: kernel PEP is Linux-only — no-op on $(uname -s)."; exit 0
+    fi
+    just bpf-build
+    echo "eBPF object built. Start the PEP with: just bpf-daemon"
+
+# Show attached SecureOps eBPF programs (Linux only; needs bpftool + root).
+bpf-status:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! uname -s | grep -qi linux; then
+      echo "bpf-status: Linux-only — no-op on $(uname -s)."; exit 0
+    fi
+    sudo bpftool prog show 2>/dev/null | grep -i secureops || echo "no SecureOps eBPF programs attached"
+
+# Detach the kernel PEP (programs unpin when the daemon exits).
+bpf-unload:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! uname -s | grep -qi linux; then
+      echo "bpf-unload: Linux-only — no-op on $(uname -s)."; exit 0
+    fi
+    echo "Stop secureops-daemon to detach; eBPF programs are unpinned on exit."
+
+# Demo the exfil-chain detector on ANY OS (no kernel): runs the daemon with a
+# mock event source that injects a read-.env→connect chain.
+bpf-mock-demo:
+    OPENCLAW_STATE_DIR="{{state_dir}}" cargo run -p secureops-daemon --features mock
+
+# --- Platform services (Phase 5: API + Postgres + Redis + MinIO + OTel) -------
+
+platform_compose := "deploy/docker/docker-compose.platform.yml"
+
+# Bring up the platform stack. Copy deploy/docker/.env.example → .env first.
+platform-up:
+    docker compose -f {{platform_compose}} --env-file deploy/docker/.env up -d --build
+
+platform-down:
+    docker compose -f {{platform_compose}} --env-file deploy/docker/.env down
+
+platform-logs service="api":
+    docker compose -f {{platform_compose}} logs -f {{service}}
+
+platform-status:
+    docker compose -f {{platform_compose}} ps
+
+# Run the API locally (in-memory store; dev mode: insecure built-in defaults).
+api:
+    SECUREOPS_DEV_MODE=1 SECUREOPS_API_ADDR=127.0.0.1:8080 cargo run -p secureops-api
+
+# Run the scan-job worker locally (needs a reachable REDIS_URL).
+scanner:
+    cargo run -p secureops-scanner
+
+# Aliases the prompt-pack expects.
+up: platform-up
+down: platform-down
+
+# Smoke: queue a scan via the API after `just up` (export TOKEN first).
+scan target="all":
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/scans \
+      -H "Authorization: Bearer ${TOKEN:-}" -H 'Content-Type: application/json' \
+      -d '{"scope":"{{target}}"}' | jq .
+
+# Queue a scan via the running API (export TOKEN from /license/activate first).
+platform-scan target="all":
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/scans \
+      -H "Authorization: Bearer ${TOKEN:-}" -H 'Content-Type: application/json' \
+      -d '{"scope":"{{target}}"}'
+
+# Apply SQL migrations to $DATABASE_URL (needs sqlx-cli: cargo install sqlx-cli).
+db-migrate:
+    sqlx migrate run --source crates/secureops-api/migrations
+
+# --- Intelligence layer (Phase 6: graph + LLM bug-hunt + token budget) -------
+
+# Run the intelligence-engine unit tests (graph algorithms, knapsack, agentic loop).
+intel-test:
+    cargo test -p secureops-tokenbudget -p secureops-graph -p secureops-bughunt
+
+# Rebuild the security knowledge graph from a sample 2-node topology (demo).
+graph-rebuild:
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/graph/rebuild \
+      -H "Authorization: Bearer ${TOKEN:-}" -H 'Content-Type: application/json' \
+      -d '{"nodes":[{"id":"internet","kind":"net","exposed":true},{"id":"db","kind":"rds","sensitive":true}],"edges":[{"from":"internet","to":"db","kind":"Exposes","difficulty":1.0}]}' | jq .
+
+# Queue an LLM bug-hunt via the running API (export TOKEN; tier must include 'bughunt').
+bughunt scope="all":
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/bughunt \
+      -H "Authorization: Bearer ${TOKEN:-}" -H 'Content-Type: application/json' \
+      -d '{"scope":"{{scope}}"}'
+
+# --- Autonomy (Phase 7: RL ranking + self-healing playbooks) -----------------
+
+# Run the autonomy unit tests (LinUCB ranking, playbook engine, circuit breaker).
+autonomy-test:
+    cargo test -p secureops-rl -p secureops-selfheal
+
+# Show the remediation HITL queue + RL stats (export TOKEN; needs running API).
+heal-status:
+    @curl -fsS http://127.0.0.1:8080/api/v1/remediations/queue \
+      -H "Authorization: Bearer ${TOKEN:-}" | jq . || \
+      echo "heal-status: set TOKEN via /license/activate and start the API (just api)."
+    @curl -fsS http://127.0.0.1:8080/api/v1/rl/stats \
+      -H "Authorization: Bearer ${TOKEN:-}" | jq . || true
+
+# Queue a remediation for finding_id using playbook_id (mock backend, no real cloud).
+heal-dry finding_id="finding-1" playbook="s3-public-acl":
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/remediations \
+      -H "Authorization: Bearer ${TOKEN:-}" -H 'Content-Type: application/json' \
+      -d '{"finding_id":"{{finding_id}}","playbook_id":"{{playbook}}"}' | jq .
+
+# Approve a queued remediation (executes through the playbook engine).
+heal-approve id="":
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/remediations/{{id}}/approve \
+      -H "Authorization: Bearer ${TOKEN:-}" | jq .
+
+# Deny a queued remediation (no cloud call, audit logged).
+heal-deny id="":
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/remediations/{{id}}/deny \
+      -H "Authorization: Bearer ${TOKEN:-}" | jq .
+
+# Reset a halted circuit-breaker class (safe|reversible|destructive).
+heal-reset class="reversible":
+    curl -fsS -X POST http://127.0.0.1:8080/api/v1/remediations/circuit/{{class}}/reset \
+      -H "Authorization: Bearer ${TOKEN:-}" | jq .
+
+# --- Enterprise (Phase 8: dashboard + license server) ------------------------
+
+# Run the stateless license server locally (dev mode: insecure built-in defaults).
+license-server:
+    SECUREOPS_DEV_MODE=1 cargo run -p secureops-license-server
+
+# Mint a dev-signed license key for local/beta use (pairs with SECUREOPS_DEV_MODE=1).
+dev-license tenant="beta" tier="enterprise" days="365":
+    cargo run -q -p secureops-license-server -- mint --dev --tenant {{tenant}} --tier {{tier}} --days {{days}}
+
+# Dashboard dev server (needs Node 18+; proxies /api + /ws to the running API).
+web-dev:
+    cd web && npm install && npm run dev
+
+# Build the dashboard for production (emits web/dist).
+web-build:
+    cd web && npm install && npm run build
+
+# Zero-downtime-ish platform upgrade: pull → migrate → rolling restart → health poll.
+platform-upgrade:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker compose -f {{platform_compose}} --env-file deploy/docker/.env pull
+    just db-migrate || echo "migrate skipped (set DATABASE_URL + install sqlx-cli)"
+    docker compose -f {{platform_compose}} --env-file deploy/docker/.env up -d --no-deps api
+    for i in $(seq 1 30); do
+      if curl -fsS http://127.0.0.1:8080/livez >/dev/null 2>&1; then echo "api healthy after upgrade"; exit 0; fi
+      sleep 2
+    done
+    echo "health check failed after upgrade" >&2; exit 1
+
 # --- Docs --------------------------------------------------------------------
 
 docs:

@@ -22,8 +22,8 @@
 use async_trait::async_trait;
 use regex::Regex;
 use secureops_core::{
-    AuditContext, AuditFinding, AuditOptions, Check, IocDatabase, MaestroLayer, NistAttackType,
-    Severity,
+    is_group_or_other_accessible, AuditContext, AuditFinding, AuditOptions, Check, IocDatabase,
+    MaestroLayer, NistAttackType, Severity,
 };
 use std::sync::{Arc, LazyLock};
 
@@ -102,20 +102,16 @@ impl Check for MemoryIntegrityCheck {
         // The Rust `list_dir` never errors, so the "readdir threw" branch (which
         // fires only when the dir is absent) is gated on `!file_exists`.
         if !ctx.file_exists(&agents_dir).await {
-            findings.push(AuditFinding {
-                id: "SC-MEM-001".to_string(),
-                severity: Severity::Info,
-                category: "memory".to_string(),
-                title: "No agents directory found".to_string(),
-                description: "No agents directory exists to check memory integrity.".to_string(),
-                evidence: format!("Path: {agents_dir}"),
-                remediation: "No action needed if this is a fresh installation".to_string(),
-                auto_fixable: false,
-                references: vec![],
-                owasp_asi: "ASI06".to_string(),
-                maestro_layer: Some(MaestroLayer::L2),
-                nist_category: None,
-            });
+            findings.push(
+                AuditFinding::builder("SC-MEM-001", Severity::Info, "memory")
+                    .title("No agents directory found")
+                    .description("No agents directory exists to check memory integrity.")
+                    .evidence(format!("Path: {agents_dir}"))
+                    .remediation("No action needed if this is a fresh installation")
+                    .owasp_asi("ASI06")
+                    .maestro(MaestroLayer::L2)
+                    .build(),
+            );
             return findings;
         }
 
@@ -135,54 +131,45 @@ impl Check for MemoryIntegrityCheck {
                 // MEM-002: Check for prompt injection patterns
                 for pattern in PROMPT_INJECTION_PATTERNS.iter() {
                     if pattern.is_match(&content) {
-                        findings.push(AuditFinding {
-                            id: "SC-MEM-002".to_string(),
-                            severity: Severity::Critical,
-                            category: "memory".to_string(),
-                            title: format!(
-                                "Prompt injection detected in \"{mem_file}\" for agent \"{agent}\""
-                            ),
-                            description: format!(
-                                "Memory file contains prompt injection pattern: \"{}\". This may be a time-shifted logic bomb.",
-                                pattern_source(pattern)
-                            ),
-                            evidence: format!(
-                                "File: {mem_path}, Pattern: {}",
-                                pattern_source(pattern)
-                            ),
-                            remediation:
-                                "Remove or quarantine the affected memory file, then re-run \"secureops audit\""
-                                    .to_string(),
-                            auto_fixable: false,
-                            references: vec![],
-                            owasp_asi: "ASI06".to_string(),
-                            maestro_layer: Some(MaestroLayer::L2),
-                            nist_category: Some(NistAttackType::Poisoning),
-                        });
+                        findings.push(
+                            AuditFinding::builder("SC-MEM-002", Severity::Critical, "memory")
+                                .title(format!(
+                                    "Prompt injection detected in \"{mem_file}\" for agent \"{agent}\""
+                                ))
+                                .description(format!(
+                                    "Memory file contains prompt injection pattern: \"{}\". This may be a time-shifted logic bomb.",
+                                    pattern_source(pattern)
+                                ))
+                                .evidence(format!(
+                                    "File: {mem_path}, Pattern: {}",
+                                    pattern_source(pattern)
+                                ))
+                                .remediation(
+                                    "Remove or quarantine the affected memory file, then re-run \"secureops audit\""
+                                )
+                                .owasp_asi("ASI06")
+                                .maestro(MaestroLayer::L2)
+                                .nist(NistAttackType::Poisoning)
+                                .build(),
+                        );
                     }
                 }
 
                 // MEM-003: Check for base64 encoded blocks
                 if BASE64_BLOCK_PATTERN.is_match(&content) {
-                    findings.push(AuditFinding {
-                        id: "SC-MEM-003".to_string(),
-                        severity: Severity::Medium,
-                        category: "memory".to_string(),
-                        title: format!(
-                            "Base64 encoded content in \"{mem_file}\" for agent \"{agent}\""
-                        ),
-                        description:
-                            "Memory file contains long base64-encoded blocks which may hide malicious instructions."
-                                .to_string(),
-                        evidence: format!("File: {mem_path}"),
-                        remediation: "Review and decode the base64 content to verify it is benign"
-                            .to_string(),
-                        auto_fixable: false,
-                        references: vec![],
-                        owasp_asi: "ASI06".to_string(),
-                        maestro_layer: Some(MaestroLayer::L2),
-                        nist_category: Some(NistAttackType::Poisoning),
-                    });
+                    findings.push(
+                        AuditFinding::builder("SC-MEM-003", Severity::Medium, "memory")
+                            .title(format!(
+                                "Base64 encoded content in \"{mem_file}\" for agent \"{agent}\""
+                            ))
+                            .description("Memory file contains long base64-encoded blocks which may hide malicious instructions.")
+                            .evidence(format!("File: {mem_path}"))
+                            .remediation("Review and decode the base64 content to verify it is benign")
+                            .owasp_asi("ASI06")
+                            .maestro(MaestroLayer::L2)
+                            .nist(NistAttackType::Poisoning)
+                            .build(),
+                    );
                 }
 
                 // MEM-004: Check for non-whitelisted URLs
@@ -212,24 +199,19 @@ impl Check for MemoryIntegrityCheck {
                         .iter()
                         .any(|d| hostname == *d || hostname.ends_with(&format!(".{d}")));
                     if !allowed {
-                        findings.push(AuditFinding {
-                            id: "SC-MEM-004".to_string(),
-                            severity: Severity::Medium,
-                            category: "memory".to_string(),
-                            title: format!("Unexpected URL in memory file \"{mem_file}\""),
-                            description: format!(
-                                "Memory file contains a URL to a non-whitelisted domain: {hostname}"
-                            ),
-                            evidence: format!("File: {mem_path}, URL: {url}"),
-                            remediation:
-                                "Review if this URL is expected and add to allowlist if legitimate"
-                                    .to_string(),
-                            auto_fixable: false,
-                            references: vec![],
-                            owasp_asi: "ASI10".to_string(),
-                            maestro_layer: Some(MaestroLayer::L2),
-                            nist_category: Some(NistAttackType::Evasion),
-                        });
+                        findings.push(
+                            AuditFinding::builder("SC-MEM-004", Severity::Medium, "memory")
+                                .title(format!("Unexpected URL in memory file \"{mem_file}\""))
+                                .description(format!(
+                                    "Memory file contains a URL to a non-whitelisted domain: {hostname}"
+                                ))
+                                .evidence(format!("File: {mem_path}, URL: {url}"))
+                                .remediation("Review if this URL is expected and add to allowlist if legitimate")
+                                .owasp_asi("ASI10")
+                                .maestro(MaestroLayer::L2)
+                                .nist(NistAttackType::Evasion)
+                                .build(),
+                        );
                     }
                 }
             }
@@ -243,25 +225,21 @@ impl Check for MemoryIntegrityCheck {
                 }
                 let perms = ctx.get_file_permissions(&mem_path).await;
                 if let Some(perms) = perms {
-                    if (perms & 0o077) != 0 {
-                        findings.push(AuditFinding {
-                            id: "SC-MEM-005".to_string(),
-                            severity: Severity::Medium,
-                            category: "memory".to_string(),
-                            title: format!(
-                                "Memory file \"{mem_file}\" has excessive permissions"
-                            ),
-                            description:
-                                "Memory file is readable by group/other users, enabling unauthorized modification."
-                                    .to_string(),
-                            evidence: format!("{mem_path}: permissions {:o}", perms),
-                            remediation: format!("Run: chmod 600 {mem_path}"),
-                            auto_fixable: true,
-                            references: vec![],
-                            owasp_asi: "ASI06".to_string(),
-                            maestro_layer: Some(MaestroLayer::L2),
-                            nist_category: Some(NistAttackType::Privacy),
-                        });
+                    if is_group_or_other_accessible(perms) {
+                        findings.push(
+                            AuditFinding::builder("SC-MEM-005", Severity::Medium, "memory")
+                                .title(format!(
+                                    "Memory file \"{mem_file}\" has excessive permissions"
+                                ))
+                                .description("Memory file is readable by group/other users, enabling unauthorized modification.")
+                                .evidence(format!("{mem_path}: permissions {:o}", perms))
+                                .remediation(format!("Run: chmod 600 {mem_path}"))
+                                .auto_fixable(true)
+                                .owasp_asi("ASI06")
+                                .maestro(MaestroLayer::L2)
+                                .nist(NistAttackType::Privacy)
+                                .build(),
+                        );
                     }
                 }
             }

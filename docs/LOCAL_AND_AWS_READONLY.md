@@ -79,7 +79,7 @@ cargo install secureops-cli            # or download a release binary
 export OPENCLAW_STATE_DIR=/tmp/secureops-demo
 secureops init
 secureops audit                        # score your local OpenClaw config
-secureops audit --json                 # exits 2 if score < 80 (CI gate)
+secureops audit --json                 # exits 2 below --threshold (default 80) (CI gate)
 ```
 
 For live egress enforcement locally, run the daemon and point an agent at it:

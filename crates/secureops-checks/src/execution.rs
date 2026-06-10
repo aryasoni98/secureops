@@ -37,24 +37,22 @@ impl Check for ExecutionCheck {
 
         // EXEC-001: exec.approvals off
         if config.exec.as_ref().and_then(|e| e.approvals.as_deref()) == Some("off") {
-            findings.push(AuditFinding {
-                id: "SC-EXEC-001".to_string(),
-                severity: Severity::Critical,
-                category: "execution".to_string(),
-                title: "Execution approvals disabled".to_string(),
-                description:
-                    "exec.approvals is set to \"off\". The agent can execute arbitrary commands without user confirmation."
-                        .to_string(),
-                evidence: "exec.approvals = \"off\"".to_string(),
-                remediation:
-                    "Manually set exec.approvals to \"always\" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)"
-                        .to_string(),
-                auto_fixable: false,
-                references: vec!["CVE-2026-25253".to_string()],
-                owasp_asi: "ASI02".to_string(),
-                maestro_layer: Some(MaestroLayer::L3),
-                nist_category: Some(NistAttackType::Misuse),
-            });
+            findings.push(
+                AuditFinding::builder("SC-EXEC-001", Severity::Critical, "execution")
+                    .title("Execution approvals disabled")
+                    .description(
+                        "exec.approvals is set to \"off\". The agent can execute arbitrary commands without user confirmation.",
+                    )
+                    .evidence("exec.approvals = \"off\"")
+                    .remediation(
+                        "Manually set exec.approvals to \"always\" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)",
+                    )
+                    .references(["CVE-2026-25253"])
+                    .owasp_asi("ASI02")
+                    .maestro(MaestroLayer::L3)
+                    .nist(NistAttackType::Misuse)
+                    .build(),
+            );
         }
 
         // EXEC-002: tools.exec.host = gateway
@@ -65,47 +63,42 @@ impl Check for ExecutionCheck {
             .and_then(|e| e.host.as_deref())
             == Some("gateway")
         {
-            findings.push(AuditFinding {
-                id: "SC-EXEC-002".to_string(),
-                severity: Severity::High,
-                category: "execution".to_string(),
-                title: "Commands execute on host, not in sandbox".to_string(),
-                description:
-                    "tools.exec.host is \"gateway\", meaning commands run directly on the host machine without isolation."
-                        .to_string(),
-                evidence: "tools.exec.host = \"gateway\"".to_string(),
-                remediation: "Set tools.exec.host to \"sandbox\"".to_string(),
-                auto_fixable: true,
-                references: vec![],
-                owasp_asi: "ASI05".to_string(),
-                maestro_layer: Some(MaestroLayer::L3),
-                nist_category: Some(NistAttackType::Misuse),
-            });
+            findings.push(
+                AuditFinding::builder("SC-EXEC-002", Severity::High, "execution")
+                    .title("Commands execute on host, not in sandbox")
+                    .description(
+                        "tools.exec.host is \"gateway\", meaning commands run directly on the host machine without isolation.",
+                    )
+                    .evidence("tools.exec.host = \"gateway\"")
+                    .remediation("Set tools.exec.host to \"sandbox\"")
+                    .auto_fixable(true)
+                    .owasp_asi("ASI05")
+                    .maestro(MaestroLayer::L3)
+                    .nist(NistAttackType::Misuse)
+                    .build(),
+            );
         }
 
         // EXEC-003: Sandbox mode
         let sandbox_mode = config.sandbox.as_ref().and_then(|s| s.mode.as_deref());
         if sandbox_mode != Some("all") {
             let mode_label = sandbox_mode.unwrap_or("undefined");
-            findings.push(AuditFinding {
-                id: "SC-EXEC-003".to_string(),
-                severity: Severity::Medium,
-                category: "execution".to_string(),
-                title: "Sandbox mode not set to \"all\"".to_string(),
-                description: format!(
-                    "Sandbox mode is \"{}\". Not all commands run in a sandboxed environment.",
-                    mode_label
-                ),
-                evidence: format!("sandbox.mode = \"{}\"", mode_label),
-                remediation:
-                    "Manually set sandbox.mode to \"all\" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)"
-                        .to_string(),
-                auto_fixable: false,
-                references: vec![],
-                owasp_asi: "ASI05".to_string(),
-                maestro_layer: Some(MaestroLayer::L3),
-                nist_category: Some(NistAttackType::Misuse),
-            });
+            findings.push(
+                AuditFinding::builder("SC-EXEC-003", Severity::Medium, "execution")
+                    .title("Sandbox mode not set to \"all\"")
+                    .description(format!(
+                        "Sandbox mode is \"{}\". Not all commands run in a sandboxed environment.",
+                        mode_label
+                    ))
+                    .evidence(format!("sandbox.mode = \"{}\"", mode_label))
+                    .remediation(
+                        "Manually set sandbox.mode to \"all\" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)",
+                    )
+                    .owasp_asi("ASI05")
+                    .maestro(MaestroLayer::L3)
+                    .nist(NistAttackType::Misuse)
+                    .build(),
+            );
         }
 
         // EXEC-004..007: Docker compose hardening
@@ -114,23 +107,20 @@ impl Check for ExecutionCheck {
                 for (svc_name, svc) in services.iter() {
                     // EXEC-004: Docker --read-only
                     if svc.read_only != Some(true) {
-                        findings.push(AuditFinding {
-                            id: "SC-EXEC-004".to_string(),
-                            severity: Severity::Medium,
-                            category: "execution".to_string(),
-                            title: format!("Docker service \"{}\" not read-only", svc_name),
-                            description:
-                                "Container filesystem is writable, allowing post-exploitation persistence."
-                                    .to_string(),
-                            evidence: format!("Service \"{}\": read_only is not set", svc_name),
-                            remediation: "Add read_only: true to the service configuration"
-                                .to_string(),
-                            auto_fixable: true,
-                            references: vec![],
-                            owasp_asi: "ASI05".to_string(),
-                            maestro_layer: Some(MaestroLayer::L3),
-                            nist_category: Some(NistAttackType::Misuse),
-                        });
+                        findings.push(
+                            AuditFinding::builder("SC-EXEC-004", Severity::Medium, "execution")
+                                .title(format!("Docker service \"{}\" not read-only", svc_name))
+                                .description(
+                                    "Container filesystem is writable, allowing post-exploitation persistence.",
+                                )
+                                .evidence(format!("Service \"{}\": read_only is not set", svc_name))
+                                .remediation("Add read_only: true to the service configuration")
+                                .auto_fixable(true)
+                                .owasp_asi("ASI05")
+                                .maestro(MaestroLayer::L3)
+                                .nist(NistAttackType::Misuse)
+                                .build(),
+                        );
                     }
 
                     // EXEC-005: Docker --cap-drop=ALL
@@ -139,26 +129,21 @@ impl Check for ExecutionCheck {
                         .as_ref()
                         .is_some_and(|c| c.iter().any(|v| v == "ALL"));
                     if !has_cap_drop_all {
-                        findings.push(AuditFinding {
-                            id: "SC-EXEC-005".to_string(),
-                            severity: Severity::Medium,
-                            category: "execution".to_string(),
-                            title: format!(
-                                "Docker service \"{}\" retains Linux capabilities",
-                                svc_name
-                            ),
-                            description:
-                                "Container has not dropped all capabilities, increasing attack surface."
-                                    .to_string(),
-                            evidence: format!("Service \"{}\": cap_drop does not include \"ALL\"", svc_name),
-                            remediation: "Add cap_drop: [\"ALL\"] to the service configuration"
-                                .to_string(),
-                            auto_fixable: true,
-                            references: vec![],
-                            owasp_asi: "ASI05".to_string(),
-                            maestro_layer: Some(MaestroLayer::L3),
-                            nist_category: Some(NistAttackType::Misuse),
-                        });
+                        findings.push(
+                            AuditFinding::builder("SC-EXEC-005", Severity::Medium, "execution")
+                                .title(format!(
+                                    "Docker service \"{}\" retains Linux capabilities",
+                                    svc_name
+                                ))
+                                .description("Container has not dropped all capabilities, increasing attack surface.")
+                                .evidence(format!("Service \"{}\": cap_drop does not include \"ALL\"", svc_name))
+                                .remediation("Add cap_drop: [\"ALL\"] to the service configuration")
+                                .auto_fixable(true)
+                                .owasp_asi("ASI05")
+                                .maestro(MaestroLayer::L3)
+                                .nist(NistAttackType::Misuse)
+                                .build(),
+                        );
                     }
 
                     // EXEC-006: Docker no-new-privileges
@@ -167,52 +152,43 @@ impl Check for ExecutionCheck {
                         .as_ref()
                         .is_some_and(|s| s.iter().any(|v| v == "no-new-privileges:true"));
                     if !has_no_new_privileges {
-                        findings.push(AuditFinding {
-                            id: "SC-EXEC-006".to_string(),
-                            severity: Severity::Medium,
-                            category: "execution".to_string(),
-                            title: format!(
-                                "Docker service \"{}\" allows privilege escalation",
-                                svc_name
-                            ),
-                            description: "Container does not have no-new-privileges set.".to_string(),
-                            evidence: format!(
-                                "Service \"{}\": security_opt missing no-new-privileges:true",
-                                svc_name
-                            ),
-                            remediation:
-                                "Add security_opt: [\"no-new-privileges:true\"] to the service configuration"
-                                    .to_string(),
-                            auto_fixable: true,
-                            references: vec![],
-                            owasp_asi: "ASI05".to_string(),
-                            maestro_layer: Some(MaestroLayer::L3),
-                            nist_category: Some(NistAttackType::Misuse),
-                        });
+                        findings.push(
+                            AuditFinding::builder("SC-EXEC-006", Severity::Medium, "execution")
+                                .title(format!(
+                                    "Docker service \"{}\" allows privilege escalation",
+                                    svc_name
+                                ))
+                                .description("Container does not have no-new-privileges set.")
+                                .evidence(format!(
+                                    "Service \"{}\": security_opt missing no-new-privileges:true",
+                                    svc_name
+                                ))
+                                .remediation("Add security_opt: [\"no-new-privileges:true\"] to the service configuration")
+                                .auto_fixable(true)
+                                .owasp_asi("ASI05")
+                                .maestro(MaestroLayer::L3)
+                                .nist(NistAttackType::Misuse)
+                                .build(),
+                        );
                     }
 
                     // EXEC-007: Docker host network
                     if svc.network_mode.as_deref() == Some("host") {
-                        findings.push(AuditFinding {
-                            id: "SC-EXEC-007".to_string(),
-                            severity: Severity::High,
-                            category: "execution".to_string(),
-                            title: format!(
-                                "Docker service \"{}\" uses host network mode",
-                                svc_name
-                            ),
-                            description:
-                                "Container shares the host network namespace, bypassing network isolation."
-                                    .to_string(),
-                            evidence: format!("Service \"{}\": network_mode = \"host\"", svc_name),
-                            remediation: "Remove network_mode: \"host\" and use bridge networking"
-                                .to_string(),
-                            auto_fixable: true,
-                            references: vec![],
-                            owasp_asi: "ASI05".to_string(),
-                            maestro_layer: Some(MaestroLayer::L3),
-                            nist_category: Some(NistAttackType::Misuse),
-                        });
+                        findings.push(
+                            AuditFinding::builder("SC-EXEC-007", Severity::High, "execution")
+                                .title(format!(
+                                    "Docker service \"{}\" uses host network mode",
+                                    svc_name
+                                ))
+                                .description("Container shares the host network namespace, bypassing network isolation.")
+                                .evidence(format!("Service \"{}\": network_mode = \"host\"", svc_name))
+                                .remediation("Remove network_mode: \"host\" and use bridge networking")
+                                .auto_fixable(true)
+                                .owasp_asi("ASI05")
+                                .maestro(MaestroLayer::L3)
+                                .nist(NistAttackType::Misuse)
+                                .build(),
+                        );
                     }
                 }
             }

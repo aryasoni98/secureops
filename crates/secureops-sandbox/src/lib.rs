@@ -43,7 +43,6 @@
 //! [`secureops-intel`]: https://github.com/aryasoni98/secureops
 //! [`secureops-core`]: secureops_core
 
-#![allow(dead_code, unused_variables)]
 #![forbid(unsafe_code)]
 
 use anyhow::Result;
@@ -336,29 +335,15 @@ impl SkillSandbox {
                 "skill execution failed",
             ),
         };
-        AuditFinding {
-            id: "SC-SANDBOX-001".into(),
-            severity,
-            category: "execution-sandbox".into(),
-            title: title.into(),
-            description: description.to_string(),
-            evidence: format!("{:?}", err),
-            remediation: "Review skill sandbox policy grants (PRODUCT.md B.7)".into(),
-            auto_fixable: false,
-            references: vec!["PRODUCT.md B.7".into()],
-            owasp_asi: owasp_asi.into(),
-            maestro_layer: self.layer,
-            nist_category: None,
-        }
-    }
-}
-
-impl Default for SkillSandbox {
-    fn default() -> Self {
-        Self::new().unwrap_or_else(|_| {
-            // Engine creation should only fail on misconfiguration.
-            panic!("SkillSandbox::default(): wasmtime engine creation failed")
-        })
+        AuditFinding::builder("SC-SANDBOX-001", severity, "execution-sandbox")
+            .title(title)
+            .description(description)
+            .evidence(format!("{:?}", err))
+            .remediation("Review skill sandbox policy grants (PRODUCT.md B.7)")
+            .references(["PRODUCT.md B.7"])
+            .owasp_asi(owasp_asi)
+            .maestro(self.layer)
+            .build()
     }
 }
 

@@ -1,0 +1,9 @@
+id: s3-public-acl
+matches: [SC-S3-001]
+class: reversible
+dry_run: "aws s3api get-bucket-acl --bucket {bucket}"
+snapshot: "capture current bucket acl"
+execute: "s3.put_bucket_acl bucket={bucket} acl=private"
+health_check: "aws s3api get-bucket-acl --bucket {bucket} | assert not public"
+rollback: "restore bucket acl from snapshot"
+audit_required: true

@@ -32,7 +32,6 @@
 //! by [`secureops_core::run_audit`] after all checks, via
 //! [`secureops_core::cross_layer_risk`].
 
-#![allow(dead_code, unused_variables)]
 #![forbid(unsafe_code)]
 
 pub mod access_control;

@@ -1,0 +1,40 @@
+# bpf-agent — SecureOps kernel PEP DaemonSet (PRODUCT.md B.6).
+#
+# Gated to the Enterprise tier: the parent chart should only enable this
+# subchart when license features include kernel enforcement. The DaemonSet
+# needs privileged host access (hostPID + BPF/NET_RAW/SYS_ADMIN), so it ships
+# OFF by default and must be explicitly turned on per cluster.
+
+# Master switch. The parent chart sets this from `tier == enterprise`.
+enabled: false
+
+image:
+  repository: secureops-rust
+  # Defaults to the chart appVersion; override for a specific build.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Inline LSM-BPF connect-deny. false = observe + escalate (egress proxy
+# enforces); true = also deny the exfil connect() in-kernel. Maps to the
+# daemon's SECUREOPS_BPF_ENFORCE env var.
+enforce: false
+
+# Only schedule onto Linux nodes — the kernel PEP is a no-op elsewhere.
+nodeSelector:
+  kubernetes.io/os: linux
+
+# Extra node selection (e.g. dedicated security nodes). Merged with the above.
+extraNodeSelector: {}
+
+tolerations: []
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+# Path the eBPF object is mounted/expected at (SECUREOPS_BPF_OBJ).
+bpfObjectPath: /opt/secureops/secureops-ebpf

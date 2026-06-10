@@ -1,0 +1,21 @@
+[package]
+name = "secureops-chaos"
+description = "SecureOps chaos test harness (PRODUCT.md Phase 9). Drives controlled failures against the API + worker + storage so reliability targets stay green under Postgres outage, Redis loss, LLM 429/500, license-API unreachable, and MinIO down."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.82"
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+secureops-api = { path = "../secureops-api", version = "0.0.1" }
+secureops-scanner = { path = "../secureops-scanner", version = "0.0.1" }
+async-trait = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+deadpool-redis = "0.18"
+serde_json = { workspace = true }
+uuid = { version = "1", features = ["v4", "serde"] }

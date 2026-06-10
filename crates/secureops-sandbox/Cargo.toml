@@ -12,12 +12,8 @@ homepage.workspace = true
 [dependencies]
 secureops-core = { workspace = true }
 secureops-policy = { path = "../secureops-policy", version = "0.0.1" }
-serde = { workspace = true }
-serde_json = { workspace = true }
-async-trait = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
-tracing = { workspace = true }
 
 wasmtime = { version = "27", default-features = false, features = ["cranelift", "runtime"] }
 wasmtime-wasi = "27"

@@ -1,0 +1,30 @@
+[package]
+name = "secureops-graph"
+description = "SecureOps security knowledge graph (PRODUCT.md §11/Phase 6): typed edges, attack-path Dijkstra (internet→sensitive), and blast-radius reachability."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.82"
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+# Live Neo4j backend (gated). neo4rs uses tokio-rustls (ring) — reuses the
+# workspace-locked ring, so no cc-cap bump. Off by default; Community uses the
+# in-memory/pg-CTE path.
+neo4rs = { version = "0.8", optional = true }
+anyhow = { workspace = true, optional = true }
+
+[features]
+neo4j = ["dep:neo4rs", "dep:anyhow"]
+
+[dev-dependencies]
+# No plotters/rayon (avoids extra/native deps); keep the bench harness only.
+criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }
+
+[[bench]]
+name = "attack_paths"
+harness = false
