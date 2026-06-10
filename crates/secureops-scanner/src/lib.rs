@@ -11,6 +11,10 @@
 
 #![forbid(unsafe_code)]
 
+#[cfg(feature = "aws")]
+pub mod aws;
+pub mod aws_rules;
+
 use std::sync::Arc;
 
 use async_trait::async_trait;

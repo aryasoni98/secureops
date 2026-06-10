@@ -48,6 +48,8 @@ services:
       DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
       REDIS_URL: "redis://redis:6379"
       SECUREOPS_SCAN_QUEUE: "secureops:scans"
+      # `aws` needs an image built with `--features aws` + read-only AWS creds.
+      SECUREOPS_COLLECTOR: "${SECUREOPS_COLLECTOR:-mock}"
     networks: [backend]
     depends_on:
       postgres:

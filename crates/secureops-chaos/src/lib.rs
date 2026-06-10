@@ -63,6 +63,9 @@ impl Store for DeadStore {
     async fn get_license(&self, _tenant: &str) -> anyhow::Result<Option<License>> {
         anyhow::bail!("postgres down")
     }
+    async fn any_license(&self) -> anyhow::Result<bool> {
+        anyhow::bail!("postgres down")
+    }
     async fn create_scan(&self, _scan: &Scan) -> anyhow::Result<()> {
         anyhow::bail!("postgres down")
     }

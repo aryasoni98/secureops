@@ -40,6 +40,9 @@ impl Store for DeadStore {
     async fn get_license(&self, _t: &str) -> anyhow::Result<Option<License>> {
         anyhow::bail!("db down")
     }
+    async fn any_license(&self) -> anyhow::Result<bool> {
+        anyhow::bail!("db down")
+    }
     async fn create_scan(&self, _s: &Scan) -> anyhow::Result<()> {
         anyhow::bail!("db down")
     }

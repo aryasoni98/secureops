@@ -95,11 +95,12 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // Optionally embed the built dashboard SPA (PRODUCT.md Phase 8).
+    let spa_store = state.store.clone();
     let mut app = build_router(state);
     if let Ok(dir) = std::env::var("SECUREOPS_WEB_DIR") {
         if !dir.is_empty() {
             tracing::info!("serving dashboard SPA from {dir}");
-            app = with_spa(app, &dir);
+            app = with_spa(app, &dir, spa_store);
         }
     }
 
