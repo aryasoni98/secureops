@@ -43,7 +43,6 @@
 //! [`secureops-intel`]: https://github.com/aryasoni98/secureops
 //! [`secureops-core`]: secureops_core
 
-
 #![forbid(unsafe_code)]
 
 use anyhow::Result;
@@ -345,15 +344,6 @@ impl SkillSandbox {
             .owasp_asi(owasp_asi)
             .maestro(self.layer)
             .build()
-    }
-}
-
-impl Default for SkillSandbox {
-    fn default() -> Self {
-        Self::new().unwrap_or_else(|_| {
-            // Engine creation should only fail on misconfiguration.
-            panic!("SkillSandbox::default(): wasmtime engine creation failed")
-        })
     }
 }
 

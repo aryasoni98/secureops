@@ -272,11 +272,22 @@ impl CredentialHardening {
                     if let Ok(content) = tokio::fs::read_to_string(&mem_path).await {
                         let redacted = redact_api_keys(&content);
                         if redacted != content {
-                            let _ = tokio::fs::copy(
+                            // Redaction rewrites the file; without a backup the
+                            // original is unrecoverable. Never mutate unless
+                            // the backup copy landed.
+                            if let Err(e) = tokio::fs::copy(
                                 &mem_path,
                                 backup_dir.join(format!("{agent}-{mem_file}")),
                             )
-                            .await;
+                            .await
+                            {
+                                return Err(std::io::Error::new(
+                                    e.kind(),
+                                    format!(
+                                        "refusing to redact {mem_file} for agent {agent}: backup failed: {e}"
+                                    ),
+                                ));
+                            }
                             tokio::fs::write(&mem_path, &redacted).await?;
                             applied.push(HardeningAction {
                                 id: format!("cred-redact-{agent}-{mem_file}"),

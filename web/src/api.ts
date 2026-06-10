@@ -14,6 +14,18 @@ function authHeader(): Record<string, string> {
   return t ? { authorization: `Bearer ${t}` } : {};
 }
 
+/** API failure with the HTTP status attached. The user-facing message is kept
+ * short and generic; the full response body goes to the console only. */
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 async function rawFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = {
     "content-type": "application/json",
@@ -21,7 +33,11 @@ async function rawFetch(path: string, init: RequestInit = {}): Promise<Response>
     ...((init.headers as Record<string, string>) || {}),
   };
   const res = await fetch(`/api/v1${path}`, { ...init, headers });
-  if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(`API ${init.method ?? "GET"} ${path} → ${res.status}`, body);
+    throw new ApiError(res.status, `Request failed (${res.status})`);
+  }
   return res;
 }
 
@@ -132,16 +148,50 @@ export function downloadBlob(blob: Blob, filename: string): void {
   a.click();
 }
 
-/** WebSocket helper that JSON-parses messages and falls back to raw text. */
-export function openWs(path: string, onMsg: (data: unknown) => void): WebSocket {
+/** Handle returned by [`openWs`]; `close()` also cancels any pending reconnect. */
+export interface WsHandle {
+  close: () => void;
+}
+
+/** WebSocket helper that JSON-parses messages (falling back to raw text) and
+ * reconnects with exponential backoff (1s → 30s cap) when the connection
+ * drops. `close()` stops the socket and the reconnect loop. */
+export function openWs(path: string, onMsg: (data: unknown) => void): WsHandle {
   const proto = window.location.protocol === "https:" ? "wss" : "ws";
-  const ws = new WebSocket(`${proto}://${window.location.host}${path}`);
-  ws.onmessage = (ev) => {
-    try {
-      onMsg(JSON.parse(ev.data));
-    } catch {
-      onMsg(ev.data);
-    }
+  let ws: WebSocket | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let closed = false;
+  let attempt = 0;
+
+  function connect() {
+    ws = new WebSocket(`${proto}://${window.location.host}${path}`);
+    ws.onopen = () => {
+      attempt = 0;
+    };
+    ws.onmessage = (ev) => {
+      try {
+        onMsg(JSON.parse(ev.data));
+      } catch {
+        onMsg(ev.data);
+      }
+    };
+    ws.onerror = () => {
+      console.warn(`ws ${path}: error`);
+    };
+    ws.onclose = () => {
+      if (closed) return;
+      const delay = Math.min(1000 * 2 ** attempt, 30_000);
+      attempt += 1;
+      timer = setTimeout(connect, delay);
+    };
+  }
+  connect();
+
+  return {
+    close: () => {
+      closed = true;
+      if (timer) clearTimeout(timer);
+      ws?.close();
+    },
   };
-  return ws;
 }

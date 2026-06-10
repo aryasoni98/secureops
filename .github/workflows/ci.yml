@@ -53,6 +53,23 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: CI=1 npm run e2e
 
+  # ── Landing page: type-check + build (deploy happens in pages.yml) ──────
+  site:
+    name: Landing page
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
   # ── Postgres integration: runs the `#[ignore]`-gated PgStore tests ──────
   postgres-integration:
     name: Postgres integration

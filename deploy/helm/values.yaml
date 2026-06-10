@@ -4,7 +4,8 @@ replicaCount: 2
 
 image:
   repository: secureops-rust
-  tag: latest
+  # Defaults to the chart appVersion; override for a specific build.
+  tag: ""
   pullPolicy: IfNotPresent
 
 api:

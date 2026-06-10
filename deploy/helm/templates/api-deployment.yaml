@@ -20,7 +20,7 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: api
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["secureops-api"]
           securityContext:
@@ -35,19 +35,18 @@ spec:
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ .Values.api.otelEndpoint | quote }}
             # JWT secret + license pubkey from a Secret named per values.api.jwtSecretName
-            # (keys: jwt-secret, license-pubkey). Create it out-of-band or via your secrets operator.
+            # (keys: jwt-secret, license-pubkey). Create it out-of-band or via your
+            # secrets operator — required: the API refuses to start without them.
             - name: SECUREOPS_JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.api.jwtSecretName }}
                   key: jwt-secret
-                  optional: true
             - name: SECUREOPS_LICENSE_PUBKEY
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.api.jwtSecretName }}
                   key: license-pubkey
-                  optional: true
           ports:
             - name: http
               containerPort: {{ .Values.api.port }}

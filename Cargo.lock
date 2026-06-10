@@ -4950,6 +4950,8 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "clap",
+ "ed25519-dalek",
+ "secureops-auditlog",
  "secureops-checks",
  "secureops-core",
  "secureops-crypto",
@@ -4958,6 +4960,7 @@ dependencies = [
  "secureops-intel",
  "secureops-monitors",
  "serde_json",
+ "sha2 0.10.9",
  "tokio",
 ]
 
@@ -5083,6 +5086,7 @@ dependencies = [
  "anyhow",
  "axum",
  "base64",
+ "clap",
  "ed25519-dalek",
  "http-body-util",
  "secureops-api",

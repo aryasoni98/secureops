@@ -1,6 +1,8 @@
 // Authenticated dashboard pages (PRODUCT.md Phase 8 — seven screens).
 // All fetches go through the typed `api` client. Each page is self-contained;
-// shared chrome lives in `components.tsx`.
+// shared chrome lives in `components.tsx`. Every data fetch keeps a separate
+// error state so "empty" never masks "API failed", and mutating buttons are
+// disabled while their request is in flight.
 
 import { useEffect, useState } from "react";
 import {
@@ -13,7 +15,7 @@ import {
   type FindingAction,
   type Remediation,
 } from "./api";
-import { EmptyRow, Page, PillButton, SeverityBadge } from "./components";
+import { EmptyRow, ErrorNotice, Page, PillButton, SeverityBadge } from "./components";
 
 const SEVERITY_FILTERS: ReadonlyArray<"" | Finding["severity"]> = [
   "",
@@ -27,23 +29,38 @@ const SEVERITY_FILTERS: ReadonlyArray<"" | Finding["severity"]> = [
 export function Findings() {
   const [items, setItems] = useState<Finding[]>([]);
   const [sev, setSev] = useState<"" | Finding["severity"]>("");
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
     const filter = sev ? { severity: sev } : {};
     const refresh = () =>
       api
         .listFindings(filter)
-        .then((r) => setItems(r.findings))
-        .catch(() => setItems([]));
+        .then((r) => {
+          setItems(r.findings);
+          setError("");
+        })
+        .catch(() => setError("Could not load findings."));
     refresh();
     const ws = openWs("/ws/findings", refresh);
     return () => ws.close();
-  }, [sev]);
+  }, [sev, reloadKey]);
   async function act(id: string, a: FindingAction) {
-    await api.findingAction(id, a);
-    setItems((p) => p.map((f) => (f.id === id ? { ...f, status: a } : f)));
+    setPending(id);
+    try {
+      await api.findingAction(id, a);
+      setItems((p) => p.map((f) => (f.id === id ? { ...f, status: a } : f)));
+      setError("");
+    } catch {
+      setError(`Could not ${a} finding.`);
+    } finally {
+      setPending(null);
+    }
   }
   return (
     <Page title="Findings">
+      {error && <ErrorNotice message={error} onRetry={() => setReloadKey((k) => k + 1)} />}
       <div className="flex gap-2 mb-3">
         {SEVERITY_FILTERS.map((s) => (
           <PillButton
@@ -77,19 +94,31 @@ export function Findings() {
               <td className="p-2">{f.blastRadius}</td>
               <td className="p-2">{f.status}</td>
               <td className="p-2 flex gap-2">
-                <button onClick={() => act(f.id, "confirm")} className="text-emerald-400">
+                <button
+                  onClick={() => act(f.id, "confirm")}
+                  disabled={pending === f.id}
+                  className="text-emerald-400 disabled:opacity-50"
+                >
                   confirm
                 </button>
-                <button onClick={() => act(f.id, "dismiss")} className="text-rose-400">
+                <button
+                  onClick={() => act(f.id, "dismiss")}
+                  disabled={pending === f.id}
+                  className="text-rose-400 disabled:opacity-50"
+                >
                   dismiss
                 </button>
-                <button onClick={() => act(f.id, "escalate")} className="text-amber-400">
+                <button
+                  onClick={() => act(f.id, "escalate")}
+                  disabled={pending === f.id}
+                  className="text-amber-400 disabled:opacity-50"
+                >
                   escalate
                 </button>
               </td>
             </tr>
           ))}
-          {items.length === 0 && (
+          {items.length === 0 && !error && (
             <EmptyRow colSpan={6}>No findings yet — run a scan from /setup/scan.</EmptyRow>
           )}
         </tbody>
@@ -108,18 +137,36 @@ const COMPLIANCE_FORMATS: ReadonlyArray<{ format: ComplianceFormat; label: strin
 export function Compliance() {
   const [framework, setFramework] = useState<(typeof COMPLIANCE_FRAMEWORKS)[number]>("cis");
   const [count, setCount] = useState<number | null>(null);
+  const [error, setError] = useState("");
+  const [downloading, setDownloading] = useState<ComplianceFormat | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
     api
       .complianceCount(framework)
-      .then((r) => setCount(r.count))
-      .catch(() => setCount(null));
-  }, [framework]);
+      .then((r) => {
+        setCount(r.count);
+        setError("");
+      })
+      .catch(() => {
+        setCount(null);
+        setError("Could not load compliance report counts.");
+      });
+  }, [framework, reloadKey]);
   async function download(format: ComplianceFormat) {
-    const blob = await api.complianceDownload(framework, format);
-    downloadBlob(blob, `${framework}-compliance.${format}`);
+    setDownloading(format);
+    try {
+      const blob = await api.complianceDownload(framework, format);
+      downloadBlob(blob, `${framework}-compliance.${format}`);
+      setError("");
+    } catch {
+      setError(`Could not download the ${format.toUpperCase()} report.`);
+    } finally {
+      setDownloading(null);
+    }
   }
   return (
     <Page title="Compliance">
+      {error && <ErrorNotice message={error} onRetry={() => setReloadKey((k) => k + 1)} />}
       <div className="flex gap-3 mb-4">
         {COMPLIANCE_FRAMEWORKS.map((f) => (
           <button
@@ -141,11 +188,12 @@ export function Compliance() {
           <button
             key={format}
             onClick={() => download(format)}
-            className={`px-3 py-2 rounded ${
+            disabled={downloading !== null}
+            className={`px-3 py-2 rounded disabled:opacity-50 ${
               primary ? "bg-emerald-500 text-slate-950" : "bg-slate-800"
             }`}
           >
-            {label}
+            {downloading === format ? "Downloading…" : label}
           </button>
         ))}
       </div>
@@ -155,14 +203,20 @@ export function Compliance() {
 
 export function Graph() {
   const [paths, setPaths] = useState<AttackPath[]>([]);
+  const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
     api
       .attackPaths()
-      .then((r) => setPaths(r.paths))
-      .catch(() => setPaths([]));
-  }, []);
+      .then((r) => {
+        setPaths(r.paths);
+        setError("");
+      })
+      .catch(() => setError("Could not load attack paths."));
+  }, [reloadKey]);
   return (
     <Page title="Attack paths">
+      {error && <ErrorNotice message={error} onRetry={() => setReloadKey((k) => k + 1)} />}
       <p className="text-slate-400 mb-4">
         Internet → sensitive nodes ranked by blast radius. (D3 force-graph view rendered on the
         same payload when `@adversa/d3` is added.)
@@ -174,7 +228,7 @@ export function Graph() {
             <span className="text-amber-400">blast {p.blastRadius}</span>
           </li>
         ))}
-        {paths.length === 0 && (
+        {paths.length === 0 && !error && (
           <li className="text-slate-500">No path data yet — call POST /graph/rebuild.</li>
         )}
       </ul>
@@ -190,19 +244,38 @@ const REM_CLASS_COLORS: Record<Remediation["class"], string> = {
 
 export function RemediationQueue() {
   const [items, setItems] = useState<Remediation[]>([]);
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   function refresh() {
     api
       .remediationQueue()
-      .then((r) => setItems(r.remediations))
-      .catch(() => setItems([]));
+      .then((r) => {
+        setItems(r.remediations);
+        setError("");
+      })
+      .catch(() => setError("Could not load the remediation queue."));
   }
   useEffect(() => {
     refresh();
     const ws = openWs("/ws/remediation", refresh);
     return () => ws.close();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadKey]);
+  async function decide(id: string, decision: "approve" | "deny") {
+    setPending(id);
+    try {
+      await (decision === "approve" ? api.approveRemediation(id) : api.denyRemediation(id));
+      refresh();
+    } catch {
+      setError(`Could not ${decision} the remediation.`);
+    } finally {
+      setPending(null);
+    }
+  }
   return (
     <Page title="Remediation queue (HITL)">
+      {error && <ErrorNotice message={error} onRetry={() => setReloadKey((k) => k + 1)} />}
       <table className="w-full text-sm">
         <thead className="text-slate-400 text-xs uppercase">
           <tr>
@@ -226,21 +299,23 @@ export function RemediationQueue() {
               <td className="p-2">{r.state}</td>
               <td className="p-2 flex gap-2">
                 <button
-                  onClick={() => api.approveRemediation(r.id).then(refresh)}
-                  className="text-emerald-400"
+                  onClick={() => decide(r.id, "approve")}
+                  disabled={pending === r.id}
+                  className="text-emerald-400 disabled:opacity-50"
                 >
                   approve
                 </button>
                 <button
-                  onClick={() => api.denyRemediation(r.id).then(refresh)}
-                  className="text-rose-400"
+                  onClick={() => decide(r.id, "deny")}
+                  disabled={pending === r.id}
+                  className="text-rose-400 disabled:opacity-50"
                 >
                   deny
                 </button>
               </td>
             </tr>
           ))}
-          {items.length === 0 && <EmptyRow colSpan={5}>Queue empty.</EmptyRow>}
+          {items.length === 0 && !error && <EmptyRow colSpan={5}>Queue empty.</EmptyRow>}
         </tbody>
       </table>
     </Page>
@@ -258,11 +333,20 @@ function Stat({ label, value }: { label: string; value: React.ReactNode }) {
 
 export function Usage() {
   const [stats, setStats] = useState<{ updates: number; dim: number; alpha: number } | null>(null);
+  const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
-    api.rlStats().then(setStats).catch(() => setStats(null));
-  }, []);
+    api
+      .rlStats()
+      .then((s) => {
+        setStats(s);
+        setError("");
+      })
+      .catch(() => setError("Could not load RL telemetry."));
+  }, [reloadKey]);
   return (
     <Page title="Usage & RL telemetry">
+      {error && <ErrorNotice message={error} onRetry={() => setReloadKey((k) => k + 1)} />}
       {stats ? (
         <div className="grid grid-cols-3 gap-4">
           <Stat label="RL updates" value={stats.updates} />
@@ -270,7 +354,7 @@ export function Usage() {
           <Stat label="Exploration alpha" value={stats.alpha} />
         </div>
       ) : (
-        <p className="text-slate-500">Loading…</p>
+        !error && <p className="text-slate-500">Loading…</p>
       )}
     </Page>
   );
@@ -278,11 +362,20 @@ export function Usage() {
 
 export function LicenseStatus() {
   const [lic, setLic] = useState<{ tier: string; expiry: number; features: string[] } | null>(null);
+  const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
-    api.getLicense().then(setLic).catch(() => setLic(null));
-  }, []);
+    api
+      .getLicense()
+      .then((l) => {
+        setLic(l);
+        setError("");
+      })
+      .catch(() => setError("Could not load the license."));
+  }, [reloadKey]);
   return (
     <Page title="License">
+      {error && <ErrorNotice message={error} onRetry={() => setReloadKey((k) => k + 1)} />}
       {lic ? (
         <div className="bg-slate-900 border border-slate-800 rounded p-4">
           <p className="text-sm">
@@ -292,7 +385,7 @@ export function LicenseStatus() {
           <p className="text-sm">Features: {lic.features.join(", ") || "(base)"}</p>
         </div>
       ) : (
-        <p className="text-slate-500">No active license.</p>
+        !error && <p className="text-slate-500">No active license.</p>
       )}
     </Page>
   );

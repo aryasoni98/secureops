@@ -25,7 +25,6 @@
 //! - [`probe_port`] is a **loopback-only** deep probe (PRODUCT.md B.2 step 4);
 //!   callers must restrict `host` to localhost addresses.
 
-
 #![forbid(unsafe_code)]
 
 pub mod behavioral;

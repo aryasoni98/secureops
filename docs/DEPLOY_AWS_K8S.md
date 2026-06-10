@@ -23,7 +23,7 @@ On any Linux box or in CI:
 cargo install secureops-cli            # or download a release binary
 export OPENCLAW_STATE_DIR=/var/lib/openclaw
 secureops init
-secureops audit --json                 # exits 2 if score < 80 → fail the build
+secureops audit --json                 # exits 2 below --threshold (default 80) → fail the build
 ```
 
 That is the whole audit-gate path. The rest of this doc is for **enforcement** (the daemon).
@@ -154,7 +154,7 @@ Exit code `2` = score below threshold → alert on it.
 
 ## 2. Kubernetes (EKS / GKE / AKS / kind)
 
-Manifests are in [`deploy/k8s/`](../deploy/k8s) (Kustomize). They create, in namespace `secureops`:
+Manifests are in [`deploy/k8s/`](https://github.com/aryasoni98/secureops/tree/master/deploy/k8s) (Kustomize). They create, in namespace `secureops`:
 
 | Object | Name | Role |
 |--------|------|------|
@@ -197,7 +197,7 @@ kind load docker-image secureops-rust:latest
 
 ### 2.3 Point Kustomize at your image
 
-Edit the `images:` block in [`deploy/k8s/kustomization.yaml`](../deploy/k8s/kustomization.yaml):
+Edit the `images:` block in [`deploy/k8s/kustomization.yaml`](https://github.com/aryasoni98/secureops/blob/master/deploy/k8s/kustomization.yaml):
 
 ```yaml
 images:
@@ -210,7 +210,7 @@ images:
 
 ### 2.4 Configure the egress allowlist
 
-Edit [`deploy/k8s/configmap-openclaw.yaml`](../deploy/k8s/configmap-openclaw.yaml):
+Edit [`deploy/k8s/configmap-openclaw.yaml`](https://github.com/aryasoni98/secureops/blob/master/deploy/k8s/configmap-openclaw.yaml):
 
 ```yaml
 data:
@@ -297,4 +297,4 @@ kubectl delete -k deploy/k8s/ --ignore-not-found
 | Audit `exit 2` | Score < 80 — inspect JSON findings; not a crash |
 | `audit` says no state | Run `secureops init` first (K8s does this in the initContainer) |
 
-See also: [docs/RUNNING.md](RUNNING.md) (local dev + more detail) and [PRODUCT.md](../PRODUCT.md) (architecture).
+See also: [docs/RUNNING.md](RUNNING.md) (local dev + more detail) and [PRODUCT.md](https://github.com/aryasoni98/secureops/blob/master/PRODUCT.md) (architecture).

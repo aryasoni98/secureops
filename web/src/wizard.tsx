@@ -54,16 +54,21 @@ export function SetupLlmKeys() {
   const nav = useNavigate();
   function save() {
     if (!key) return setMsg("paste a key");
+    // Only a "configured" marker is kept client-side — never the key itself.
+    // The key must be supplied to the API/scanner via env (OPENAI_API_KEY /
+    // ANTHROPIC_API_KEY); see docs.
     localStorage.setItem(`secureops.llm.${provider}`, "configured");
     setup.mark("llm");
-    setMsg(`${provider} key stored locally (encrypted at rest in production).`);
+    setMsg(`${provider} marked configured — set the key as an env var on the API/scanner.`);
     nav("/setup/cloud");
   }
   return (
     <Page title="Step 2 — LLM keys">
       <p className="text-slate-400 mb-3">
-        Provide a key for at least one LLM provider so SecureOps can run the bug-hunt loop. Keys
-        are stored encrypted; they never leave your environment.
+        Provide a key for at least one LLM provider so SecureOps can run the bug-hunt loop. The
+        key itself is never stored in the browser — configure it as an environment variable on
+        the API/scanner (`OPENAI_API_KEY` / `ANTHROPIC_API_KEY`); this step only records which
+        provider you chose.
       </p>
       <select
         value={provider}
@@ -164,17 +169,29 @@ export function SetupScan() {
   const [scope, setScope] = useState<(typeof SCAN_SCOPES)[number]>("all");
   const [progress, setProgress] = useState<string[]>([]);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [msg, setMsg] = useState("");
+  const [starting, setStarting] = useState(false);
   const nav = useNavigate();
+  // The progress socket is only opened once a scan has actually started.
   useEffect(() => {
+    if (!jobId) return;
     const ws = openWs("/ws/scan-progress", (data) => {
       setProgress((p) => [...p, JSON.stringify(data)]);
     });
     return () => ws.close();
-  }, []);
+  }, [jobId]);
   async function go() {
-    const r = await api.createScan(scope);
-    setJobId(r.jobId);
-    setup.mark("scan");
+    setStarting(true);
+    try {
+      const r = await api.createScan(scope);
+      setJobId(r.jobId);
+      setup.mark("scan");
+      setMsg("");
+    } catch {
+      setMsg("Could not start the scan — is the API reachable?");
+    } finally {
+      setStarting(false);
+    }
   }
   return (
     <Page title="Step 4 — first scan">
@@ -191,14 +208,20 @@ export function SetupScan() {
         </select>
         <button
           onClick={go}
-          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-2 rounded"
+          disabled={starting}
+          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-2 rounded disabled:opacity-50"
         >
-          Run scan
+          {starting ? "Starting…" : "Run scan"}
         </button>
         {jobId && <span className="text-sm text-slate-300">job: {jobId}</span>}
+        {msg && <span className="text-sm text-rose-300">{msg}</span>}
       </div>
       <pre className="mt-4 bg-slate-900 border border-slate-800 rounded p-3 text-xs h-48 overflow-auto">
-        {progress.length ? progress.join("\n") : "Waiting for /ws/scan-progress events…"}
+        {progress.length
+          ? progress.join("\n")
+          : jobId
+            ? "Waiting for /ws/scan-progress events…"
+            : "Start a scan to stream progress here."}
       </pre>
       <button
         onClick={() => nav("/findings")}

@@ -137,6 +137,25 @@ export function PillButton({
   );
 }
 
+export function ErrorNotice({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div className="bg-rose-500/10 border border-rose-500/40 text-rose-300 rounded p-3 text-sm mb-3 flex items-center gap-3">
+      <span>{message}</span>
+      {onRetry && (
+        <button onClick={onRetry} className="underline hover:text-rose-200">
+          Retry
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function EmptyRow({ colSpan, children }: { colSpan: number; children: React.ReactNode }) {
   return (
     <tr>

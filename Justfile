@@ -206,9 +206,9 @@ platform-logs service="api":
 platform-status:
     docker compose -f {{platform_compose}} ps
 
-# Run the API locally (in-memory store; no Postgres needed for the 5a surface).
+# Run the API locally (in-memory store; dev mode: insecure built-in defaults).
 api:
-    SECUREOPS_API_ADDR=127.0.0.1:8080 cargo run -p secureops-api
+    SECUREOPS_DEV_MODE=1 SECUREOPS_API_ADDR=127.0.0.1:8080 cargo run -p secureops-api
 
 # Run the scan-job worker locally (needs a reachable REDIS_URL).
 scanner:
@@ -289,9 +289,13 @@ heal-reset class="reversible":
 
 # --- Enterprise (Phase 8: dashboard + license server) ------------------------
 
-# Run the stateless license server locally.
+# Run the stateless license server locally (dev mode: insecure built-in defaults).
 license-server:
-    SECUREOPS_ADMIN_KEY="${SECUREOPS_ADMIN_KEY:-dev-admin-key}" cargo run -p secureops-license-server
+    SECUREOPS_DEV_MODE=1 cargo run -p secureops-license-server
+
+# Mint a dev-signed license key for local/beta use (pairs with SECUREOPS_DEV_MODE=1).
+dev-license tenant="beta" tier="enterprise" days="365":
+    cargo run -q -p secureops-license-server -- mint --dev --tenant {{tenant}} --tier {{tier}} --days {{days}}
 
 # Dashboard dev server (needs Node 18+; proxies /api + /ws to the running API).
 web-dev:

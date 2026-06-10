@@ -10,7 +10,8 @@ enabled: false
 
 image:
   repository: secureops-rust
-  tag: latest
+  # Defaults to the chart appVersion; override for a specific build.
+  tag: ""
   pullPolicy: IfNotPresent
 
 # Inline LSM-BPF connect-deny. false = observe + escalate (egress proxy

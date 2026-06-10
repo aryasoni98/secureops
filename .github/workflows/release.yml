@@ -3,7 +3,10 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      # Strict semver (with optional pre-release, e.g. v0.1.0-beta.1) so a typo
+      # tag can never cut a release.
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
 
 # Run bundled JS actions (checkout/setup-node/gh-release) on Node 24, ahead of
 # the Node 20 removal from runners (Sept 2026). Silences deprecation warnings.
@@ -73,10 +76,10 @@ jobs:
       - name: Install cargo-auditable
         run: cargo install cargo-auditable --locked
 
+      - name: Set SOURCE_DATE_EPOCH from the tagged commit
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+
       - name: Build release binaries
-        env:
-          # Reproducible build: pin timestamps to the tagged commit's author date.
-          SOURCE_DATE_EPOCH: "1700000000"
         run: |
           PACKAGES="-p secureops-cli -p secureops-daemon -p secureops-api -p secureops-license-server -p secureops-scanner"
           if [ "${{ matrix.cross }}" = "true" ]; then

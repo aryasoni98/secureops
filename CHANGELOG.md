@@ -1,5 +1,57 @@
 # Changelog
 
+## Unreleased — beta-launch hardening (2026-06-10)
+
+Gap-audit sweep ahead of the beta tag. 285 Rust tests pass, clippy `-D warnings` clean, web build + vitest + Playwright green.
+
+### Security (breaking defaults)
+
+- **Fail-fast secrets**: `secureops-api` and `secureops-license-server` refuse to start without `SECUREOPS_JWT_SECRET`, `SECUREOPS_LICENSE_PUBKEY`, `SECUREOPS_ADMIN_KEY`. The old insecure dev fallbacks now require an explicit `SECUREOPS_DEV_MODE=1` (local only). A malformed `SECUREOPS_LICENSE_PUBKEY` is always a hard error — never silently downgraded to the dev key.
+- **CORS**: opt-in `SECUREOPS_CORS_ORIGINS` allowlist on the API (GET/POST, `authorization`+`content-type`); unset emits no CORS headers. Invalid origins abort boot.
+- **Listen defaults** moved from `0.0.0.0` to `127.0.0.1` for `secureops-api` (`:8080`) and the license server (`:8090`); compose/Helm set `0.0.0.0` explicitly for containers.
+- License server: constant-time admin-key comparison (was timing-attackable `!=`); poisoned-mutex recovery so one panic can't wedge every later heartbeat/revoke.
+- Removed the panicking `SkillSandbox::default()`; `SkillSandbox::new() -> Result` is the only constructor.
+- Helm: `jwt-secret` / `license-pubkey` Secret refs are now required (no `optional: true`).
+
+### Signed incident export (B.9 TODO closed)
+
+- `secureops export-incident` now writes `manifest.json` (SHA-256 of every bundle file + signer public key) and `manifest.sig` (ed25519, OS-keychain-backed key), and anchors an `incident_exported` entry into the hash-chained `.secureops/audit.jsonl`.
+
+### License tooling & onboarding
+
+- `secureops-license-server mint` / `verify` subcommands: mint dev- or vendor-signed license keys (`--dev` or `SECUREOPS_SIGNING_KEY`), verify keys offline. New `just dev-license` recipe.
+- `docs/license.md` gains a "Getting a license (beta)" walkthrough; the documented-but-never-implemented `secureops verify-license` command is replaced by `secureops-license-server verify`.
+- `secureops init` scaffolds a starter `openclaw.json` (monitors on, cost limits 2/10/100 USD + breaker, egress allowlist present but disabled) when none exists; an existing file is never touched.
+- `secureops audit --json --threshold <N>` makes the CI gate threshold configurable (default 80).
+
+### Hardening engine correctness
+
+- `rollback()` reports every file that failed to restore instead of silently skipping (`let _ =`).
+- API-key redaction refuses to rewrite a memory/soul file whose backup copy failed (original was unrecoverable).
+- Gateway/docker config backups only swallow `NotFound`; any other I/O error aborts before the rewrite.
+
+### Web dashboard
+
+- Tailwind Play CDN removed — compiled Tailwind v3 via PostCSS (10.7 kB CSS, no external runtime dependency).
+- `ApiError` with sanitized user-facing messages (full response body to console only).
+- `openWs` returns a reconnecting handle (exponential backoff 1s→30s, proper close).
+- Every page separates error state from empty state with a retry action; all mutating buttons disable while in flight.
+- Scan-progress WebSocket opens only after a scan starts; LLM-key step no longer claims keys are stored encrypted (they are never stored in the browser at all).
+- 3 new vitest cases (sanitized errors, bearer header, 204 handling).
+
+### Landing page + GitHub Pages
+
+- New `site/` — marketing landing page (Vite + React + Framer Motion + Tailwind): animated hero, stats band, trust-rings diagram, feature bento grid, terminal demo, tiers, scroll-progress bar.
+- New `pages.yml` workflow deploys the landing page at `/` and the mkdocs-material docs at `/docs/` to GitHub Pages on master pushes; `ci.yml` gains a `site` build check.
+- Docs link fixes so `mkdocs build --strict` passes (repo-relative links → GitHub URLs, anchor slugs).
+
+### Deploy / release
+
+- MinIO and OTel-collector compose images pinned by digest (upstream MinIO was archived in April 2026 — `latest` is unsafe); rust builder pinned to `1.85-bookworm`.
+- `release.yml`: strict-semver tag filter (typo tags can't cut a release); `SOURCE_DATE_EPOCH` derived from the tagged commit (was a hardcoded 2023 epoch).
+- Helm image tags default to the chart `appVersion` instead of `latest`.
+- `.env.example` documents `SECUREOPS_DEV_MODE` / `SECUREOPS_CORS_ORIGINS`; platform compose passes both through.
+
 ## Unreleased — P4–P9 closure (2026-06-10)
 
 Phases P4–P9 from the build pack closed in-tree: **282 Rust tests** pass, `cargo clippy --workspace -- -D warnings` clean, `cargo fmt --all --check` clean, web `vitest` + Playwright E2E green.

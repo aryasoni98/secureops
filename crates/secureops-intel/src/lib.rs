@@ -11,7 +11,6 @@
 
 #![forbid(unsafe_code)]
 
-
 pub mod baseline;
 
 use anyhow::Result;

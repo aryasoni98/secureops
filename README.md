@@ -5,11 +5,14 @@
 **Out-of-band security for AI agents — audit, harden, and enforce from outside the agent process.**
 
 [![CI](https://github.com/aryasoni98/secureops/actions/workflows/ci.yml/badge.svg)](https://github.com/aryasoni98/secureops/actions/workflows/ci.yml)
+[![Pages](https://github.com/aryasoni98/secureops/actions/workflows/pages.yml/badge.svg)](https://aryasoni98.github.io/secureops/)
 [![Supply chain](https://github.com/aryasoni98/secureops/actions/workflows/supply-chain.yml/badge.svg)](https://github.com/aryasoni98/secureops/actions/workflows/supply-chain.yml)
 [![crates.io](https://img.shields.io/crates/v/secureops-cli.svg?logo=rust)](https://crates.io/crates/secureops-cli)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Rust 1.80+](https://img.shields.io/badge/rust-1.80%2B-orange.svg?logo=rust)](https://www.rust-lang.org)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macOS-informational)](#install)
+
+**[Landing page](https://aryasoni98.github.io/secureops/)** · **[Docs site](https://aryasoni98.github.io/secureops/docs/)**
 
 [Install](#install) · [Quick start](#quick-start) · [Phase status](#phase-status) · [Architecture](#architecture) · [CLI](#cli-reference) · [Platform API](#platform-api) · [Configuration](#configuration) · [Contributing](#contributing)
 
@@ -63,7 +66,7 @@ SecureOps is a **26-crate Rust workspace** (v0.0.1) that ports the [`@adversa/se
 | Feature | Purpose | How it works | Key crates |
 |---------|---------|--------------|------------|
 | **Security audit** | Baseline posture assessment | Nine OWASP-ASI categories, 56 `SC-*` checks, MAESTRO cross-layer risk, 0–100 score | `secureops-checks`, `secureops-core` |
-| **CI gate** | Fail pipelines below threshold | `secureops audit --json` exits `2` when score &lt; 80 | `secureops-cli` |
+| **CI gate** | Fail pipelines below threshold | `secureops audit --json` exits `2` below `--threshold` (default 80) | `secureops-cli` |
 | **Hardening** | Auto-fix safe misconfigurations | Gateway, credentials, config, Docker, network modules with rollback | `secureops-harden` |
 | **Egress enforcement** | Block unauthorized outbound traffic | HTTP `CONNECT` allowlist proxy on `127.0.0.1:8889`, fail-closed | `secureops-proxy`, `secureops-daemon` |
 | **Runtime monitors** | Detect live abuse | Cost circuit-breaker, credential access, memory integrity, skill IOC scan | `secureops-monitors` |
@@ -378,7 +381,7 @@ export OPENCLAW_STATE_DIR=~/.openclaw
 
 secureops init
 secureops audit
-secureops audit --json          # CI gate: exits 2 if score < 80
+secureops audit --json          # CI gate: exits 2 if score < threshold (default 80; --threshold N)
 secureops harden
 secureops status
 ```
@@ -426,7 +429,7 @@ State lives under `$OPENCLAW_STATE_DIR` (default `~/.openclaw`).
 
 | Path | Purpose |
 |------|---------|
-| `openclaw.json` | Agent + SecureOps configuration |
+| `openclaw.json` | Agent + SecureOps configuration. `secureops init` writes a starter file (all monitors on, cost limits 2/10/100 USD + circuit breaker, egress allowlist present but disabled) when none exists; an existing file is never touched |
 | `.secureops/` | Keystore, kill-switch file, audit log, behavioral baseline |
 
 Egress enforcement reads `openclaw.json`:
@@ -451,9 +454,11 @@ Egress enforcement reads `openclaw.json`:
 | `SECUREOPS_BPF_OBJ` | No | unset | `secureops-bpf`, daemon | Path to compiled eBPF object (Linux) |
 | `SECUREOPS_BPF_ENFORCE` | No | unset | daemon | Set to `1` for enforce mode (Linux+eBPF only; else observe) |
 | `SECUREOPS_IOC_FEED_PUBKEY` | No | unset | `secureops-intel` | Ed25519 public key for signed IOC feed verification |
-| `SECUREOPS_API_ADDR` | No | `0.0.0.0:8080` | `secureops-api` | API listen address |
-| `SECUREOPS_JWT_SECRET` | **Yes (prod)** | `dev-insecure-secret` | `secureops-api` | HMAC secret for session JWTs |
-| `SECUREOPS_LICENSE_PUBKEY` | **Yes (prod)** | dev key (`[7u8;32]`) | API, license server | Base64url 32-byte Ed25519 vendor public key |
+| `SECUREOPS_API_ADDR` | No | `127.0.0.1:8080` | `secureops-api` | API listen address (set `0.0.0.0:8080` for containers) |
+| `SECUREOPS_JWT_SECRET` | **Yes** | — (refuses to start) | `secureops-api` | HMAC secret for session JWTs; dev default only with `SECUREOPS_DEV_MODE=1` |
+| `SECUREOPS_LICENSE_PUBKEY` | **Yes** | — (refuses to start) | API, license server | Base64url 32-byte Ed25519 vendor public key; dev key only with `SECUREOPS_DEV_MODE=1` |
+| `SECUREOPS_DEV_MODE` | No | `0` | API, license server | Set to `1` to accept insecure local-only secret defaults. Never in production |
+| `SECUREOPS_CORS_ORIGINS` | No | unset (same-origin only) | `secureops-api` | Comma-separated browser origins allowed cross-origin |
 | `DATABASE_URL` | No | unset → in-memory | `secureops-api` | Postgres DSN; migrations run on boot |
 | `REDIS_URL` | No | unset | `secureops-api` | Redis for scan queue (degraded if unreachable) |
 | `MINIO_ROOT_USER` | No | unset | `secureops-api` | S3 access key for evidence presigner |
@@ -462,8 +467,8 @@ Egress enforcement reads `openclaw.json`:
 | `AWS_REGION` | No | `us-east-1` | `secureops-api` | SigV4 region for presigning |
 | `S3_SCHEME` | No | `http` | `secureops-api` | `http` or `https` for presigned URLs |
 | `SECUREOPS_WEB_DIR` | No | unset | `secureops-api` | Path to built dashboard (`web/dist`) for SPA fallback |
-| `SECUREOPS_LICENSE_ADDR` | No | `0.0.0.0:8090` | license server | License server listen address |
-| `SECUREOPS_ADMIN_KEY` | **Yes (prod)** | `dev-admin-key` | license server | Bearer token for `/revoke` |
+| `SECUREOPS_LICENSE_ADDR` | No | `127.0.0.1:8090` | license server | License server listen address (set `0.0.0.0:8090` for containers) |
+| `SECUREOPS_ADMIN_KEY` | **Yes** | — (refuses to start) | license server | Bearer token for `/revoke`; dev default only with `SECUREOPS_DEV_MODE=1` |
 | `RUST_LOG` / `tracing` | No | `info` | all binaries | Log filter via `tracing-subscriber` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | No | unset | platform compose | OpenTelemetry collector endpoint |
 | `POSTGRES_USER` | Yes (compose) | — | `docker-compose.platform.yml` | Postgres user |
@@ -564,7 +569,7 @@ secureops <COMMAND>
 | `monitor` | Start runtime monitors (Ctrl-C to stop) |
 | `behavioral` | Rolling tool-call baseline stats (`--window 60`) |
 | `kill` | Emergency stop; `--deactivate` to resume; `--reason <text>` |
-| `export-incident` | Bundle audit + findings into portable incident report |
+| `export-incident` | Bundle audit + findings into a signed incident report (ed25519 manifest, OS-keychain key, hash-chain anchored) |
 
 `secureops-daemon` runs the Ring-2 loop: kill-switch check → monitors → optional egress proxy → kernel correlator.
 
@@ -739,7 +744,7 @@ Subcharts (disabled by default):
 | Agent cannot reach proxy | Docker bridge networking | Use `SECUREOPS_NETWORK_MODE=host` on Linux or run daemon natively |
 | API uses in-memory store | `DATABASE_URL` unset | Set Postgres DSN; check migrations on boot |
 | Scans stay `queued` | Scanner worker not running | Bring it up via `just platform-up` (compose service `scanner`) or `cargo run -p secureops-scanner` with `REDIS_URL` set |
-| `audit --json` exits 2 | Score below 80 | Run `secureops audit` (human report); remediate with `secureops harden` |
+| `audit --json` exits 2 | Score below threshold (default 80) | Run `secureops audit` (human report); remediate with `secureops harden` |
 | BPF enforce ineffective | Not Linux or missing object | Build `ebpf/`; set `SECUREOPS_BPF_OBJ`; use `SECUREOPS_BPF_ENFORCE=1` |
 
 ---
@@ -752,7 +757,7 @@ SecureOps is a security tool. Report vulnerabilities **privately** — see [SECU
 |------|----------|
 | **Authentication** | HS256 JWT, SHA-256-hashed API keys, Ed25519 license verification |
 | **Authorization** | Cedar default-deny per feature flag |
-| **Secrets** | Dev defaults for local runs; production requires explicit `SECUREOPS_JWT_SECRET`, `SECUREOPS_ADMIN_KEY`, `SECUREOPS_LICENSE_PUBKEY` |
+| **Secrets** | Fail-fast: `SECUREOPS_JWT_SECRET`, `SECUREOPS_ADMIN_KEY`, `SECUREOPS_LICENSE_PUBKEY` are required at boot; insecure dev defaults only behind explicit `SECUREOPS_DEV_MODE=1` |
 | **Audit integrity** | Hash-chained JSONL + Ed25519. `KeychainSigner` (real OS keychain) + `InMemoryTpmSigner` (process-local proof of the TPM trait flow). Real TPM 2.0 via `tss-esapi` under `--features tpm` |
 | **Image signing** | `sign_image_digest` / `verify_image_digest` prove the ed25519 image-digest sign+verify primitive locally; sigstore keyless flow wired in `cosign` CI job on release tags |
 | **Egress** | Fail-closed allowlist; denied hosts get `403` before upstream connect |
@@ -834,12 +839,7 @@ Full external-infra deferral matrix: **[`DEFERRED.md`](DEFERRED.md)**.
 
 ## Contributing
 
-Contributions are welcome — issues, bug reports, and PRs.
-
-1. Fork and branch from `master`.
-2. Keep the gate green: `just ci` (or `cargo fmt --all --check && cargo clippy --workspace -- -D warnings && cargo test --workspace`).
-3. Add tests for new behavior; keep the JSON wire format stable with the TS tool.
-4. Use clear, conventional commit messages; open a PR describing the change and its rationale.
+Contributions are welcome — issues, bug reports, and PRs. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide (gate commands, ground rules, MSRV, orientation path).
 
 New to the codebase? Start with [PRODUCT.md](PRODUCT.md), then `crates/secureops-core` for the type/scoring contract, then [docs/RUNNING.md](docs/RUNNING.md) for hands-on workflows.
 

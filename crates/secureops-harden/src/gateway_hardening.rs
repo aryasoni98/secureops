@@ -171,9 +171,15 @@ async fn fix_inner(
     backup_dir: &Path,
     applied: &mut Vec<HardeningAction>,
 ) -> std::io::Result<()> {
-    // Backup current config (may not exist yet — ignore the error, like TS).
+    // Backup current config. A missing file is fine (nothing to back up yet,
+    // like the TS try/catch); any other I/O failure aborts — we must not
+    // rewrite a config we could not back up.
     let config_path = format!("{}/openclaw.json", ctx.state_dir());
-    let _ = tokio::fs::copy(&config_path, backup_dir.join("openclaw.json")).await;
+    if let Err(e) = tokio::fs::copy(&config_path, backup_dir.join("openclaw.json")).await {
+        if e.kind() != std::io::ErrorKind::NotFound {
+            return Err(e);
+        }
+    }
 
     let mut config = read_config(ctx.state_dir()).await;
 

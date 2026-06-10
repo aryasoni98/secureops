@@ -120,13 +120,19 @@ impl HardeningModule for DockerHardening {
 async fn write_override(ctx: &dyn AuditContext, backup_dir: &Path) -> std::io::Result<()> {
     let override_path = Path::new(ctx.state_dir()).join("docker-compose.secureops.yml");
 
-    // Backup existing override if present (TS swallows the "no existing override"
-    // error in its inner try/catch).
-    let _ = tokio::fs::copy(
+    // Backup existing override if present. Missing file is fine (no override
+    // yet, like the TS inner try/catch); any other I/O failure aborts so we
+    // never overwrite an override we could not back up.
+    if let Err(e) = tokio::fs::copy(
         &override_path,
         backup_dir.join("docker-compose.secureops.yml"),
     )
-    .await;
+    .await
+    {
+        if e.kind() != std::io::ErrorKind::NotFound {
+            return Err(e);
+        }
+    }
 
     let override_config = hardened_override_config();
 

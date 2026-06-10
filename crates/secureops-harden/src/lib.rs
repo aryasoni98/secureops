@@ -219,7 +219,10 @@ pub async fn rollback(state_dir: &str, timestamp: Option<&str>) -> anyhow::Resul
         ));
     }
 
-    // Restore any other backed-up files.
+    // Restore any other backed-up files. A failed restore must surface — a
+    // rollback that silently skips files leaves the host in a state the
+    // operator believes was reverted.
+    let mut failed: Vec<String> = Vec::new();
     let mut rd = match tokio::fs::read_dir(&backup_dir).await {
         Ok(rd) => rd,
         Err(_) => return Ok(()),
@@ -237,10 +240,14 @@ pub async fn rollback(state_dir: &str, timestamp: Option<&str>) -> anyhow::Resul
 
         if let Some(name) = file.strip_prefix("cred-") {
             let dest = PathBuf::from(state_dir).join("credentials").join(name);
-            let _ = tokio::fs::copy(&src, &dest).await;
+            if let Err(e) = tokio::fs::copy(&src, &dest).await {
+                failed.push(format!("{file}: {e}"));
+            }
         }
         if file == ".env" {
-            let _ = tokio::fs::copy(&src, PathBuf::from(state_dir).join(".env")).await;
+            if let Err(e) = tokio::fs::copy(&src, PathBuf::from(state_dir).join(".env")).await {
+                failed.push(format!("{file}: {e}"));
+            }
         }
         if let Some(rest) = file.strip_prefix("auth-profiles-") {
             let agent = rest.strip_suffix(".json").unwrap_or(rest);
@@ -249,7 +256,9 @@ pub async fn rollback(state_dir: &str, timestamp: Option<&str>) -> anyhow::Resul
                 .join(agent)
                 .join("agent")
                 .join("auth-profiles.json");
-            let _ = tokio::fs::copy(&src, &dest).await;
+            if let Err(e) = tokio::fs::copy(&src, &dest).await {
+                failed.push(format!("{file}: {e}"));
+            }
         }
         for mem in ["soul.md", "SOUL.md", "MEMORY.md"] {
             if let Some(agent) = file.strip_suffix(&format!("-{mem}")) {
@@ -257,10 +266,19 @@ pub async fn rollback(state_dir: &str, timestamp: Option<&str>) -> anyhow::Resul
                     .join("agents")
                     .join(agent)
                     .join(mem);
-                let _ = tokio::fs::copy(&src, &dest).await;
+                if let Err(e) = tokio::fs::copy(&src, &dest).await {
+                    failed.push(format!("{file}: {e}"));
+                }
                 break;
             }
         }
+    }
+    if !failed.is_empty() {
+        return Err(anyhow::anyhow!(
+            "rollback restored the config but {} file(s) failed: {}",
+            failed.len(),
+            failed.join("; ")
+        ));
     }
     Ok(())
 }

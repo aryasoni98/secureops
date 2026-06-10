@@ -44,7 +44,6 @@
 
 #![forbid(unsafe_code)]
 
-
 pub mod napi_surface;
 pub mod plugin;
 

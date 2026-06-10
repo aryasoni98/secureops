@@ -46,6 +46,20 @@ fn now_unix() -> i64 {
         .unwrap_or(0)
 }
 
+/// Recover the revocation set even if a prior panic poisoned the mutex — a
+/// `HashSet` insert/contains cannot leave the set in a broken state, and a
+/// license server that panics on every later request is worse than one that
+/// keeps serving the last-known revocation list.
+fn revoked_set(s: &AppState) -> std::sync::MutexGuard<'_, HashSet<String>> {
+    s.revoked.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// Constant-time byte comparison so the admin key cannot be guessed
+/// byte-by-byte via response timing.
+fn ct_eq(a: &[u8], b: &[u8]) -> bool {
+    a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
 #[derive(Deserialize)]
 pub struct HeartbeatReq {
     /// The full signed license key (`payload.sig`).
@@ -59,11 +73,7 @@ pub struct HeartbeatReq {
 async fn heartbeat(State(s): State<AppState>, Json(req): Json<HeartbeatReq>) -> Response {
     match license::verify(&req.key, &s.pubkey, now_unix()) {
         Ok(lic) => {
-            let revoked = s
-                .revoked
-                .lock()
-                .expect("revoked lock")
-                .contains(&lic.lic_id);
+            let revoked = revoked_set(&s).contains(&lic.lic_id);
             let status = if revoked { "revoked" } else { "active" };
             (
                 StatusCode::OK,
@@ -92,18 +102,18 @@ async fn revoke(
     State(s): State<AppState>,
     Json(req): Json<RevokeReq>,
 ) -> Response {
-    let provided = headers.get("x-admin-key").and_then(|v| v.to_str().ok());
-    if provided != Some(s.admin_key.as_ref()) {
+    let authorized = headers
+        .get("x-admin-key")
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|k| ct_eq(k.as_bytes(), s.admin_key.as_bytes()));
+    if !authorized {
         return (
             StatusCode::UNAUTHORIZED,
             Json(json!({ "error": "unauthorized" })),
         )
             .into_response();
     }
-    s.revoked
-        .lock()
-        .expect("revoked lock")
-        .insert(req.lic_id.clone());
+    revoked_set(&s).insert(req.lic_id.clone());
     (
         StatusCode::OK,
         Json(json!({ "status": "revoked", "licId": req.lic_id })),
