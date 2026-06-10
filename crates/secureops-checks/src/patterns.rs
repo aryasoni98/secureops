@@ -1,4 +1,4 @@
-//! Shared detection patterns — faithful port of the regex constants at the top
+//! Shared detection patterns - faithful port of the regex constants at the top
 //! of `secureops/src/auditor.ts`. Compiled once via `LazyLock`.
 //!
 //! Rust's `regex` crate has no backreferences/lookarounds, but none of these

@@ -3,7 +3,7 @@
 //! A key is `base64url(payload_json) "." base64url(ed25519_sig)`. The payload is
 //! the [`License`] claims; the signature is over the exact payload bytes, made
 //! by the vendor signing key. [`verify`] checks the signature against the
-//! embedded vendor public key, then enforces expiry — so a tampered key fails
+//! embedded vendor public key, then enforces expiry - so a tampered key fails
 //! with `invalid_signature` and a stale key with `license_expired`.
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -92,7 +92,7 @@ mod tests {
     use super::*;
 
     fn key_pair() -> (SigningKey, [u8; 32]) {
-        // Deterministic test seed — no RNG dependency.
+        // Deterministic test seed - no RNG dependency.
         let sk = SigningKey::from_bytes(&[7u8; 32]);
         let pk = sk.verifying_key().to_bytes();
         (sk, pk)

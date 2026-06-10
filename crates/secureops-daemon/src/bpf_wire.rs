@@ -6,7 +6,7 @@
 //! publishes a `Critical` alert on the [`AlertBus`] and trips the circuit
 //! breaker. Under [`EnforcementMode::Enforce`] on Linux+LSM-BPF the `connect` is
 //! additionally denied in-kernel; on observe-only builds the egress proxy PEP
-//! remains the enforcing layer (honest disclosure — never over-trust a weaker
+//! remains the enforcing layer (honest disclosure - never over-trust a weaker
 //! tier, PRODUCT.md W0).
 //!
 //! ## Event source by build
@@ -15,7 +15,7 @@
 //! |---|---|
 //! | Linux + `ebpf` feature | aya CO-RE hooks attached via [`secureops_bpf::load`]; the ring-buffer → correlator pump requires the built `secureops-ebpf` programs |
 //! | `mock` feature (any OS) | [`secureops_bpf::mock::spawn_demo`] injects a synthetic chain |
-//! | otherwise | no source — the correlator idles; the egress proxy PEP enforces |
+//! | otherwise | no source - the correlator idles; the egress proxy PEP enforces |
 
 use secureops_bpf::chain::{ChainAction, ChainCorrelator, EnforcementMode};
 use secureops_bpf::SyscallEvent;
@@ -49,11 +49,11 @@ pub async fn run_chain_agent(
                     let _ = circuit.send(CircuitState::Tripped);
                     match secureops_bpf::chain::decide(mode, &chain) {
                         ChainAction::DenyConnect => eprintln!(
-                            "[bpf] exfil chain DENIED in-kernel (LSM-BPF) — pid {} dest {}",
+                            "[bpf] exfil chain DENIED in-kernel (LSM-BPF) - pid {} dest {}",
                             chain.pid, chain.dest
                         ),
                         ChainAction::AlertEscalate => eprintln!(
-                            "[bpf] exfil chain detected (observe-only) — pid {} dest {} — egress proxy enforces",
+                            "[bpf] exfil chain detected (observe-only) - pid {} dest {} - egress proxy enforces",
                             chain.pid, chain.dest
                         ),
                     }
@@ -95,7 +95,7 @@ pub fn spawn(
     #[cfg(feature = "mock")]
     {
         println!(
-            "  kernel PEP: mock event source active ({mode:?}) — injecting a demo exfil chain"
+            "  kernel PEP: mock event source active ({mode:?}) - injecting a demo exfil chain"
         );
         secureops_bpf::mock::spawn_demo(tx);
     }
@@ -103,7 +103,7 @@ pub fn spawn(
     #[cfg(not(any(all(target_os = "linux", feature = "ebpf"), feature = "mock")))]
     {
         println!(
-            "  kernel PEP: unavailable on this build — chain correlator idle (egress proxy enforces)"
+            "  kernel PEP: unavailable on this build - chain correlator idle (egress proxy enforces)"
         );
         drop(tx); // no source: agent drains the closed channel and exits
     }

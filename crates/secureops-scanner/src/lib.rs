@@ -150,7 +150,7 @@ impl Worker {
     }
 
     /// Process one payload string (used by tests + `process_one`). Persists
-    /// findings even when the upstream scan row has not been created — useful
+    /// findings even when the upstream scan row has not been created - useful
     /// for ad-hoc collector runs.
     pub async fn handle_payload(&self, payload: &str) -> anyhow::Result<()> {
         let job: ScanJob = serde_json::from_str(payload)?;
@@ -181,7 +181,7 @@ impl Worker {
     }
 
     /// Run forever (until `cancel` resolves). `process_one` errors are logged
-    /// but never crash the worker — Phase 9 chaos requires graceful degradation.
+    /// but never crash the worker - Phase 9 chaos requires graceful degradation.
     pub async fn run_until(self, cancel: impl std::future::Future<Output = ()>) {
         tokio::pin!(cancel);
         loop {
@@ -224,7 +224,7 @@ mod tests {
     #[tokio::test]
     async fn handle_payload_persists_findings_to_store() {
         let store: Arc<dyn Store> = Arc::new(InMemoryStore::new());
-        // Build a worker without a live Redis pool — `handle_payload` doesn't touch it.
+        // Build a worker without a live Redis pool - `handle_payload` doesn't touch it.
         let cfg = deadpool_redis::Config::from_url("redis://127.0.0.1:1");
         let pool = cfg
             .create_pool(Some(deadpool_redis::Runtime::Tokio1))

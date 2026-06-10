@@ -1,20 +1,20 @@
-//! `secureops-api` binary — boots the platform HTTP API (PRODUCT.md Phase 5).
+//! `secureops-api` binary - boots the platform HTTP API (PRODUCT.md Phase 5).
 //!
 //! Config (env):
-//! - `SECUREOPS_API_ADDR` — listen addr (default `127.0.0.1:8080`; set
+//! - `SECUREOPS_API_ADDR` - listen addr (default `127.0.0.1:8080`; set
 //!   `0.0.0.0:8080` explicitly for containers).
-//! - `SECUREOPS_JWT_SECRET` — HMAC secret for session JWTs (required unless
+//! - `SECUREOPS_JWT_SECRET` - HMAC secret for session JWTs (required unless
 //!   `SECUREOPS_DEV_MODE=1`).
-//! - `SECUREOPS_LICENSE_PUBKEY` — base64url 32-byte Ed25519 vendor public key
+//! - `SECUREOPS_LICENSE_PUBKEY` - base64url 32-byte Ed25519 vendor public key
 //!   (required unless `SECUREOPS_DEV_MODE=1`).
-//! - `SECUREOPS_DEV_MODE` — set to `1` to accept insecure local-only defaults
+//! - `SECUREOPS_DEV_MODE` - set to `1` to accept insecure local-only defaults
 //!   for the two secrets above. Never set in production.
-//! - `SECUREOPS_CORS_ORIGINS` — comma-separated browser origins allowed to call
+//! - `SECUREOPS_CORS_ORIGINS` - comma-separated browser origins allowed to call
 //!   the API cross-origin. Unset → no CORS headers (same-origin only).
-//! - `DATABASE_URL` — Postgres DSN; migrations run on boot. Unset → in-memory store.
-//! - `REDIS_URL` — Redis DSN for the scan queue (degraded if unset/unreachable).
+//! - `DATABASE_URL` - Postgres DSN; migrations run on boot. Unset → in-memory store.
+//! - `REDIS_URL` - Redis DSN for the scan queue (degraded if unset/unreachable).
 //! - `MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD` (+ `S3_ENDPOINT`/`AWS_REGION`/`S3_SCHEME`)
-//!   — enable the evidence presigner.
+//!   - enable the evidence presigner.
 
 #![forbid(unsafe_code)]
 
@@ -42,7 +42,7 @@ async fn main() -> anyhow::Result<()> {
         Ok(s) if !s.is_empty() => s,
         _ if dev_mode => {
             tracing::warn!(
-                "SECUREOPS_JWT_SECRET unset — using insecure dev secret (SECUREOPS_DEV_MODE=1)"
+                "SECUREOPS_JWT_SECRET unset - using insecure dev secret (SECUREOPS_DEV_MODE=1)"
             );
             "dev-insecure-secret".into()
         }
@@ -64,7 +64,7 @@ async fn main() -> anyhow::Result<()> {
             Arc::new(pg)
         }
         _ => {
-            tracing::warn!("DATABASE_URL unset — using in-memory store (non-persistent)");
+            tracing::warn!("DATABASE_URL unset - using in-memory store (non-persistent)");
             Arc::new(InMemoryStore::new())
         }
     };
@@ -147,7 +147,7 @@ fn load_license_pubkey(dev_mode: bool) -> anyhow::Result<[u8; 32]> {
         }
         _ if dev_mode => {
             tracing::warn!(
-                "SECUREOPS_LICENSE_PUBKEY unset — using insecure dev key (SECUREOPS_DEV_MODE=1)"
+                "SECUREOPS_LICENSE_PUBKEY unset - using insecure dev key (SECUREOPS_DEV_MODE=1)"
             );
             Ok(ed25519_dalek::SigningKey::from_bytes(&[7u8; 32])
                 .verifying_key()

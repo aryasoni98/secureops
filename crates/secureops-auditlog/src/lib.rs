@@ -18,7 +18,7 @@
 //! ```
 //!
 //! Because every link folds in the previous link's hash, editing or deleting
-//! any historical entry changes every hash after it — [`AuditLog::verify_chain`]
+//! any historical entry changes every hash after it - [`AuditLog::verify_chain`]
 //! detects exactly that break (PRODUCT.md B.9 step 3: the export carries "its
 //! hash-chain proof", "tamper-evident in court/audit").
 //!
@@ -261,7 +261,7 @@ pub struct AuditLog {
     anchor: Option<Box<dyn Anchor>>,
     /// In-memory tail of appended entries.
     entries: Vec<LogEntry>,
-    /// Optional JSONL persistence path — entries are fsynced here on each append.
+    /// Optional JSONL persistence path - entries are fsynced here on each append.
     persist_path: Option<PathBuf>,
 }
 
@@ -280,7 +280,7 @@ impl AuditLog {
 
     /// Open (or create) a **persisted** audit log backed by a JSONL file.
     ///
-    /// If `path` exists, loads all entries and resumes from the chain tail —
+    /// If `path` exists, loads all entries and resumes from the chain tail -
     /// preserving the integrity guarantees across daemon restarts (PRODUCT.md B.9).
     /// Returns an error if the existing chain fails verification.
     pub fn open(path: impl Into<PathBuf>, signer: Box<dyn Signer>) -> anyhow::Result<Self> {
@@ -309,7 +309,7 @@ impl AuditLog {
             (last.seq + 1, last.hash.clone())
         };
 
-        // Verify hash-chain integrity on load (not signatures — the signing key
+        // Verify hash-chain integrity on load (not signatures - the signing key
         // lives in the OS keychain and is the same across restarts in production,
         // but tests may use ephemeral keys; hash integrity is always verifiable).
         let mut expected_prev = Self::genesis_hash();
@@ -349,7 +349,7 @@ impl AuditLog {
 
     /// The genesis-link sentinel used as `prev_hash` for the first entry.
     fn genesis_hash() -> String {
-        // 32 zero bytes, hex-encoded — the empty-chain predecessor.
+        // 32 zero bytes, hex-encoded - the empty-chain predecessor.
         "0".repeat(64)
     }
 
@@ -410,7 +410,7 @@ impl AuditLog {
     /// `H(prev_hash || canonical(payload))`, and its ed25519 `signature`
     /// verifies. A detected break is reported as
     /// [`AuditLogError::ChainBroken`] / [`AuditLogError::SignatureInvalid`]
-    /// (PRODUCT.md B.9 — "tamper-evident").
+    /// (PRODUCT.md B.9 - "tamper-evident").
     pub fn verify_chain(&self) -> anyhow::Result<bool> {
         let mut expected_prev = Self::genesis_hash();
         for (i, entry) in self.entries.iter().enumerate() {

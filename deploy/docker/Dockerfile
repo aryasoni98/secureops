@@ -1,4 +1,4 @@
-# SecureOps Rust — multi-stage image (CLI + Ring-2 daemon + platform API)
+# SecureOps Rust - multi-stage image (CLI + Ring-2 daemon + platform API)
 # Build context: repo root   (docker build -f deploy/docker/Dockerfile .)
 
 # Pin the toolchain minor so image rebuilds are reproducible (MSRV: api crate 1.82).

@@ -1,7 +1,7 @@
 //! Multi-framework agentic-control category (PRODUCT.md A.4, B.2).
 //!
 //! Ports `auditMultiFramework` from `secureops/src/auditor.ts`: cross-framework
-//! agentic safety controls — kill-switch status, memory-trust scanning of
+//! agentic safety controls - kill-switch status, memory-trust scanning of
 //! workspace cognitive files, control-token customization, and graceful
 //! degradation mode. This category emits several wire sub-categories
 //! (`"kill-switch"`, `"memory-trust"`, `"control-tokens"`, `"degradation"`);
@@ -9,7 +9,7 @@
 //! logging/diagnostics.
 //!
 //! The `auditCrossLayerRisk` function from the same TS file is intentionally
-//! NOT ported here — it lives in `secureops-core` already.
+//! NOT ported here - it lives in `secureops-core` already.
 
 use async_trait::async_trait;
 use regex::Regex;
@@ -78,7 +78,7 @@ impl Check for MultiFrameworkCheck {
             );
         }
 
-        // TRUST-001: Memory trust — scan workspace cognitive files for injection
+        // TRUST-001: Memory trust - scan workspace cognitive files for injection
         let cognitive_files = [
             "SOUL.md",
             "IDENTITY.md",

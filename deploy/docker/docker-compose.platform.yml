@@ -1,4 +1,4 @@
-# SecureOps platform stack (PRODUCT.md Phase 5) — HTTP API + storage.
+# SecureOps platform stack (PRODUCT.md Phase 5) - HTTP API + storage.
 #
 # Separate from docker-compose.yml (the host-local daemon/audit tool). Brings up
 # the platform tier: API + scanner worker + Postgres + Redis + MinIO + OTel collector.
@@ -87,7 +87,7 @@ services:
 
   minio:
     # Pinned by digest: the upstream MinIO repo was archived in April 2026 and
-    # images stopped being published — `latest` can vanish or go stale.
+    # images stopped being published - `latest` can vanish or go stale.
     image: minio/minio:RELEASE.2025-04-22T22-12-26Z@sha256:3f97c5651cb6662b880c787a232b6b34fec8d8922e08d6617b25d241a21164bb
     command: ["server", "/data", "--console-address", ":9001"]
     environment:

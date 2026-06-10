@@ -1,4 +1,4 @@
--- 004_findings — scan jobs + their findings (RL-ranked in P7, graphed in P6).
+-- 004_findings - scan jobs + their findings (RL-ranked in P7, graphed in P6).
 
 CREATE TABLE IF NOT EXISTS scans (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

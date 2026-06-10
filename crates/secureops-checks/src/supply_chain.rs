@@ -164,7 +164,7 @@ impl Check for SupplyChainCheck {
                             )
                             .evidence(format!("Account age: {} days", age))
                             .remediation(
-                                "Review the skill carefully — new accounts are commonly used for typosquatting attacks"
+                                "Review the skill carefully - new accounts are commonly used for typosquatting attacks"
                             )
                             .owasp_asi("ASI04")
                             .maestro(MaestroLayer::L7)

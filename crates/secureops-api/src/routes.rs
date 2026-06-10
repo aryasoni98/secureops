@@ -1,6 +1,6 @@
 //! REST handlers (PRODUCT.md Phase 5). Every handler depends only on
 //! [`AppState`]; tier-locked ones gate through the Cedar [`PolicyEngine`] before
-//! doing work. Bug-hunt execution and compliance PDF rendering land in P6/P8 —
+//! doing work. Bug-hunt execution and compliance PDF rendering land in P6/P8 -
 //! the routes here queue jobs / return JSON and are not stubs.
 
 use axum::body::Body;
@@ -23,7 +23,7 @@ fn now_unix() -> i64 {
     time::OffsetDateTime::now_utc().unix_timestamp()
 }
 
-/// `POST /api/v1/license/activate` — verify an Ed25519 key, persist it, mint a
+/// `POST /api/v1/license/activate` - verify an Ed25519 key, persist it, mint a
 /// session JWT scoped to the license's tier/features.
 #[derive(Deserialize)]
 pub struct ActivateReq {
@@ -58,7 +58,7 @@ pub async fn license_activate(
     })))
 }
 
-/// `GET /api/v1/license` — the authenticated tenant's active license.
+/// `GET /api/v1/license` - the authenticated tenant's active license.
 pub async fn license_get(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,
@@ -76,7 +76,7 @@ pub struct ScanReq {
     pub scope: String,
 }
 
-/// `POST /api/v1/scans` — queue a scan (Cedar action `scans`).
+/// `POST /api/v1/scans` - queue a scan (Cedar action `scans`).
 pub async fn create_scan(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,
@@ -114,7 +114,7 @@ pub async fn create_scan(
     Ok(Json(json!({ "jobId": scan.id, "status": "queued" })))
 }
 
-/// `GET /api/v1/scans/{id}` — fetch a scan (tenant-scoped).
+/// `GET /api/v1/scans/{id}` - fetch a scan (tenant-scoped).
 pub async fn get_scan(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,
@@ -136,7 +136,7 @@ pub struct FindingsQuery {
     pub offset: Option<i64>,
 }
 
-/// `GET /api/v1/findings` — list the tenant's findings (filter + paginate).
+/// `GET /api/v1/findings` - list the tenant's findings (filter + paginate).
 pub async fn list_findings(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,
@@ -167,7 +167,7 @@ pub struct ActionReq {
     pub action: String,
 }
 
-/// `POST /api/v1/findings/{id}/action` — confirm/dismiss/escalate a finding.
+/// `POST /api/v1/findings/{id}/action` - confirm/dismiss/escalate a finding.
 pub async fn finding_action(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,

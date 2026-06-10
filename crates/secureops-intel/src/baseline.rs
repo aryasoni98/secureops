@@ -1,4 +1,4 @@
-//! Directory hash baselines — faithful port of the remaining `utils/hash.ts`
+//! Directory hash baselines - faithful port of the remaining `utils/hash.ts`
 //! functions (`hashDirectory`, `createBaseline`, `compareBaseline`,
 //! `saveBaseline`, `loadBaseline`). Used for drift / integrity detection.
 //!

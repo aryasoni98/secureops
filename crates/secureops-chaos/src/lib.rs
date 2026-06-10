@@ -5,8 +5,8 @@
 //! These functions are wired into integration tests, the CLI (`just chaos`), and
 //! the chaos workflow in CI.
 //!
-//! The drills run against in-process backends — no live Postgres / Redis / MinIO
-//! required — so they catch regressions in the degradation paths themselves.
+//! The drills run against in-process backends - no live Postgres / Redis / MinIO
+//! required - so they catch regressions in the degradation paths themselves.
 
 #![forbid(unsafe_code)]
 
@@ -171,7 +171,7 @@ pub async fn chaos_redis_down() -> DrillResult {
 }
 
 fn deadpool_redis_stub() -> deadpool_redis::Pool {
-    // A pool pointed at a port that isn't listening — only used to prove the
+    // A pool pointed at a port that isn't listening - only used to prove the
     // payload-handling path doesn't dial Redis. `process_one` would error.
     let cfg = deadpool_redis::Config::from_url("redis://127.0.0.1:1");
     cfg.create_pool(Some(deadpool_redis::Runtime::Tokio1))
@@ -255,7 +255,7 @@ pub async fn chaos_minio_down() -> DrillResult {
         blast_radius: 0,
     };
     // Simulate MinIO failure: skip evidence upload, persist finding.
-    tracing::warn!("evidence upload skipped — minio down");
+    tracing::warn!("evidence upload skipped - minio down");
     store.insert_finding(&f).await.unwrap();
     let stored = store
         .list_findings("t", &FindingFilter::default())

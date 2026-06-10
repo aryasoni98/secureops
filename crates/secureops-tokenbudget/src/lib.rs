@@ -7,11 +7,11 @@
 //!
 //! Strategy: a greedy **relevance/cost knapsack** ([`TokenBudget::pack`]) over
 //! [`Evidence`], plus composable compression passes:
-//! - [`cosine_dedup`] — collapse near-duplicate findings to one representative + a count.
-//! - [`schema_ref`] — send a repeated JSON schema once, reference it by id.
-//! - [`diff_delta`] — for configs/manifests, keep only the changed/violating lines.
-//! - [`map_reduce_chunks`] — split an oversized blob into window-sized chunks.
-//! - [`anthropic_cache_control`] — mark a stable prefix for prompt caching.
+//! - [`cosine_dedup`] - collapse near-duplicate findings to one representative + a count.
+//! - [`schema_ref`] - send a repeated JSON schema once, reference it by id.
+//! - [`diff_delta`] - for configs/manifests, keep only the changed/violating lines.
+//! - [`map_reduce_chunks`] - split an oversized blob into window-sized chunks.
+//! - [`anthropic_cache_control`] - mark a stable prefix for prompt caching.
 //!
 //! All passes are pure, deterministic, and model-free (no network), so they
 //! unit-test everywhere. Token counts use a `chars/4` estimate ([`estimate_tokens`]).
@@ -196,7 +196,7 @@ pub fn schema_ref(texts: &[String], schema: &str) -> (String, Vec<String>) {
     (schema_block, rewritten)
 }
 
-/// Keep only the lines present in `candidate` but not in `baseline` — the
+/// Keep only the lines present in `candidate` but not in `baseline` - the
 /// changed/violating fragment of an IAM policy or K8s manifest.
 pub fn diff_delta(baseline: &str, candidate: &str) -> String {
     use std::collections::HashSet;

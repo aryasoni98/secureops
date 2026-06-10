@@ -1,4 +1,4 @@
-// Authenticated dashboard pages (PRODUCT.md Phase 8 — seven screens).
+// Authenticated dashboard pages (PRODUCT.md Phase 8 - seven screens).
 // All fetches go through the typed `api` client. Each page is self-contained;
 // shared chrome lives in `components.tsx`. Every data fetch keeps a separate
 // error state so "empty" never masks "API failed", and mutating buttons are
@@ -90,7 +90,7 @@ export function Findings() {
                 <SeverityBadge severity={f.severity} />
               </td>
               <td className="p-2">{f.title}</td>
-              <td className="p-2">{f.cloud || "—"}</td>
+              <td className="p-2">{f.cloud || "-"}</td>
               <td className="p-2">{f.blastRadius}</td>
               <td className="p-2">{f.status}</td>
               <td className="p-2 flex gap-2">
@@ -119,7 +119,7 @@ export function Findings() {
             </tr>
           ))}
           {items.length === 0 && !error && (
-            <EmptyRow colSpan={6}>No findings yet — run a scan from /setup/scan.</EmptyRow>
+            <EmptyRow colSpan={6}>No findings yet - run a scan from /setup/scan.</EmptyRow>
           )}
         </tbody>
       </table>
@@ -219,7 +219,7 @@ export function Graph() {
       {error && <ErrorNotice message={error} onRetry={() => setReloadKey((k) => k + 1)} />}
       <p className="text-slate-400 mb-4">
         Internet → sensitive nodes ranked by blast radius. (D3 force-graph view rendered on the
-        same payload when `@adversa/d3` is added.)
+        same payload when `@aryasoni98/d3` is added.)
       </p>
       <ul className="space-y-2">
         {paths.map((p, i) => (
@@ -229,7 +229,7 @@ export function Graph() {
           </li>
         ))}
         {paths.length === 0 && !error && (
-          <li className="text-slate-500">No path data yet — call POST /graph/rebuild.</li>
+          <li className="text-slate-500">No path data yet - call POST /graph/rebuild.</li>
         )}
       </ul>
     </Page>

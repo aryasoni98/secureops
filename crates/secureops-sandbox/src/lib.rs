@@ -1,7 +1,7 @@
-//! # secureops-sandbox — the execution Policy Enforcement Point (PEP)
+//! # secureops-sandbox - the execution Policy Enforcement Point (PEP)
 //!
 //! This crate is the **execution PEP** in the PDP/PEP enforcement spine
-//! (PRODUCT.md A.2 table — *"`wasmtime` host that grants WASI capabilities only
+//! (PRODUCT.md A.2 table - *"`wasmtime` host that grants WASI capabilities only
 //! as the PDP permits; fuel/epoch caps"*). Instead of executing a skill
 //! natively, a skill invocation is intercepted and loaded into a `wasmtime`
 //! sandbox whose syscall surface is WASI-shaped and whose every capability is
@@ -15,7 +15,7 @@
 //!    [`secureops-proxy`] egress PEP), and a bounded **fuel** budget plus an
 //!    **epoch deadline** ([`Capabilities`]).
 //! 3. Even an obfuscated `eval` / `child_process` payload that slipped past the
-//!    tree-sitter scan ([`secureops-intel`]) simply has **nothing to call** —
+//!    tree-sitter scan ([`secureops-intel`]) simply has **nothing to call** -
 //!    `.env` is unreachable and the only syscalls available are WASI-shaped.
 //!
 //! ## Defence-in-depth invariants this PEP must uphold
@@ -97,7 +97,7 @@ pub enum SandboxError {
 
 /// The WASI capability envelope granted to a single skill invocation.
 ///
-/// PRODUCT.md B.7 step 2: capabilities are *granted from policy* — this struct
+/// PRODUCT.md B.7 step 2: capabilities are *granted from policy* - this struct
 /// is the concrete, PDP-derived grant that the [`SkillSandbox`] hands to the
 /// `wasmtime` store. The defaults are deliberately the **most restrictive**
 /// (no fs, no network, tiny budgets) so a missing grant fails closed.
@@ -105,7 +105,7 @@ pub enum SandboxError {
 pub struct Capabilities {
     /// Filesystem paths preopened for the guest, each one already
     /// [`Decision::Allow`]ed by the PDP. The secret store / `.env` is **never**
-    /// in this list — that is the whole point of B.7 step 3 (`.env` unreachable).
+    /// in this list - that is the whole point of B.7 step 3 (`.env` unreachable).
     pub fs_paths: Vec<String>,
 
     /// If `true`, the guest's outbound traffic is routed through the forward
@@ -157,7 +157,7 @@ impl Default for Capabilities {
 /// PRODUCT.md A.2 (`secureops-sandbox` row) / B.7. The engine is built once
 /// with fuel-consumption and epoch-interruption enabled; each skill gets its
 /// own short-lived store so capabilities never leak between invocations.
-/// State stored inside the wasmtime `Store` — the WASI context.
+/// State stored inside the wasmtime `Store` - the WASI context.
 struct StoreState {
     wasi: wasmtime_wasi::preview1::WasiP1Ctx,
 }
@@ -213,7 +213,7 @@ impl SkillSandbox {
                 )));
             }
         }
-        // Note: network WASI is NOT linked — outbound traffic must use the proxy PEP.
+        // Note: network WASI is NOT linked - outbound traffic must use the proxy PEP.
         let wasi: WasiP1Ctx = wasi_builder.build_p1();
 
         // Build store with fuel + epoch limits.
@@ -474,7 +474,7 @@ mod tests {
 
     #[test]
     fn capabilities_can_describe_a_grant() {
-        // A grant carries exactly what the PDP allowed — and never the secret store.
+        // A grant carries exactly what the PDP allowed - and never the secret store.
         let caps = Capabilities {
             fs_paths: vec!["/srv/skills/tmp".to_string()],
             network_via_proxy: true,
@@ -492,7 +492,7 @@ mod sandbox_tests {
     use secureops_policy::AllowlistEngine;
 
     fn noop_wasm() -> Vec<u8> {
-        // (module (func (export "_start"))) — compiled via wat crate at test time.
+        // (module (func (export "_start"))) - compiled via wat crate at test time.
         wat::parse_str(r#"(module (func (export "_start")))"#).unwrap()
     }
 

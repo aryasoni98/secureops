@@ -6,7 +6,7 @@
 # Do NOT add bpfel-unknown-none to the default build targets.
 
 [target.x86_64-unknown-linux-gnu]
-# Linker for cross-compilation — used by the release workflow.
+# Linker for cross-compilation - used by the release workflow.
 # linker = "x86_64-linux-gnu-gcc"
 
 [target.aarch64-unknown-linux-gnu]

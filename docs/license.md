@@ -8,7 +8,7 @@ platform never phones home except for an optional heartbeat.
 
 | Tier | Capabilities |
 | --- | --- |
-| `community` | Audit, hardening, monitors, kill switch — host-local only |
+| `community` | Audit, hardening, monitors, kill switch - host-local only |
 | `pro` | Adds: API, findings DB, attack-path graph, RL ranking |
 | `enterprise` | Adds: SSO, signed IR export, bughunt, federated IOC, BYO model |
 
@@ -18,13 +18,13 @@ lower-tier token returns `403 Forbidden`.
 ## Getting a license (beta)
 
 The host-local CLI (`community` tier: audit, hardening, monitors, kill switch)
-needs **no license at all** — install and run.
+needs **no license at all** - install and run.
 
 For the platform API during the beta, mint a self-signed dev license and run
 the API in dev mode:
 
 ```bash
-# 1. Start the API accepting the built-in dev key (local only — never in production)
+# 1. Start the API accepting the built-in dev key (local only - never in production)
 SECUREOPS_DEV_MODE=1 just api
 
 # 2. Mint an enterprise-tier dev license (or: just dev-license)

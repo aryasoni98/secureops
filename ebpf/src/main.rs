@@ -1,4 +1,4 @@
-//! # secureops-ebpf — kernel PEP eBPF programs (PRODUCT.md B.6)
+//! # secureops-ebpf - kernel PEP eBPF programs (PRODUCT.md B.6)
 //!
 //! Hooks `openat`, `connect`, and `execve` via tracepoints, streams
 //! [`SyscallEvent`] records to the Ring-2 daemon over a BPF ring buffer.
@@ -85,7 +85,7 @@ static EVENTS: RingBuf = RingBuf::with_byte_size(512 * 1024, 0);
 // Tracepoint hooks
 // ---------------------------------------------------------------------------
 
-/// `sys_enter_openat` — the "read-a-secret" half of the exfil chain.
+/// `sys_enter_openat` - the "read-a-secret" half of the exfil chain.
 ///
 /// Tracepoint args layout (kernel abi):
 /// ```c
@@ -97,7 +97,7 @@ pub fn secureops_openat(ctx: TracePointContext) -> u32 {
     emit_event(&ctx, EventKind::Openat, 16).unwrap_or(0)
 }
 
-/// `sys_enter_connect` — the "connect-to-unknown-host" half of the exfil chain.
+/// `sys_enter_connect` - the "connect-to-unknown-host" half of the exfil chain.
 ///
 /// Tracepoint args layout:
 /// ```c
@@ -109,7 +109,7 @@ pub fn secureops_connect(ctx: TracePointContext) -> u32 {
     emit_event(&ctx, EventKind::Connect, 16).unwrap_or(0)
 }
 
-/// `sys_enter_execve` — process identity / lineage for the per-PID state window.
+/// `sys_enter_execve` - process identity / lineage for the per-PID state window.
 ///
 /// Tracepoint args layout:
 /// ```c

@@ -11,11 +11,11 @@
 //! * The TS `listDir` is `fs.readdir`, which *throws* when the agents directory
 //!   is absent; that thrown case is what emits `SC-MEM-001`. The Rust
 //!   `list_dir` contract returns an empty vec instead of erroring, so we gate
-//!   `SC-MEM-001` on `!ctx.file_exists(agents_dir)` — the faithful equivalent
+//!   `SC-MEM-001` on `!ctx.file_exists(agents_dir)` - the faithful equivalent
 //!   of "readdir would have thrown ENOENT".
 //! * The TS `new URL(url).hostname` is reproduced by [`url_hostname`]: it strips
 //!   the scheme, cuts at the first `/`, `?`, or `#`, drops any `userinfo@`
-//!   prefix and `:port` suffix, preserves IPv6 brackets, and lowercases —
+//!   prefix and `:port` suffix, preserves IPv6 brackets, and lowercases -
 //!   matching Node's WHATWG URL parser for the `https?://[^\s"'<>]+` inputs the
 //!   regex can produce. The `url` crate is intentionally not a dependency.
 

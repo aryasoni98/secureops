@@ -9,7 +9,7 @@ SecureOps ranks findings using a per-tenant LinUCB contextual bandit
 | `escalate` | `+1.5` |
 | `dismiss` | `-1.0` |
 
-Rewards decay at `0.95^hours` — older feedback counts less.
+Rewards decay at `0.95^hours` - older feedback counts less.
 
 ## Feature vector
 

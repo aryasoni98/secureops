@@ -1,23 +1,23 @@
 //! `secureops-license-server` binary (PRODUCT.md Phase 8).
 //!
 //! Subcommands:
-//! - *(default)* / `serve` — run the stateless heartbeat/revoke HTTP server.
-//! - `mint` — sign a license key (vendor tooling; `--dev` uses the built-in
+//! - *(default)* / `serve` - run the stateless heartbeat/revoke HTTP server.
+//! - `mint` - sign a license key (vendor tooling; `--dev` uses the built-in
 //!   dev key for local/beta runs).
-//! - `verify` — verify a license key offline and print its claims.
+//! - `verify` - verify a license key offline and print its claims.
 //!
 //! Env (serve):
-//! - `SECUREOPS_LICENSE_PUBKEY` — base64url 32-byte Ed25519 vendor public key
+//! - `SECUREOPS_LICENSE_PUBKEY` - base64url 32-byte Ed25519 vendor public key
 //!   (required unless `SECUREOPS_DEV_MODE=1`).
-//! - `SECUREOPS_ADMIN_KEY` — bearer for `/revoke` (required unless
+//! - `SECUREOPS_ADMIN_KEY` - bearer for `/revoke` (required unless
 //!   `SECUREOPS_DEV_MODE=1`).
-//! - `SECUREOPS_DEV_MODE` — set to `1` to accept insecure local-only defaults
+//! - `SECUREOPS_DEV_MODE` - set to `1` to accept insecure local-only defaults
 //!   for the two values above. Never set in production.
-//! - `SECUREOPS_LICENSE_ADDR` — listen addr (default `127.0.0.1:8090`; set
+//! - `SECUREOPS_LICENSE_ADDR` - listen addr (default `127.0.0.1:8090`; set
 //!   `0.0.0.0:8090` explicitly for containers).
 //!
 //! Env (mint):
-//! - `SECUREOPS_SIGNING_KEY` — base64url 32-byte Ed25519 seed (vendor private
+//! - `SECUREOPS_SIGNING_KEY` - base64url 32-byte Ed25519 seed (vendor private
 //!   key). Not needed with `--dev`.
 
 #![forbid(unsafe_code)]
@@ -28,7 +28,7 @@ use secureops_api::license::{self, License, Tier};
 use secureops_license_server::{build_router, AppState};
 use tracing_subscriber::EnvFilter;
 
-/// Deterministic dev seed — local/beta only, never trusted in production.
+/// Deterministic dev seed - local/beta only, never trusted in production.
 const DEV_SEED: [u8; 32] = [7u8; 32];
 
 #[derive(Parser)]
@@ -62,7 +62,7 @@ enum Cmd {
         /// Grace days after expiry before features hard-lock.
         #[arg(long, default_value_t = 7)]
         grace_days: u32,
-        /// Sign with the built-in dev key (local/beta only — pairs with
+        /// Sign with the built-in dev key (local/beta only - pairs with
         /// `SECUREOPS_DEV_MODE=1` on the API/license server).
         #[arg(long)]
         dev: bool,
@@ -119,7 +119,7 @@ async fn serve() -> anyhow::Result<()> {
         Ok(k) if !k.is_empty() => k,
         _ if dev_mode => {
             tracing::warn!(
-                "SECUREOPS_ADMIN_KEY unset — using insecure dev key (SECUREOPS_DEV_MODE=1)"
+                "SECUREOPS_ADMIN_KEY unset - using insecure dev key (SECUREOPS_DEV_MODE=1)"
             );
             "dev-admin-key".into()
         }
@@ -166,7 +166,7 @@ fn mint(
 ) -> anyhow::Result<()> {
     let tier = parse_tier(tier)?;
     let signing_key = if dev {
-        eprintln!("warning: signing with the built-in DEV key — local/beta use only");
+        eprintln!("warning: signing with the built-in DEV key - local/beta use only");
         ed25519_dalek::SigningKey::from_bytes(&DEV_SEED)
     } else {
         let b64 = std::env::var("SECUREOPS_SIGNING_KEY").map_err(|_| {
@@ -270,7 +270,7 @@ fn load_pubkey(dev_mode: bool) -> anyhow::Result<[u8; 32]> {
         }
         _ if dev_mode => {
             tracing::warn!(
-                "SECUREOPS_LICENSE_PUBKEY unset — using insecure dev key (SECUREOPS_DEV_MODE=1)"
+                "SECUREOPS_LICENSE_PUBKEY unset - using insecure dev key (SECUREOPS_DEV_MODE=1)"
             );
             Ok(ed25519_dalek::SigningKey::from_bytes(&DEV_SEED)
                 .verifying_key()

@@ -2,9 +2,9 @@
 
 ## Trust rings (host tool)
 
-- **Ring 0 — Untrusted:** the agent, LLM, skills, secrets. Assumed compromisable.
-- **Ring 1 — Degraded trust:** in-process audit/monitor logic (CLI, N-API).
-- **Ring 2 — Root of trust:** `secureops-daemon` — egress proxy (fail-closed),
+- **Ring 0 - Untrusted:** the agent, LLM, skills, secrets. Assumed compromisable.
+- **Ring 1 - Degraded trust:** in-process audit/monitor logic (CLI, N-API).
+- **Ring 2 - Root of trust:** `secureops-daemon` - egress proxy (fail-closed),
   PDP, runtime monitors, kill switch, hash-chained Ed25519-signed audit log, and
   the eBPF kernel PEP (exfil-chain correlation; LSM-BPF inline deny on Linux).
 
@@ -41,5 +41,5 @@ The API composes the engine crates:
 
 Pure-Rust, `cc`-light dependency choices throughout (tokio-postgres over sqlx;
 hand-rolled SigV4 over aws-sdk; Sherman-Morrison over BLAS; stored-only ZIP) to
-stay under `tree-sitter-javascript`'s `cc <1.1` cap — see `SECURITY.md` and the
+stay under `tree-sitter-javascript`'s `cc <1.1` cap - see `SECURITY.md` and the
 inline pin in `crates/secureops-monitors/Cargo.toml`.

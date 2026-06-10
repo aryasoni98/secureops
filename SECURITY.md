@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Email security findings to **security@adversa.ai** (or open a private GitHub
+Email security findings to **security@aryasoni98.ai** (or open a private GitHub
 Security Advisory). Please do not file public issues for undisclosed
 vulnerabilities. We aim to acknowledge within 48 hours.
 

@@ -75,7 +75,7 @@ async fn compliance_json_csv_and_signed_zip() {
     assert_eq!(r.status(), StatusCode::OK);
     assert_eq!(r.headers().get(header::CONTENT_TYPE).unwrap(), "text/csv");
 
-    // Signed ZIP — verify the Ed25519 signature with the advertised pubkey.
+    // Signed ZIP - verify the Ed25519 signature with the advertised pubkey.
     let r = app
         .clone()
         .oneshot(get("/api/v1/compliance/reports?format=zip", &tok))

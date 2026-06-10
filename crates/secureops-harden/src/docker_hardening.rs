@@ -1,4 +1,4 @@
-//! Docker hardening (priority 4) — port of `hardening/docker-hardening.ts`.
+//! Docker hardening (priority 4) - port of `hardening/docker-hardening.ts`.
 //!
 //! `check` emits `SC-DOCKER-INFO` when no docker-compose config is present, and
 //! otherwise reuses `SC-EXEC-004` / `SC-EXEC-007` for non-read-only and
@@ -40,7 +40,7 @@ impl HardeningModule for DockerHardening {
                     AuditFinding::builder("SC-DOCKER-INFO", Severity::Info, "execution")
                         .title("No Docker Compose configuration found")
                         .description(
-                            "Docker hardening checks skipped — no docker-compose.yml detected.",
+                            "Docker hardening checks skipped - no docker-compose.yml detected.",
                         )
                         .evidence("No docker-compose configuration in context")
                         .remediation(
@@ -54,7 +54,7 @@ impl HardeningModule for DockerHardening {
         };
 
         for (name, svc) in services.iter() {
-            // `!svc.read_only` — missing OR false.
+            // `!svc.read_only` - missing OR false.
             if svc.read_only != Some(true) {
                 findings.push(
                     AuditFinding::builder("SC-EXEC-004", Severity::Medium, "execution")
@@ -137,7 +137,7 @@ async fn write_override(ctx: &dyn AuditContext, backup_dir: &Path) -> std::io::R
     let override_config = hardened_override_config();
 
     // Write as YAML-like JSON (user should convert to YAML for Docker), matching
-    // `JSON.stringify(overrideConfig, null, 2)` — 2-space pretty, no trailing
+    // `JSON.stringify(overrideConfig, null, 2)` - 2-space pretty, no trailing
     // newline.
     let json = serde_json::to_string_pretty(&override_config).map_err(std::io::Error::other)?;
     tokio::fs::write(&override_path, json).await
@@ -190,7 +190,7 @@ mod tests {
     use std::collections::HashMap;
     use tempfile::tempdir;
 
-    /// Minimal local mock — only the accessors docker-hardening touches.
+    /// Minimal local mock - only the accessors docker-hardening touches.
     struct MockCtx {
         state_dir: String,
         config: OpenClawConfig,

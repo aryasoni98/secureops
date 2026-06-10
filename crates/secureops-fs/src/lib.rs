@@ -3,7 +3,7 @@
 //! The real, [`tokio::fs`]-backed [`AuditContext`] implementation plus a
 //! localhost-only TCP port probe. This is the Ring 0/1 bridge between the
 //! I/O-free [`secureops_core`] type model and the actual host filesystem and
-//! loopback network — see **PRODUCT.md A.4** (crate map: "tokio::fs context +
+//! loopback network - see **PRODUCT.md A.4** (crate map: "tokio::fs context +
 //! localhost probe") and **PRODUCT.md B.2** (audit flow: "CLI/napi builds an
 //! `Arc<dyn AuditContext>` (real `tokio::fs` impl)" and "`--deep` adds
 //! localhost-only port probes").
@@ -45,7 +45,7 @@ use secureops_core::{
 /// ("CLI/napi builds an `Arc<dyn AuditContext>` (real `tokio::fs` impl)") and
 /// shared across the [`Check`](secureops_core::Check) registry fan-out.
 pub struct RealAuditContext {
-    /// `<stateDir>` root — the OpenClaw state directory the audit inspects.
+    /// `<stateDir>` root - the OpenClaw state directory the audit inspects.
     state_dir: String,
     /// The parsed OpenClaw configuration tree (PRODUCT.md config contract).
     config: OpenClawConfig,
@@ -179,7 +179,7 @@ impl AuditContext for RealAuditContext {
     /// Faithful port of `createAuditContext.fileInfo` in `src/index.ts`: stat the
     /// path and, on success, surface `exists: true`, the low 9 permission bits
     /// (`mode & 0o777`), and the byte size; on any error report `exists: false`
-    /// with the rest defaulted. Permission bits are unix-only — on non-unix hosts
+    /// with the rest defaulted. Permission bits are unix-only - on non-unix hosts
     /// there are no POSIX mode bits, so `permissions` stays `None`. `content` is
     /// never populated here (matching the TS impl, which omits the `content`
     /// field); callers that need bytes use [`read_file`](Self::read_file).

@@ -1,4 +1,4 @@
-# neo4j subchart — graph backend (Pro/Enterprise). Off by default.
+# neo4j subchart - graph backend (Pro/Enterprise). Off by default.
 enabled: false
 
 image:

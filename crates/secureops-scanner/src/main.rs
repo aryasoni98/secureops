@@ -31,7 +31,7 @@ async fn main() -> anyhow::Result<()> {
             Arc::new(pg)
         }
         _ => {
-            tracing::warn!("DATABASE_URL not set — using in-memory store (CI/dev mode)");
+            tracing::warn!("DATABASE_URL not set - using in-memory store (CI/dev mode)");
             Arc::new(InMemoryStore::new())
         }
     };

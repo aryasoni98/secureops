@@ -1,4 +1,4 @@
-//! SecureOps runtime monitors — `secureops-monitors`.
+//! SecureOps runtime monitors - `secureops-monitors`.
 //!
 //! Implements the Phase-2 "monitors daemon" surface from **PRODUCT.md B.4
 //! (Daemon runtime loop)** and PRODUCT.md §A architecture diagram
@@ -7,7 +7,7 @@
 //! 1. `init_db` migrates the SQLite store (alerts + audit-log tables).
 //! 2. An [`AlertBus`] (`tokio::sync::broadcast`) fans [`MonitorAlert`]s out to
 //!    every consumer (SQLite persistence, ratatui TUI, axum/SSE dashboard,
-//!    OpenTelemetry export — see PRODUCT.md §"Observability surfaces").
+//!    OpenTelemetry export - see PRODUCT.md §"Observability surfaces").
 //! 3. Each [`Monitor`] is spawned *by value* into a `JoinSet`, holding a clone
 //!    of the bus sender and a [`CancellationToken`]; `token.cancel()` fans a
 //!    clean shutdown to every monitor (PRODUCT.md B.4 steps 3 & 5).
@@ -176,11 +176,11 @@ pub trait Monitor: Send + Sync {
 /// [`CircuitState::Tripped`] (PRODUCT.md B.9 step 2).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum CircuitState {
-    /// Normal operation — new sessions allowed.
+    /// Normal operation - new sessions allowed.
     #[default]
     Armed,
     /// Tripped (cost breaker, eBPF chain match, canary read, or operator
-    /// `kill`) — the gateway refuses new sessions.
+    /// `kill`) - the gateway refuses new sessions.
     Tripped,
 }
 
@@ -197,7 +197,7 @@ pub fn circuit_channel() -> (watch::Sender<CircuitState>, watch::Receiver<Circui
 // SQLite persistence
 // ---------------------------------------------------------------------------
 
-/// Open/migrate the SQLite store — `alerts` + `audit_log` tables (PRODUCT.md B.4 step 2).
+/// Open/migrate the SQLite store - `alerts` + `audit_log` tables (PRODUCT.md B.4 step 2).
 pub async fn init_db(path: &str) -> anyhow::Result<()> {
     use rusqlite::Connection;
     let conn = Connection::open(path)?;
@@ -248,7 +248,7 @@ pub async fn run_alert_persistence(bus: AlertBus, db_path: Arc<str>) -> anyhow::
             }
             Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
             Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                tracing::warn!("alert_persistence lagged by {n} — some alerts not persisted");
+                tracing::warn!("alert_persistence lagged by {n} - some alerts not persisted");
             }
         }
     }

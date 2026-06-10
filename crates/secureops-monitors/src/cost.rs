@@ -1,4 +1,4 @@
-//! Cost monitor + circuit breaker — port of `monitors/cost-monitor.ts`.
+//! Cost monitor + circuit breaker - port of `monitors/cost-monitor.ts`.
 //!
 //! The pure cost math (`parse_session_log`, `calculate_cost_for_window`,
 //! `generate_cost_report`, `check_limits`) is faithful to the TS and injects
@@ -174,7 +174,7 @@ pub fn check_limits(
             tripped = true;
             alerts.push(alert(
                 Severity::Critical,
-                "Circuit breaker TRIPPED — pausing agent sessions".to_string(),
+                "Circuit breaker TRIPPED - pausing agent sessions".to_string(),
                 Some(format!(
                     "Hourly spend: ${:.2}, Limit: ${}",
                     hourly, limits.hourly_usd

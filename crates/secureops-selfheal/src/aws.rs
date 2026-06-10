@@ -1,9 +1,9 @@
 //! Live **AWS** [`CloudBackend`] (gated `aws` feature). Executes parsed
-//! [`CloudAction`]s via the AWS SDK — usable now that the tree-sitter bump
+//! [`CloudAction`]s via the AWS SDK - usable now that the tree-sitter bump
 //! lifted the workspace `cc < 1.1` cap (aws-sdk pulls aws-lc-rs).
 //!
 //! Supports the AWS-native sample actions (S3 ACL, CloudTrail). Non-AWS actions
-//! (GCP/K8s) return an unsupported error — those route to their own backends.
+//! (GCP/K8s) return an unsupported error - those route to their own backends.
 //! Reversible bookkeeping (snapshot/health/rollback) is action-specific in a
 //! production deploy; here the trait hooks are wired to safe defaults.
 

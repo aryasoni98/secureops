@@ -1,12 +1,12 @@
-# SecureOps — Technical Specification
+# SecureOps - Technical Specification
 ### A Fully Self-Hosted, Client-Deployed, AI-Native Multi-Cloud Security Platform
 
 ---
 
 ## TL;DR
 
-- **SecureOps is a "bring-your-own-infrastructure" (BYOI) security SaaS:** the client deploys the entire platform inside their own AWS/GCP/Azure/on-prem environment via Docker Compose or Helm, launched with one `just install` command; clients supply their own LLM API keys; the vendor supplies only Ed25519-signed license keys that are validated **locally** against a public key embedded in the binary — **no vendor infrastructure is ever required to run the product.**
-- **The architecture is a Rust (axum) multi-service system** — API server, scan/check engine (Cedar + Rego), Security Knowledge Graph, RL prioritizer, LLM agentic bug-hunter, three-class self-healing engine, and a token-compression layer — backed by Postgres, a graph store, Redis, an object store, and OpenTelemetry, all shipping as cosign-signed, distroless, non-root containers in every phase from P0 onward.
+- **SecureOps is a "bring-your-own-infrastructure" (BYOI) security SaaS:** the client deploys the entire platform inside their own AWS/GCP/Azure/on-prem environment via Docker Compose or Helm, launched with one `just install` command; clients supply their own LLM API keys; the vendor supplies only Ed25519-signed license keys that are validated **locally** against a public key embedded in the binary - **no vendor infrastructure is ever required to run the product.**
+- **The architecture is a Rust (axum) multi-service system** - API server, scan/check engine (Cedar + Rego), Security Knowledge Graph, RL prioritizer, LLM agentic bug-hunter, three-class self-healing engine, and a token-compression layer - backed by Postgres, a graph store, Redis, an object store, and OpenTelemetry, all shipping as cosign-signed, distroless, non-root containers in every phase from P0 onward.
 - **Build it in this order:** P0 license + container/Helm/Justfile foundation → P1 dashboard MVP with license activation → P2 multi-cloud scanning → P3–P4 knowledge graph + attack paths → P5 LLM bug-hunting + token compression → P6 self-healing → P7 RL feedback loop → P8 enterprise (SSO/eBPF/destructive healing) → P9 hardening/GA, with a parallel W0–W7 worldwide rollout. Feature access is gated by the license `tier` claim (Community/Pro/Enterprise) enforced in Cedar at the API edge.
 
 ---
@@ -15,13 +15,13 @@
 
 1. **The BYOI model is proven.** GitLab EE, Mattermost, Netdata, Portainer, Metabase, and HashiCorp Vault Enterprise all ship self-hosted binaries that validate an embedded, cryptographically-signed license offline and degrade gracefully (not hard-lock) on expiry. SecureOps should follow the same pattern: **offline-first signature verification with an optional online heartbeat**, never a phone-home dependency.
 
-2. **The hardest design constraint is "vendor never hosts anything."** This forces three decisions: (a) license validation must be **offline-capable via embedded Ed25519 public key**; (b) all LLM cost/usage accounting happens **client-side** (no vendor billing pipeline — the client pays their own OpenAI/Anthropic bills); (c) telemetry to the vendor must be **opt-in and license-keyed only**, not operationally required.
+2. **The hardest design constraint is "vendor never hosts anything."** This forces three decisions: (a) license validation must be **offline-capable via embedded Ed25519 public key**; (b) all LLM cost/usage accounting happens **client-side** (no vendor billing pipeline - the client pays their own OpenAI/Anthropic bills); (c) telemetry to the vendor must be **opt-in and license-keyed only**, not operationally required.
 
-3. **Token cost is the dominant variable operating expense** because security artifacts (IAM policies, K8s manifests, Terraform plans, CloudTrail) are enormous. A `TokenBudget` packing layer with semantic dedup, schema-reference compression, diff/delta evidence extraction, map-reduce chunking, and provider-side prompt caching is not optional — it is the difference between a usable product and one that burns the client's API budget.
+3. **Token cost is the dominant variable operating expense** because security artifacts (IAM policies, K8s manifests, Terraform plans, CloudTrail) are enormous. A `TokenBudget` packing layer with semantic dedup, schema-reference compression, diff/delta evidence extraction, map-reduce chunking, and provider-side prompt caching is not optional - it is the difference between a usable product and one that burns the client's API budget.
 
-4. **A graph is the correct core data model**, not a flat findings table. Attack-path analysis (internet → sensitive target) and blast-radius scoring require traversal queries. Neo4j gives the richest path queries; PostgreSQL + recursive CTEs (+ pgvector for semantic search) keeps the deployment to a single relational engine — a meaningful simplification for a self-hosted product the client must operate.
+4. **A graph is the correct core data model**, not a flat findings table. Attack-path analysis (internet → sensitive target) and blast-radius scoring require traversal queries. Neo4j gives the richest path queries; PostgreSQL + recursive CTEs (+ pgvector for semantic search) keeps the deployment to a single relational engine - a meaningful simplification for a self-hosted product the client must operate.
 
-5. **Self-healing must be risk-classified, not binary.** Three classes — Safe (auto after dry-run), Reversible (snapshot → execute → health-check → auto-rollback), Destructive (mandatory human-in-the-loop with timeout) — plus an immutable audit log, are the safe way to ship automated remediation into someone else's production cloud.
+5. **Self-healing must be risk-classified, not binary.** Three classes - Safe (auto after dry-run), Reversible (snapshot → execute → health-check → auto-rollback), Destructive (mandatory human-in-the-loop with timeout) - plus an immutable audit log, are the safe way to ship automated remediation into someone else's production cloud.
 
 6. **The four cited external sources could not be fetched** in this environment (tool access failure for both the lead and the subagent). Their designs below are **reconstructed from domain patterns** and flagged accordingly; verify against the live repos before implementation.
 
@@ -106,7 +106,7 @@
 
 ### 4. Workflow Data-Flow Diagrams (W1–W7)
 
-**W1 — First-Run / Onboarding**
+**W1 - First-Run / Onboarding**
 ```
 operator: just install
   └─> detect runtime (docker | k8s/helm)
@@ -120,7 +120,7 @@ operator: just install
                                                   └─> dashboard renders findings as they stream over WS
 ```
 
-**W2 — Continuous Scan (event-driven + scheduled)**
+**W2 - Continuous Scan (event-driven + scheduled)**
 ```
 CloudTrail / EventGrid / Pub-Sub  ──event──> Collector
   └─> normalize → AssetEvent → Redis queue
@@ -133,7 +133,7 @@ CloudTrail / EventGrid / Pub-Sub  ──event──> Collector
                                             └─> notify Slack / email / webhook
 ```
 
-**W3 — Self-Healing (Remediation)**
+**W3 - Self-Healing (Remediation)**
 ```
 Finding crosses auto-heal threshold
   └─> Remediation Engine: lookup playbook by rule_id
@@ -148,7 +148,7 @@ Finding crosses auto-heal threshold
    (every branch terminates in an APPEND-ONLY immutable audit record)
 ```
 
-**W4 — LLM Bug Hunting (Claude-BugHunter-inspired)**
+**W4 - LLM Bug Hunting (Claude-BugHunter-inspired)**
 ```
 analyst selects target scope (account / namespace / asset set)
   └─> assemble context: KG subgraph + raw configs (compressed via TokenBudget)
@@ -161,7 +161,7 @@ analyst selects target scope (account / namespace / asset set)
                           └─> insert into main finding stream
 ```
 
-**W5 — Security Graph**
+**W5 - Security Graph**
 ```
 ingest all assets → create nodes
   └─> build edges: identity→permission→asset, asset→network, asset→vuln, asset→control
@@ -172,7 +172,7 @@ ingest all assets → create nodes
                                 └─> remediation priority weighted by blast radius
 ```
 
-**W6 — RL Feedback Loop**
+**W6 - RL Feedback Loop**
 ```
 analyst views ranked finding → action {confirm | dismiss | escalate}
   └─> log to rl_feedback(finding_features, action, reward)
@@ -183,7 +183,7 @@ analyst views ranked finding → action {confirm | dismiss | escalate}
                     promote new weights → archive old in model registry (object store)
 ```
 
-**W7 — License & Key Management**
+**W7 - License & Key Management**
 ```
 key entered → backend Ed25519 verify (embedded pubkey)
   └─> extract claims {tenant_id, expiry, tier, seats, features[]}
@@ -216,7 +216,7 @@ services:
 - `USER 65532:65532` (non-root), `read_only: true` rootfs with explicit `tmpfs` mounts.
 - `cap_drop: [ALL]`; add back **only** `NET_RAW`/`BPF` on the optional eBPF agent.
 - `mem_limit`, `cpus`, `pids_limit` set; `no-new-privileges:true`.
-- Per-service `networks` for isolation (frontend net for api/ingress; backend net for data stores — data stores never exposed to ingress net).
+- Per-service `networks` for isolation (frontend net for api/ingress; backend net for data stores - data stores never exposed to ingress net).
 - `healthcheck` on every service; `restart: unless-stopped`.
 - Secrets via Docker secrets or `.env` with documented `.env.example`; never bake secrets into images.
 - Images signed with **cosign**; compose docs show `cosign verify` step.
@@ -283,10 +283,10 @@ secureops/
 
 ---
 
-### 7. Justfile — Full Recipe List
+### 7. Justfile - Full Recipe List
 
 ```just
-# Justfile — SecureOps operator interface
+# Justfile - SecureOps operator interface
 set shell := ["bash", "-uc"]
 set dotenv-load := true
 
@@ -371,27 +371,27 @@ _open-browser path="/":
 
 **Validation (client side, embedded):**
 1. The **Ed25519 public key is compiled into the binary** (`const VENDOR_PUBKEY: [u8;32]`). 
-2. `verify(VENDOR_PUBKEY, payload_bytes, sig)` — pure local check, no network.
+2. `verify(VENDOR_PUBKEY, payload_bytes, sig)` - pure local check, no network.
 3. Check `expiry > now`. Enforce `seats` and `features` against tier.
-4. Persist activated license **encrypted at rest** (AES-256-GCM with a client-generated master key derived via Argon2id from an operator passphrase or a generated key stored in a K8s/Docker secret — **never vendor-accessible**).
+4. Persist activated license **encrypted at rest** (AES-256-GCM with a client-generated master key derived via Argon2id from an operator passphrase or a generated key stored in a K8s/Docker secret - **never vendor-accessible**).
 
 **Online vs offline modes:**
 - **Offline (default for air-gapped):** signature + local expiry only.
-- **Online:** every 24h, POST `{lic_id, instance_fingerprint, version}` to the vendor's lightweight license API; receive `{status: active|revoked, expiry}`. On network failure, enter a **grace period** (`grace_days`); after grace, degrade to Community tier rather than hard-locking (the GitLab EE / Vault Enterprise pattern — features disable, data stays accessible).
+- **Online:** every 24h, POST `{lic_id, instance_fingerprint, version}` to the vendor's lightweight license API; receive `{status: active|revoked, expiry}`. On network failure, enter a **grace period** (`grace_days`); after grace, degrade to Community tier rather than hard-locking (the GitLab EE / Vault Enterprise pattern - features disable, data stays accessible).
 
-**Comparable patterns:** Metabase, GitLab EE, HashiCorp Vault Enterprise, Portainer, and Netdata all validate a signed token locally and degrade gracefully on expiry rather than blocking access to existing data — SecureOps adopts the same "fail-open-to-Community" posture.
+**Comparable patterns:** Metabase, GitLab EE, HashiCorp Vault Enterprise, Portainer, and Netdata all validate a signed token locally and degrade gracefully on expiry rather than blocking access to existing data - SecureOps adopts the same "fail-open-to-Community" posture.
 
 ---
 
 ### 9. Dashboard UX Flow
 
 **First-run wizard (cannot be skipped, ordered):**
-1. **License** — enter key → live Ed25519 validation → shows tier/seats/expiry on success.
-2. **LLM keys** — OpenAI / Anthropic / Azure OpenAI / custom OpenAI-compatible endpoint; test-call button; keys encrypted with client master key.
-3. **Cloud onboarding** — pick AWS/GCP/Azure; UI **emits the exact IaC/CLI** to create a read-only role (CloudFormation/Terraform/gcloud/az snippet); paste back ARN/SA/credentials; connectivity test.
-4. **Initial scan** — one click; progress bar; findings stream in live.
+1. **License** - enter key → live Ed25519 validation → shows tier/seats/expiry on success.
+2. **LLM keys** - OpenAI / Anthropic / Azure OpenAI / custom OpenAI-compatible endpoint; test-call button; keys encrypted with client master key.
+3. **Cloud onboarding** - pick AWS/GCP/Azure; UI **emits the exact IaC/CLI** to create a read-only role (CloudFormation/Terraform/gcloud/az snippet); paste back ARN/SA/credentials; connectivity test.
+4. **Initial scan** - one click; progress bar; findings stream in live.
 
-**Main sections:** Security Findings (filter/sort, RL-ranked), Compliance (CIS/SOC2/PCI mappings + report export), Asset Graph (interactive node-graph, click a node → blast radius, "explain path"), Remediation Queue (HITL approvals with diff preview + approve/deny + timeout countdown), Usage (per-provider token consumption + **client-side cost estimate** — there is no vendor billing), Profile/RBAC, License (status, renewal, feature flags).
+**Main sections:** Security Findings (filter/sort, RL-ranked), Compliance (CIS/SOC2/PCI mappings + report export), Asset Graph (interactive node-graph, click a node → blast radius, "explain path"), Remediation Queue (HITL approvals with diff preview + approve/deny + timeout countdown), Usage (per-provider token consumption + **client-side cost estimate** - there is no vendor billing), Profile/RBAC, License (status, renewal, feature flags).
 
 **Cross-cutting:** WebSocket live updates for findings + remediation approvals; dark mode default; responsive; React SPA served as static assets from axum (`tower-http::ServeDir` with SPA fallback).
 
@@ -411,13 +411,13 @@ impl TokenBudget {
 }
 ```
 Techniques layered in:
-- **Semantic deduplication** — embed findings, cluster near-duplicates (cosine ≥ τ), send one representative + `count`.
-- **Schema-reference compression** — define JSON schemas/control catalog **once** in the system prompt; reference by short ID in messages.
-- **Evidence summarization (diff/delta)** — for IAM policies / K8s manifests, send only the **changed or violating fragment**, not the whole document.
-- **Chunked map-reduce** — huge Terraform plans → chunk → parallel `summarize` → `reduce` into a single finding-relevant digest.
-- **Provider prompt caching** — mark stable context (asset-graph summary, control catalog) with **Anthropic `cache_control`** / OpenAI prompt-caching so it isn't re-billed each call.
-- **Structured-output compression** — request compact JSON (short internal field names, no whitespace), expand client-side.
-- **Relevance filtering** — inject only assets/findings relevant to the specific task subgraph.
+- **Semantic deduplication** - embed findings, cluster near-duplicates (cosine ≥ τ), send one representative + `count`.
+- **Schema-reference compression** - define JSON schemas/control catalog **once** in the system prompt; reference by short ID in messages.
+- **Evidence summarization (diff/delta)** - for IAM policies / K8s manifests, send only the **changed or violating fragment**, not the whole document.
+- **Chunked map-reduce** - huge Terraform plans → chunk → parallel `summarize` → `reduce` into a single finding-relevant digest.
+- **Provider prompt caching** - mark stable context (asset-graph summary, control catalog) with **Anthropic `cache_control`** / OpenAI prompt-caching so it isn't re-billed each call.
+- **Structured-output compression** - request compact JSON (short internal field names, no whitespace), expand client-side.
+- **Relevance filtering** - inject only assets/findings relevant to the specific task subgraph.
 
 ---
 
@@ -432,7 +432,7 @@ Techniques layered in:
 - **Blast radius:** for each node, count sensitive nodes reachable if it is compromised → prioritization weight.
 - **"Explain this path":** serialize the path → compress via `TokenBudget` → LLM narrative.
 
-**Graph DB recommendation (decision):** Default to **Neo4j 5** for production tiers — Cypher gives concise variable-length path queries (`MATCH p=(:Internet)-[*..6]->(:Sensitive)`) essential for attack paths. For Community/single-binary simplicity, offer a **PostgreSQL + recursive CTE** mode (+ `pgvector` for semantic node search) so small deployments run one relational engine. Make this a `values.yaml` / compose-profile switch. Avoid DGraph/custom unless a specific scale need emerges.
+**Graph DB recommendation (decision):** Default to **Neo4j 5** for production tiers - Cypher gives concise variable-length path queries (`MATCH p=(:Internet)-[*..6]->(:Sensitive)`) essential for attack paths. For Community/single-binary simplicity, offer a **PostgreSQL + recursive CTE** mode (+ `pgvector` for semantic node search) so small deployments run one relational engine. Make this a `values.yaml` / compose-profile switch. Avoid DGraph/custom unless a specific scale need emerges.
 
 ---
 
@@ -440,22 +440,22 @@ Techniques layered in:
 
 **Agentic loop (bounded):** system prompt primes the model as a cloud-pentest reasoner; supply few-shot misconfiguration exemplars; the model emits hypotheses, then for each one issues **tool calls** (function-calling) restricted to **read-only** cloud queries (e.g., `get_iam_policy`, `describe_sg`, `list_public_buckets`). Results are fed back; loop iterates to `max_depth` (e.g., 4) and `max_tool_calls` (e.g., 25) to bound cost. Final output is a strict JSON vulnerability report (title, attack vector, affected assets, evidence, suggested severity, remediation).
 
-**Safety rails:** all tool calls are read-only and rate-limited; no mutation tools in the bug-hunt loop; outputs flow into the same scoring + finding stream as automated checks (the LLM never directly remediates — it only proposes findings).
+**Safety rails:** all tool calls are read-only and rate-limited; no mutation tools in the bug-hunt loop; outputs flow into the same scoring + finding stream as automated checks (the LLM never directly remediates - it only proposes findings).
 
 ---
 
 ### 13. Phase Plan P0–P9 (each ships Docker + Helm + Justfile)
 
-- **P0 — Foundation & License (weeks 0–4).** Rust workspace; axum skeleton; **Ed25519 license system** (keygen tool + embedded-pubkey verify + encrypted storage + grace state machine); Postgres schema bootstrap + migrations; **multi-stage distroless Dockerfile + Compose + Helm parent/subchart skeleton + cosign signing**; **Justfile: `install/build/up/down/logs/status/license`**. *Deliverable: stack stands up, license validates offline.*
-- **P1 — Dashboard MVP + Activation (weeks 4–8).** React SPA served by axum; first-run wizard (license → LLM keys → placeholder cloud step); WebSocket scaffold; RBAC; tier feature-flag plumbing. Helm `license-validate` post-install hook; Justfile unchanged. *Deliverable: browser auto-opens, license activates, dashboard renders.*
-- **P2 — Multi-Cloud Scanning (weeks 8–14).** Collectors (AWS/GCP/Azure) with IRSA/Workload Identity; normalizer; **Cedar + Rego (regorus)** rule packs (CIS baseline); scoring; findings stream over WS; **Justfile `scan`, `add-cloud`**. HPA for scanner in Helm. *Deliverable: real findings from all 3 clouds.*
-- **P3 — Knowledge Graph core (weeks 14–18).** Graph ingest; node/edge model; Neo4j subchart + pg-CTE fallback mode; asset-graph dashboard view. *Deliverable: explorable graph.*
-- **P4 — Attack Paths & Blast Radius (weeks 18–22).** BFS/Dijkstra path engine; blast-radius scoring; interactive path visualization; "explain path" LLM hook. *Deliverable: attack paths shown + prioritized.*
-- **P5 — LLM Bug-Hunting + Token Compression (weeks 22–28).** `TokenBudget` layer (dedup, schema-ref, diff, map-reduce, prompt caching); multi-provider client with fallback; agentic bug-hunt loop; Usage section (token/cost). *Deliverable: bug-hunt produces findings within a bounded token budget.*
-- **P6 — Self-Healing (weeks 28–34).** Playbook engine; Safe/Reversible classes; dry-run; snapshot/rollback; immutable audit log; Justfile `backup/restore`. *Deliverable: Safe + Reversible auto-remediation.*
-- **P7 — RL Feedback Loop (weeks 34–38).** Contextual bandit ranker; `rl_feedback` capture; online updates; model registry; batch eval gating. *Deliverable: rankings improve from analyst actions.*
-- **P8 — Enterprise (weeks 38–46).** Destructive-class healing with HITL queue + timeout; SSO/SAML/OIDC; eBPF runtime agent (the only container granted `BPF`/`NET_RAW`); custom policy packs; audit-grade exports; federated threat intel. *Deliverable: full Enterprise tier.*
-- **P9 — Hardening & GA (weeks 46–52).** Pen-test; SBOM + cosign attestations; chaos/rollback testing; performance tuning; docs; upgrade/migration runbooks; Justfile `upgrade`. *Deliverable: GA-ready.*
+- **P0 - Foundation & License (weeks 0–4).** Rust workspace; axum skeleton; **Ed25519 license system** (keygen tool + embedded-pubkey verify + encrypted storage + grace state machine); Postgres schema bootstrap + migrations; **multi-stage distroless Dockerfile + Compose + Helm parent/subchart skeleton + cosign signing**; **Justfile: `install/build/up/down/logs/status/license`**. *Deliverable: stack stands up, license validates offline.*
+- **P1 - Dashboard MVP + Activation (weeks 4–8).** React SPA served by axum; first-run wizard (license → LLM keys → placeholder cloud step); WebSocket scaffold; RBAC; tier feature-flag plumbing. Helm `license-validate` post-install hook; Justfile unchanged. *Deliverable: browser auto-opens, license activates, dashboard renders.*
+- **P2 - Multi-Cloud Scanning (weeks 8–14).** Collectors (AWS/GCP/Azure) with IRSA/Workload Identity; normalizer; **Cedar + Rego (regorus)** rule packs (CIS baseline); scoring; findings stream over WS; **Justfile `scan`, `add-cloud`**. HPA for scanner in Helm. *Deliverable: real findings from all 3 clouds.*
+- **P3 - Knowledge Graph core (weeks 14–18).** Graph ingest; node/edge model; Neo4j subchart + pg-CTE fallback mode; asset-graph dashboard view. *Deliverable: explorable graph.*
+- **P4 - Attack Paths & Blast Radius (weeks 18–22).** BFS/Dijkstra path engine; blast-radius scoring; interactive path visualization; "explain path" LLM hook. *Deliverable: attack paths shown + prioritized.*
+- **P5 - LLM Bug-Hunting + Token Compression (weeks 22–28).** `TokenBudget` layer (dedup, schema-ref, diff, map-reduce, prompt caching); multi-provider client with fallback; agentic bug-hunt loop; Usage section (token/cost). *Deliverable: bug-hunt produces findings within a bounded token budget.*
+- **P6 - Self-Healing (weeks 28–34).** Playbook engine; Safe/Reversible classes; dry-run; snapshot/rollback; immutable audit log; Justfile `backup/restore`. *Deliverable: Safe + Reversible auto-remediation.*
+- **P7 - RL Feedback Loop (weeks 34–38).** Contextual bandit ranker; `rl_feedback` capture; online updates; model registry; batch eval gating. *Deliverable: rankings improve from analyst actions.*
+- **P8 - Enterprise (weeks 38–46).** Destructive-class healing with HITL queue + timeout; SSO/SAML/OIDC; eBPF runtime agent (the only container granted `BPF`/`NET_RAW`); custom policy packs; audit-grade exports; federated threat intel. *Deliverable: full Enterprise tier.*
+- **P9 - Hardening & GA (weeks 46–52).** Pen-test; SBOM + cosign attestations; chaos/rollback testing; performance tuning; docs; upgrade/migration runbooks; Justfile `upgrade`. *Deliverable: GA-ready.*
 
 ---
 
@@ -464,11 +464,11 @@ Techniques layered in:
 - **W0 Internal alpha** (vendor + design partners, single cloud).
 - **W1 Private beta** (≤10 design-partner tenants, all 3 clouds, offline license only).
 - **W2 Public beta** (self-serve Community tier; online-mode heartbeat enabled).
-- **W3 GA — North America.**
-- **W4 GA — EU/EEA** (GDPR posture; since self-hosted, **data never leaves client tenancy** — emphasize this; provide EU-resident vendor license API endpoint).
-- **W5 GA — UK + APAC.**
-- **W6 GA — regulated/air-gapped** (offline-only license bundles; gov/defense; FIPS build of crypto).
-- **W7 GA — global + partner/MSP channel** (multi-tenant license fleet management for MSPs).
+- **W3 GA - North America.**
+- **W4 GA - EU/EEA** (GDPR posture; since self-hosted, **data never leaves client tenancy** - emphasize this; provide EU-resident vendor license API endpoint).
+- **W5 GA - UK + APAC.**
+- **W6 GA - regulated/air-gapped** (offline-only license bundles; gov/defense; FIPS build of crypto).
+- **W7 GA - global + partner/MSP channel** (multi-tenant license fleet management for MSPs).
 
 Data-residency note: because the product is self-hosted, customer data residency = the client's own cloud region; the only cross-border flow is the optional license heartbeat, for which regional endpoints are provided.
 
@@ -535,7 +535,7 @@ Audit immutability enforced via revoked UPDATE/DELETE privileges + optional hash
 
 ### 18. RL System Design
 
-- **Model:** contextual bandit (LinUCB or Thompson sampling) — robust, online, explainable. Reward: `confirm=+1`, `escalate=+1.5`, `dismiss=-1` (false-positive penalty), decayed by time-to-action.
+- **Model:** contextual bandit (LinUCB or Thompson sampling) - robust, online, explainable. Reward: `confirm=+1`, `escalate=+1.5`, `dismiss=-1` (false-positive penalty), decayed by time-to-action.
 - **Features:** severity, asset criticality, blast radius, rule category, recency, cloud, exposure-to-internet flag.
 - **Online update:** single posterior/gradient step per analyst action → immediate re-ranking.
 - **Promotion gating:** periodic batch eval on held-out feedback (NDCG@k, precision@k); promote new weights only if improvement > threshold; archive prior weights in object store (model registry) for rollback.
@@ -599,8 +599,8 @@ Classification rubric: **Safe** = idempotent, no data/availability impact (e.g.,
 
 ## Caveats
 
-- **The four external sources could not be retrieved.** Both the lead agent's and the subagent's web-search/fetch tools returned hard execution errors in this environment, so **Claude-BugHunter (elementalsouls), the OpenHuman/tinyhumans token-compression page, Caveman (JuliusBrussee), and Graphify (safishamsi) were not read**. Their feature sets, exact techniques, code patterns, README contents, token-compression ratios, and graph data models in this document are **reconstructed from the source names and standard domain patterns**, not verified from the live repos. Before implementing the bug-hunting, token-compression, Caveman-inspired, and knowledge-graph modules, a developer must fetch each repo/page and reconcile any differences. In particular, I could not confirm what "Caveman" actually does — it should be researched and its relevant features slotted into P2/P5 once known.
-- **Crate selections are current best-fit recommendations, not pinned guarantees.** Some crates (e.g., `regorus` for Rego, `neo4rs`, cloud SDKs) evolve quickly; pin versions and re-verify maintenance status at implementation time. The Rego-in-Rust choice (`regorus`) and Cedar can coexist, but running two policy engines adds complexity — consider standardizing on Cedar if Rego rule packs are not strictly required.
+- **The four external sources could not be retrieved.** Both the lead agent's and the subagent's web-search/fetch tools returned hard execution errors in this environment, so **Claude-BugHunter (elementalsouls), the OpenHuman/tinyhumans token-compression page, Caveman (JuliusBrussee), and Graphify (safishamsi) were not read**. Their feature sets, exact techniques, code patterns, README contents, token-compression ratios, and graph data models in this document are **reconstructed from the source names and standard domain patterns**, not verified from the live repos. Before implementing the bug-hunting, token-compression, Caveman-inspired, and knowledge-graph modules, a developer must fetch each repo/page and reconcile any differences. In particular, I could not confirm what "Caveman" actually does - it should be researched and its relevant features slotted into P2/P5 once known.
+- **Crate selections are current best-fit recommendations, not pinned guarantees.** Some crates (e.g., `regorus` for Rego, `neo4rs`, cloud SDKs) evolve quickly; pin versions and re-verify maintenance status at implementation time. The Rego-in-Rust choice (`regorus`) and Cedar can coexist, but running two policy engines adds complexity - consider standardizing on Cedar if Rego rule packs are not strictly required.
 - **License "fail-open-to-Community" is a business decision, not a technical mandate.** I recommend graceful degradation (the GitLab/Vault pattern) over hard-locking, but the vendor must confirm this matches commercial intent.
 - **Timelines (week ranges) are planning estimates** for sequencing/dependency reasoning, not commitments; they assume a small dedicated team and will shift with staffing.
 - **eBPF agent privileges are a real attack-surface tradeoff.** It is the one component requiring elevated capabilities (`BPF`/`NET_RAW`); isolate it as a separate DaemonSet/container with its own minimal scope, and keep it Enterprise-gated and optional.

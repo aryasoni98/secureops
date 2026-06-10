@@ -12,7 +12,7 @@ homepage.workspace = true
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
-# Live Neo4j backend (gated). neo4rs uses tokio-rustls (ring) — reuses the
+# Live Neo4j backend (gated). neo4rs uses tokio-rustls (ring) - reuses the
 # workspace-locked ring, so no cc-cap bump. Off by default; Community uses the
 # in-memory/pg-CTE path.
 neo4rs = { version = "0.8", optional = true }

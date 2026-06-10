@@ -1,7 +1,7 @@
 //! HTTP-level integration tests for the platform API (PRODUCT.md Phase 5).
 //!
 //! Drives the real axum router via `tower::ServiceExt::oneshot` against an
-//! in-memory store — asserting the auth (`401` + `WWW-Authenticate`), license
+//! in-memory store - asserting the auth (`401` + `WWW-Authenticate`), license
 //! activation (`200` / `403 invalid_signature`), and Cedar tier-gate
 //! (`403` for a Community principal on `/bughunt`) behaviours end-to-end.
 

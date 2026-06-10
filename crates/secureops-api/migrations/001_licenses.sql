@@ -1,4 +1,4 @@
--- 001_licenses — license activation + API-key auth (PRODUCT.md Phase 5).
+-- 001_licenses - license activation + API-key auth (PRODUCT.md Phase 5).
 -- Run by sqlx::migrate!("./migrations") in 5b.
 
 CREATE TABLE IF NOT EXISTS licenses (

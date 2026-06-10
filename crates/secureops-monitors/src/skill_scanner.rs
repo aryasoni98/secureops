@@ -1,4 +1,4 @@
-//! Skill scanner — port of `monitors/skill-scanner.ts` (PRODUCT.md B.7).
+//! Skill scanner - port of `monitors/skill-scanner.ts` (PRODUCT.md B.7).
 //!
 //! `scan_content` / `scan_skill_content` are faithful pure ports; the
 //! [`Monitor::run`] loop polls the skills directory. IOC checks (typosquat,

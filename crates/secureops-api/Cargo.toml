@@ -53,7 +53,7 @@ uuid = { version = "1", features = ["v4", "serde"] }
 utoipa = { version = "5", features = ["axum_extras", "uuid", "time"] }
 
 # Storage (5b). tokio-postgres (pure-Rust wire protocol, NO sqlite/C transitive,
-# so no cc-cap clash with intel's tree-sitter — unlike sqlx, which force-pulls
+# so no cc-cap clash with intel's tree-sitter - unlike sqlx, which force-pulls
 # sqlx-sqlite). No TLS feature → no ring/cc. deadpool-* for connection pooling.
 tokio-postgres = { version = "0.7", features = ["with-uuid-1", "with-serde_json-1"] }
 deadpool-postgres = "0.14"

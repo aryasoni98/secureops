@@ -4,7 +4,7 @@
 //!
 //! This is the operator-facing entry point. It is a thin shell: it parses
 //! arguments with [`clap`] and dispatches to the library crates. All real work
-//! lives elsewhere —
+//! lives elsewhere -
 //!
 //! - `secureops_checks::default_checks(ioc_db)` builds the `Vec<Box<dyn Check>>`
 //!   (one [`secureops_core::Check`] per audit category),
@@ -202,7 +202,7 @@ fn starter_config() -> OpenClawConfig {
 }
 
 /// Handle `secureops init` (PRODUCT.md B.1): create `<stateDir>/.secureops/`,
-/// the machine-keyed keystore, and — only when absent — a starter
+/// the machine-keyed keystore, and - only when absent - a starter
 /// `openclaw.json`. An existing config file is never touched: it may belong to
 /// the agent runtime SecureOps is auditing.
 async fn run_init() -> anyhow::Result<()> {
@@ -215,11 +215,11 @@ async fn run_init() -> anyhow::Result<()> {
 
     let config_path = format!("{state_dir}/openclaw.json");
     if tokio::fs::try_exists(&config_path).await.unwrap_or(false) {
-        println!("  config: {config_path} (existing — left untouched)");
+        println!("  config: {config_path} (existing - left untouched)");
     } else {
         let json = serde_json::to_string_pretty(&starter_config())?;
         tokio::fs::write(&config_path, format!("{json}\n")).await?;
-        println!("  config: {config_path} (starter defaults written — edit to taste)");
+        println!("  config: {config_path} (starter defaults written - edit to taste)");
     }
 
     println!("  next: run `secureops audit` to score your config.");
@@ -234,7 +234,7 @@ async fn run_status() -> anyhow::Result<()> {
     println!(
         "  kill switch: {}",
         if kill {
-            "ACTIVE — tool calls blocked"
+            "ACTIVE - tool calls blocked"
         } else {
             "inactive"
         }
@@ -413,7 +413,7 @@ async fn run_monitor() -> anyhow::Result<()> {
     let mut rx = bus.subscribe();
     let printer = tokio::spawn(async move {
         while let Ok(a) = rx.recv().await {
-            let details = a.details.map(|d| format!(" — {d}")).unwrap_or_default();
+            let details = a.details.map(|d| format!(" - {d}")).unwrap_or_default();
             println!(
                 "[{:?}] {} :: {}{}",
                 a.severity, a.monitor, a.message, details
@@ -442,13 +442,13 @@ async fn run_kill(reason: Option<String>, deactivate: bool) -> anyhow::Result<()
     let state_dir = resolve_state_dir();
     if deactivate {
         secureops_fs::killswitch::deactivate_kill_switch(&state_dir).await?;
-        println!("Kill switch DEACTIVATED — normal operation resumes ({state_dir}).");
+        println!("Kill switch DEACTIVATED - normal operation resumes ({state_dir}).");
         return Ok(());
     }
     secureops_fs::killswitch::activate_kill_switch(&state_dir, reason.as_deref(), &now_timestamp())
         .await?;
     println!(
-        "Kill switch ACTIVATED — all tool calls are now blocked ({state_dir}).\n\
+        "Kill switch ACTIVATED - all tool calls are now blocked ({state_dir}).\n\
          Run `secureops kill --deactivate` to resume."
     );
     Ok(())
@@ -582,8 +582,8 @@ async fn run_export_incident() -> anyhow::Result<()> {
     tokio::fs::write(format!("{bundle}/incident.json"), &incident_json).await?;
 
     // Sign the bundle (PRODUCT.md B.9): a manifest commits to the SHA-256 of
-    // every file, and an ed25519 signature over the manifest bytes — keyed in
-    // the OS keychain — makes tampering with the bundle detectable.
+    // every file, and an ed25519 signature over the manifest bytes - keyed in
+    // the OS keychain - makes tampering with the bundle detectable.
     let signer = KeychainAuditSigner::new()?;
     let manifest = serde_json::json!({
         "timestamp": ts,

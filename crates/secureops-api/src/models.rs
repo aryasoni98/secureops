@@ -25,7 +25,7 @@ pub struct Scan {
     pub tenant_id: String,
     /// `"all" | "aws" | "gcp" | "azure" | <asset_id>` (PRODUCT.md Phase 5).
     pub scope: String,
-    /// `"scan" | "bughunt"` — the job kind (bug-hunt logic lands in P6).
+    /// `"scan" | "bughunt"` - the job kind (bug-hunt logic lands in P6).
     pub kind: String,
     pub status: ScanStatus,
     /// Unix seconds.

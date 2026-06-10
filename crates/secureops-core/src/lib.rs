@@ -2,12 +2,12 @@
 //!
 //! The shared, I/O-free heart of SecureOps. It holds:
 //!
-//! - the **type model** ([`types`]) — `AuditFinding`, `Severity`, `AuditReport`, …
+//! - the **type model** ([`types`]) - `AuditFinding`, `Severity`, `AuditReport`, …
 //! - the **OpenClaw config tree** ([`config`]) it audits
-//! - the **`AuditContext`** trait ([`context`]) — dependency injection for all
+//! - the **`AuditContext`** trait ([`context`]) - dependency injection for all
 //!   filesystem / environment access, so checks stay unit-testable against a mock
-//! - the **`Check`** trait ([`check`]) — one impl per audit category
-//! - **scoring** ([`scoring`]) — the faithful port of `calculateScore`,
+//! - the **`Check`** trait ([`check`]) - one impl per audit category
+//! - **scoring** ([`scoring`]) - the faithful port of `calculateScore`,
 //!   `computeSummary` and the MAESTRO cross-layer compound-risk pass
 //! - **IOC / runtime** value types ([`ioc`], [`runtime`]) shared by the
 //!   intel, monitors and daemon crates

@@ -146,7 +146,7 @@ jobs:
             --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
   # ── Release: publish crates.io on version tag ───────────────────────────
-  # The npm shim (@adversa/secureops) lives in a separate repository and is
+  # The npm shim (@aryasoni98/secureops) lives in a separate repository and is
   # released from there; this workspace publishes only the Rust crates.
   publish-crates:
     name: Publish crates.io
@@ -202,7 +202,7 @@ jobs:
                 echo "skip $crate (already published)"; break
               fi
               if echo "$out" | grep -qiE '429|Too Many Requests'; then
-                echo "rate limited on $crate — sleeping 11m"; sleep 660; continue
+                echo "rate limited on $crate - sleeping 11m"; sleep 660; continue
               fi
               echo "$out"; exit 1
             done

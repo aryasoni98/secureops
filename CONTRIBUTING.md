@@ -28,14 +28,14 @@ Issues, bug reports, and PRs are welcome.
 
 New to the codebase? Read in this order:
 
-1. [PRODUCT.md](PRODUCT.md) — the architecture and phase plan (trust rings, PDP/PEP spine).
-2. `crates/secureops-core` — the frozen type/scoring contract everything binds to.
-3. [docs/RUNNING.md](docs/RUNNING.md) — hands-on workflows.
-4. [DEFERRED.md](DEFERRED.md) — what intentionally needs external infrastructure and the trait seam each item plugs into.
+1. [PRODUCT.md](PRODUCT.md) - the architecture and phase plan (trust rings, PDP/PEP spine).
+2. `crates/secureops-core` - the frozen type/scoring contract everything binds to.
+3. [docs/RUNNING.md](docs/RUNNING.md) - hands-on workflows.
+4. [DEFERRED.md](DEFERRED.md) - what intentionally needs external infrastructure and the trait seam each item plugs into.
 
 ## Ground rules
 
-- **Keep the JSON wire format stable** with the `@adversa/secureops` TypeScript tool (v2.2.0 reference). `secureops-core` types are frozen; changes there need strong justification.
+- **Keep the JSON wire format stable** with the `@aryasoni98/secureops` TypeScript tool (v2.2.0 reference). `secureops-core` types are frozen; changes there need strong justification.
 - **MSRV**: host-local crates 1.80; `secureops-api` 1.82. Don't raise it casually.
 - **Fail closed.** Enforcement-path code (proxy, sandbox, policy, kill switch) must treat every error as deny, never as an implicit allow.
 - **No new panics in runtime paths.** `unwrap()`/`expect()` are fine in tests; daemon/API/CLI code paths return `Result`.
@@ -45,4 +45,4 @@ New to the codebase? Read in this order:
 
 ## Reporting security issues
 
-Do **not** open a public issue for vulnerabilities — see [SECURITY.md](SECURITY.md).
+Do **not** open a public issue for vulnerabilities - see [SECURITY.md](SECURITY.md).

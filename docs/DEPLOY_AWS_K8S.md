@@ -4,8 +4,8 @@ Step-by-step guides for running SecureOps on **AWS EC2 (Docker)** and **Kubernet
 
 What you deploy:
 
-- **`secureops-daemon`** — the long-running Ring-2 process: runtime monitors + (optional) fail-closed egress proxy on `127.0.0.1:8889` + signed audit log.
-- **`secureops` CLI** — used for `init`, scheduled `audit --json` (CI/cron gate), `harden`, and `kill`.
+- **`secureops-daemon`** - the long-running Ring-2 process: runtime monitors + (optional) fail-closed egress proxy on `127.0.0.1:8889` + signed audit log.
+- **`secureops` CLI** - used for `init`, scheduled `audit --json` (CI/cron gate), `harden`, and `kill`.
 
 State (keystore, baselines, audit log, `openclaw.json`) lives under `OPENCLAW_STATE_DIR` (the containers use `/data/openclaw`).
 
@@ -34,7 +34,7 @@ That is the whole audit-gate path. The rest of this doc is for **enforcement** (
 
 ## 1. AWS EC2 + Docker
 
-Run the daemon on a Linux VM — ideally the **same host as the agent**, so the agent can reach the egress proxy on loopback.
+Run the daemon on a Linux VM - ideally the **same host as the agent**, so the agent can reach the egress proxy on loopback.
 
 ### 1.1 Launch an EC2 instance
 
@@ -45,7 +45,7 @@ Run the daemon on a Linux VM — ideally the **same host as the agent**, so the 
 | One-shot `audit --deep` | `t3.micro` burst | CPU spike during deep audit |
 
 - **AMI:** Amazon Linux 2023 or Ubuntu 22.04+ (Linux required for host-network egress).
-- **Security group:** allow `22` (SSH, your IP only). Do **not** expose `8889` or the state dir to the internet — the proxy is loopback/host-only.
+- **Security group:** allow `22` (SSH, your IP only). Do **not** expose `8889` or the state dir to the internet - the proxy is loopback/host-only.
 
 ### 1.2 Install Docker
 
@@ -127,7 +127,7 @@ export HTTPS_PROXY=http://127.0.0.1:8889
 
 Allowed host → tunnels. Anything else → `403 Forbidden`, **0 bytes** to the upstream.
 
-> macOS Docker Desktop has no equivalent host networking — run the daemon natively there (`just daemon`) for egress testing.
+> macOS Docker Desktop has no equivalent host networking - run the daemon natively there (`just daemon`) for egress testing.
 
 ### 1.8 Operations
 
@@ -170,7 +170,7 @@ Manifests are in [`deploy/k8s/`](https://github.com/aryasoni98/secureops/tree/ma
 
 ### 2.2 Build and push the image to a registry
 
-The manifests reference `secureops-rust:latest`. A real cluster cannot pull a local tag — push it to your registry.
+The manifests reference `secureops-rust:latest`. A real cluster cannot pull a local tag - push it to your registry.
 
 **AWS ECR (for EKS):**
 
@@ -281,9 +281,9 @@ kubectl delete -k deploy/k8s/ --ignore-not-found
 | Variable | Default | Used by |
 |----------|---------|---------|
 | `OPENCLAW_STATE_DIR` | `/data/openclaw` (containers) | CLI, daemon |
-| `HTTPS_PROXY` | — | the agent → `http://127.0.0.1:8889` |
-| `SECUREOPS_NETWORK_MODE` | `bridge` | docker-compose — set `host` on Linux EC2 for egress |
-| `SECUREOPS_BPF_OBJ` | unset | daemon — compiled eBPF object path (Linux, `ebpf` feature) |
+| `HTTPS_PROXY` | - | the agent → `http://127.0.0.1:8889` |
+| `SECUREOPS_NETWORK_MODE` | `bridge` | docker-compose - set `host` on Linux EC2 for egress |
+| `SECUREOPS_BPF_OBJ` | unset | daemon - compiled eBPF object path (Linux, `ebpf` feature) |
 
 ---
 
@@ -294,7 +294,7 @@ kubectl delete -k deploy/k8s/ --ignore-not-found
 | K8s `ImagePullBackOff` | Push the image to a registry (§2.2) and set `kustomization.yaml` `images.newName`; or `kind load docker-image` |
 | Daemon exits immediately | Kill switch active → `secureops kill --deactivate` (or remove `$STATE_DIR/.secureops/killswitch`) |
 | Egress proxy unreachable from host | Use `SECUREOPS_NETWORK_MODE=host` on Linux EC2, or run the daemon natively |
-| Audit `exit 2` | Score < 80 — inspect JSON findings; not a crash |
+| Audit `exit 2` | Score < 80 - inspect JSON findings; not a crash |
 | `audit` says no state | Run `secureops init` first (K8s does this in the initContainer) |
 
 See also: [docs/RUNNING.md](RUNNING.md) (local dev + more detail) and [PRODUCT.md](https://github.com/aryasoni98/secureops/blob/master/PRODUCT.md) (architecture).

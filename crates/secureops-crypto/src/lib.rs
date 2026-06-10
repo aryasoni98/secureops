@@ -67,7 +67,7 @@ pub use secureops_core::Severity;
 /// Generate a cryptographically-random token as lowercase hex.
 ///
 /// Faithful port of `generateToken` (`utils/crypto.ts`):
-/// `crypto.randomBytes(length).toString('hex')` — `length` *bytes* of OS
+/// `crypto.randomBytes(length).toString('hex')` - `length` *bytes* of OS
 /// randomness, rendered as `2 * length` hex chars (default 32 bytes → 64 chars).
 /// Used by gateway hardening to mint a strong auth token.
 pub fn generate_token(length: usize) -> String {
@@ -151,9 +151,9 @@ pub type Result<T> = std::result::Result<T, CryptoError>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum KeystoreVersion {
-    /// Legacy format — decrypt-only, never written by this crate.
+    /// Legacy format - decrypt-only, never written by this crate.
     V1,
-    /// Current format — Argon2id-derived key, AES-256-GCM sealed.
+    /// Current format - Argon2id-derived key, AES-256-GCM sealed.
     V2,
 }
 
@@ -480,10 +480,10 @@ pub mod signing {
             // Key creation: in production, create an ECC NIST P-256 signing key
             // under the owner hierarchy and persist at a well-known NV index
             // derived from key_id. Full implementation requires tss_esapi::utils
-            // key template + CreateLoaded + NV persist — scaffolded here.
+            // key template + CreateLoaded + NV persist - scaffolded here.
             let _ = key_id;
             Err(CryptoError::Backend(
-                "TPM key creation requires NV index allocation — \
+                "TPM key creation requires NV index allocation - \
                  wire the full tss_esapi::utils key template (PRODUCT.md A.3)"
                     .into(),
             ))
@@ -500,7 +500,7 @@ pub mod signing {
             .map_err(|e| CryptoError::Backend(format!("TPM context: {e}")))?;
             let _ = (key_id, digest);
             Err(CryptoError::Backend(
-                "TPM sign requires loaded key handle — \
+                "TPM sign requires loaded key handle - \
                  wire key load from NV persistent storage (PRODUCT.md A.3)"
                     .into(),
             ))
@@ -510,7 +510,7 @@ pub mod signing {
         fn public_key(&self, key_id: &str) -> Result<Vec<u8>> {
             let _ = key_id;
             Err(CryptoError::Backend(
-                "TPM public key export requires ReadPublic — \
+                "TPM public key export requires ReadPublic - \
                  wire tss_esapi::Context::read_public (PRODUCT.md A.3)"
                     .into(),
             ))

@@ -1,4 +1,4 @@
-# SecureOps Pen-Test Checklist (PRODUCT.md Phase 9 — GA gate)
+# SecureOps Pen-Test Checklist (PRODUCT.md Phase 9 - GA gate)
 
 Use this list before every tagged release. Every item must be reproducible by
 an external pentester with only the public Helm chart and `cargo run`.

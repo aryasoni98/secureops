@@ -1,4 +1,4 @@
--- 003_assets_identities — the inventory the graph (P6) and scanner build on.
+-- 003_assets_identities - the inventory the graph (P6) and scanner build on.
 
 CREATE TABLE IF NOT EXISTS assets (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -1,4 +1,4 @@
-//! Network hardening (priority 5) — port of `hardening/network-hardening.ts`.
+//! Network hardening (priority 5) - port of `hardening/network-hardening.ts`.
 //!
 //! Emits the single informational finding `SC-NET-001` in `check()`, and in
 //! `fix()` generates firewall scripts under `<stateDir>/.secureops/network/`:
@@ -237,7 +237,7 @@ impl HardeningModule for NetworkHardening {
         } else {
             skipped.push(HardeningAction {
                 id: "net-platform".to_string(),
-                description: "Network rules generation skipped — unsupported platform".to_string(),
+                description: "Network rules generation skipped - unsupported platform".to_string(),
                 before: format!("platform: {}", platform),
                 after: "skipped".to_string(),
             });

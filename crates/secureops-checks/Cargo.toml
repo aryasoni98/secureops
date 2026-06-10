@@ -1,6 +1,6 @@
 [package]
 name = "secureops-checks"
-description = "One Check impl per audit category — faithful targets for the 56 SC-* checks"
+description = "One Check impl per audit category - faithful targets for the 56 SC-* checks"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -52,7 +52,7 @@ pub fn load_from_str(json: &str) -> IocDatabase {
     serde_json::from_str::<IocDatabase>(json).unwrap_or_else(|_| empty_database())
 }
 
-/// Strict parse — used by the feed-update path where a bad parse must be an error.
+/// Strict parse - used by the feed-update path where a bad parse must be an error.
 pub fn parse_database(json: &str) -> Result<IocDatabase> {
     Ok(serde_json::from_str::<IocDatabase>(json)?)
 }
@@ -75,7 +75,7 @@ pub fn is_known_malicious_hash<'a>(db: &'a IocDatabase, sha256: &str) -> Option<
     db.malicious_skill_hashes.get(sha256)
 }
 
-/// Does `name` match a typosquat pattern? (PRODUCT.md Part D — Phase 3 upgrade.)
+/// Does `name` match a typosquat pattern? (PRODUCT.md Part D - Phase 3 upgrade.)
 ///
 /// Normalizes both strings (lowercase, strip `-_` whitespace), then checks:
 /// 1. Exact equal or substring contains (original behavior).
@@ -131,7 +131,7 @@ pub fn infostealer_artifacts<'a>(db: &'a IocDatabase, platform: &str) -> &'a [St
 /// Outcome of a feed-update attempt.
 #[derive(Debug, Clone)]
 pub enum FeedUpdateOutcome {
-    /// Server returned 304 — cache kept.
+    /// Server returned 304 - cache kept.
     NotModified,
     /// New, signature-verified, version-monotonic database applied.
     Updated(Box<IocDatabase>),
@@ -293,7 +293,7 @@ fn ast_scan_js(src: &str, findings: &mut Vec<String>, patterns: &mut Vec<String>
                 "ast:eval-call",
                 findings,
                 patterns,
-                "AST: eval() call detected (PRODUCT.md Part D — bypasses static analysis)",
+                "AST: eval() call detected (PRODUCT.md Part D - bypasses static analysis)",
             );
         }
     }
@@ -348,7 +348,7 @@ fn ast_scan_js(src: &str, findings: &mut Vec<String>, patterns: &mut Vec<String>
         }
     }
 
-    // --- Query 5: dynamic require(variable) — catches obfuscated loads ---
+    // --- Query 5: dynamic require(variable) - catches obfuscated loads ---
     let dynreq_query = r#"(call_expression
   function: (identifier) @fn
   arguments: (arguments (identifier))
@@ -360,7 +360,7 @@ fn ast_scan_js(src: &str, findings: &mut Vec<String>, patterns: &mut Vec<String>
                 "ast:dynamic-require",
                 findings,
                 patterns,
-                "AST: dynamic require(variable) detected — module name may be obfuscated",
+                "AST: dynamic require(variable) detected - module name may be obfuscated",
             );
         }
     }

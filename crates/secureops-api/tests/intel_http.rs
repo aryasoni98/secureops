@@ -1,6 +1,6 @@
 //! HTTP integration tests for the intelligence/autonomy routes (Phase 6b/7b):
 //! graph rebuild/paths/blast-radius, RL feedback/stats, bug-hunt run/get, and
-//! the remediation HITL queue — all through the real router, in-memory state.
+//! the remediation HITL queue - all through the real router, in-memory state.
 
 use std::sync::Arc;
 

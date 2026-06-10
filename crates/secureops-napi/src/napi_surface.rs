@@ -1,4 +1,4 @@
-//! `#[napi]` wrappers — the thin FFI seam the Node.js shim calls.
+//! `#[napi]` wrappers - the thin FFI seam the Node.js shim calls.
 //!
 //! Every wrapper delegates immediately to the plain Rust function in the crate
 //! root or plugin module, keeping audit logic free of napi types
@@ -42,7 +42,7 @@ pub fn plugin_manifest_napi() -> napi::Result<String> {
     Ok(crate::plugin::plugin_manifest())
 }
 
-/// `gateway_start` hook — kill-switch gate + startup audit.
+/// `gateway_start` hook - kill-switch gate + startup audit.
 /// JavaScript: `await secureops.onGatewayStart(stateDir)`
 #[napi(js_name = "onGatewayStart")]
 pub async fn on_gateway_start_napi(state_dir: String) -> napi::Result<String> {

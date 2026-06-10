@@ -1,4 +1,4 @@
-// SecureOps landing page — single-page infographic-style site.
+// SecureOps landing page - single-page infographic-style site.
 // Dark glassmorphism + bento grid + Framer Motion scroll reveals.
 // Content mirrors README.md / PRODUCT.md; update both together.
 
@@ -123,7 +123,7 @@ function Hero() {
         </motion.h1>
         <motion.p variants={fadeUp} className="mt-6 text-lg md:text-xl text-slate-400 max-w-2xl mx-auto">
           When an agent is compromised, in-process guardrails can be switched off by the attacker.
-          SecureOps moves enforcement <b className="text-slate-200">outside the agent process</b> —
+          SecureOps moves enforcement <b className="text-slate-200">outside the agent process</b> -
           into a privileged daemon that keeps working even after the agent is owned.
         </motion.p>
         <motion.div variants={fadeUp} className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -212,7 +212,7 @@ function Problem() {
             <li>✗ Attacker disables the hook that would have blocked them</li>
             <li>✗ Prompt injection rewrites the policy the agent enforces on itself</li>
             <li>✗ Exfiltration looks like a normal tool call</li>
-            <li>✗ Logs live in the same process — trivially forged</li>
+            <li>✗ Logs live in the same process - trivially forged</li>
           </ul>
         </GlassCard>
         <GlassCard className="border-emerald-500/30">
@@ -221,7 +221,7 @@ function Problem() {
             <li>✓ Privileged daemon survives agent compromise</li>
             <li>✓ Fail-closed egress proxy: HTTPS allowlist, 403, 0 bytes on deny</li>
             <li>✓ Kill switch halts everything from outside</li>
-            <li>✓ Hash-chained, ed25519-signed audit log — tamper-evident</li>
+            <li>✓ Hash-chained, ed25519-signed audit log - tamper-evident</li>
           </ul>
         </GlassCard>
       </motion.div>
@@ -279,7 +279,7 @@ function TrustRings() {
 const FEATURES = [
   { icon: "🔍", title: "Security audit", desc: "Nine OWASP-ASI categories, 56 SC-* checks, MAESTRO cross-layer risk, 0–100 score.", span: "md:col-span-2" },
   { icon: "🚦", title: "CI/CD gate", desc: "`audit --json` exits 2 below your threshold. Pipelines fail before drift ships." },
-  { icon: "🔧", title: "Hardening + rollback", desc: "Gateway, credentials, config, Docker, network — every change backed up first." },
+  { icon: "🔧", title: "Hardening + rollback", desc: "Gateway, credentials, config, Docker, network - every change backed up first." },
   { icon: "🌐", title: "Fail-closed egress proxy", desc: "HTTP CONNECT allowlist on 127.0.0.1:8889. Deny = 403 and zero bytes out.", span: "md:col-span-2" },
   { icon: "📟", title: "Runtime monitors", desc: "Cost circuit-breaker, credential access, memory integrity, skill IOC scan." },
   { icon: "🛑", title: "Kill switch", desc: "One command halts the agent from outside. Daemon refuses to start while active." },
@@ -295,7 +295,7 @@ function Features() {
       <SectionTitle
         kicker="Host-local features"
         title="One binary. Ten layers of defense."
-        sub="Everything below ships in the host-local tier — no platform required."
+        sub="Everything below ships in the host-local tier - no platform required."
       />
       <motion.div
         variants={stagger}
@@ -319,10 +319,10 @@ function Features() {
 // ------------------------------------------------------------- terminal ----
 
 const TERMINAL_LINES = [
-  { cmd: "secureops init", out: "Initialized SecureOps state — keystore + starter openclaw.json" },
+  { cmd: "secureops init", out: "Initialized SecureOps state - keystore + starter openclaw.json" },
   { cmd: "secureops audit", out: "Score 84/100 · 3 findings (1 high, 2 medium)" },
   { cmd: "secureops harden", out: "4 fixes applied · backup 2026-06-10T07-44 · rollback available" },
-  { cmd: "secureops audit --json --threshold 80", out: "exit 0 — pipeline passes" },
+  { cmd: "secureops audit --json --threshold 80", out: "exit 0 - pipeline passes" },
 ];
 
 function Terminal() {
@@ -335,7 +335,7 @@ function Terminal() {
             <span className="w-3 h-3 rounded-full bg-rose-500/80" />
             <span className="w-3 h-3 rounded-full bg-amber-500/80" />
             <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
-            <span className="ml-3 text-xs text-slate-500 font-mono">secureops — zsh</span>
+            <span className="ml-3 text-xs text-slate-500 font-mono">secureops - zsh</span>
           </div>
           <motion.div
             variants={stagger}
@@ -375,7 +375,7 @@ function Tiers() {
       <SectionTitle
         kicker="Tiers"
         title="Start host-local. Scale self-hosted."
-        sub="The community tier needs no license at all. Everything is deployable on your own infrastructure — no central SaaS dependency."
+        sub="The community tier needs no license at all. Everything is deployable on your own infrastructure - no central SaaS dependency."
       />
       <motion.div
         variants={stagger}
@@ -442,7 +442,7 @@ function Footer() {
         <a href={`${REPO}/blob/master/SECURITY.md`} className="hover:text-emerald-400 transition-colors">Security</a>
         <a href={`${REPO}/blob/master/LICENSE`} className="hover:text-emerald-400 transition-colors">MIT License</a>
       </div>
-      SecureOps · out-of-band security for AI agents · Rust port of @adversa/secureops
+      SecureOps · out-of-band security for AI agents · Rust port of @aryasoni98/secureops
     </footer>
   );
 }

@@ -34,7 +34,7 @@ pub trait Check: Send + Sync {
 }
 
 /// Run every check against `ctx`, append the MAESTRO cross-layer compound-risk
-/// finding, then score and summarize — the faithful port of `runAudit`.
+/// finding, then score and summarize - the faithful port of `runAudit`.
 ///
 /// `timestamp` is injected (RFC3339) rather than read from a clock here so this
 /// stays pure and deterministic; callers stamp `new Date().toISOString()`'s

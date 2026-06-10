@@ -1,7 +1,7 @@
 //! **Realtime WebSocket hub** (PRODUCT.md Phase 5): a `tokio::broadcast` channel
 //! fanned out to every `/ws/*` subscriber. Producers (scan progress, new
 //! findings, remediation events) call [`Hub::publish`]; each connection gets its
-//! own forwarding task. One-way fan-out — inbound client frames are ignored.
+//! own forwarding task. One-way fan-out - inbound client frames are ignored.
 
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
@@ -13,7 +13,7 @@ use crate::state::AppState;
 /// Default fan-out ring capacity (lagging clients drop oldest messages).
 pub const HUB_CAPACITY: usize = 1024;
 
-/// Cloneable realtime fan-out handle. Cheap to clone — wraps a broadcast sender.
+/// Cloneable realtime fan-out handle. Cheap to clone - wraps a broadcast sender.
 #[derive(Clone)]
 pub struct Hub {
     tx: broadcast::Sender<String>,

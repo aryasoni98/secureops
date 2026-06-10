@@ -2,7 +2,7 @@
 //!
 //! Port of `IOCDatabase`, `HashBaseline` and `BaselineComparison` from
 //! `src/types.ts`. The loading/verification logic (signed feed, monotonicity,
-//! graceful fallback — PRODUCT.md B.8) lives in `secureops-intel`; these are
+//! graceful fallback - PRODUCT.md B.8) lives in `secureops-intel`; these are
 //! just the on-disk shapes.
 
 use serde::{Deserialize, Serialize};

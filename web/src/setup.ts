@@ -1,4 +1,4 @@
-// Wizard progress flags stored in localStorage. Survives reload but local-only —
+// Wizard progress flags stored in localStorage. Survives reload but local-only -
 // the server is the source of truth for license/SSO state.
 
 export type SetupStep = "llm" | "cloud" | "scan";

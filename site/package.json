@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "description": "SecureOps marketing landing page — Vite + React + Framer Motion, deployed to GitHub Pages.",
+  "description": "SecureOps marketing landing page - Vite + React + Framer Motion, deployed to GitHub Pages.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

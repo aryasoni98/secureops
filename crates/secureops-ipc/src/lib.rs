@@ -8,7 +8,7 @@
 //! The privileged daemon (`secureops-daemon`) and the unprivileged clients
 //! (`secureops-cli`, the `secureops-napi` shim) talk over a **unix domain
 //! socket**. Per PRODUCT.md A.3 ("Process & privilege model"), the daemon does
-//! **not** trust a bearer token the agent could leak — instead it authenticates
+//! **not** trust a bearer token the agent could leak - instead it authenticates
 //! the connecting process's `uid`/`pid` directly from the kernel via
 //! `SO_PEERCRED` (Linux) / `LOCAL_PEERCRED` (macOS). This module is the single
 //! shared definition of:
@@ -52,7 +52,7 @@ pub enum IpcError {
     Codec(#[from] serde_json::Error),
 
     /// The connecting peer failed the `SO_PEERCRED`/`LOCAL_PEERCRED` check
-    /// (PRODUCT.md A.3 — uid/pid not in the allowed set).
+    /// (PRODUCT.md A.3 - uid/pid not in the allowed set).
     #[error("ipc peer authentication denied: {0}")]
     Unauthorized(String),
 
@@ -65,7 +65,7 @@ pub enum IpcError {
 pub type IpcResult<T> = std::result::Result<T, IpcError>;
 
 // ---------------------------------------------------------------------------
-// Wire protocol — request enum (PRODUCT.md A.4)
+// Wire protocol - request enum (PRODUCT.md A.4)
 // ---------------------------------------------------------------------------
 
 /// A request sent from a client (cli / napi) to the daemon over the socket.
@@ -125,7 +125,7 @@ pub enum IpcRequest {
 }
 
 // ---------------------------------------------------------------------------
-// Wire protocol — response enum (PRODUCT.md A.4)
+// Wire protocol - response enum (PRODUCT.md A.4)
 // ---------------------------------------------------------------------------
 
 /// A response (or pushed event) sent from the daemon back to a client.
@@ -134,7 +134,7 @@ pub enum IpcRequest {
 /// failing check never tears down the transport (mirrors the audit "run never
 /// aborts" rule, PRODUCT.md B.2). Transport/auth failures use [`IpcError`].
 ///
-/// `serde` internally tagged, `camelCase` — frozen wire contract (A.5).
+/// `serde` internally tagged, `camelCase` - frozen wire contract (A.5).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum IpcResponse {
@@ -153,7 +153,7 @@ pub enum IpcResponse {
 impl IpcResponse {
     /// Build an [`IpcResponse::Ok`] from any serializable value.
     ///
-    /// PRODUCT.md A.4 — convenience used by the daemon's request handler to wrap
+    /// PRODUCT.md A.4 - convenience used by the daemon's request handler to wrap
     /// typed results (reports, status) into the generic `Ok(Value)` frame.
     pub fn ok<T: Serialize>(value: &T) -> IpcResult<Self> {
         Ok(IpcResponse::Ok(serde_json::to_value(value)?))
@@ -185,7 +185,7 @@ pub struct PeerCred {
 impl PeerCred {
     /// Authorization predicate: is this peer the expected service/owner uid?
     ///
-    /// PRODUCT.md A.3 — the daemon runs as the dedicated `secureops` user and
+    /// PRODUCT.md A.3 - the daemon runs as the dedicated `secureops` user and
     /// accepts connections from the owning operator uid. Real policy is wired by
     /// the daemon; this is the building block.
     pub fn is_authorized(&self, allowed_uid: u32) -> bool {
@@ -208,12 +208,12 @@ pub fn peer_cred(stream: &tokio::net::UnixStream) -> std::io::Result<PeerCred> {
 }
 
 // ---------------------------------------------------------------------------
-// Handler trait — the daemon-side request dispatcher
+// Handler trait - the daemon-side request dispatcher
 // ---------------------------------------------------------------------------
 
 /// Server-side request handler implemented by `secureops-daemon`.
 ///
-/// PRODUCT.md A.4/B.4 — [`serve`] accepts a connection, authenticates the peer
+/// PRODUCT.md A.4/B.4 - [`serve`] accepts a connection, authenticates the peer
 /// ([`peer_cred`]), then routes each decoded [`IpcRequest`] through this trait.
 /// Keeping the handler abstract lets the daemon inject its PDP/PEP/AlertBus
 /// wiring while this crate owns only the transport.
@@ -288,7 +288,7 @@ where
 
 /// A connected client handle to the daemon's control socket.
 ///
-/// PRODUCT.md A.4 — used by `secureops-cli` and `secureops-napi` to send
+/// PRODUCT.md A.4 - used by `secureops-cli` and `secureops-napi` to send
 /// [`IpcRequest`]s and read [`IpcResponse`]s over the unix socket.
 #[cfg(unix)]
 pub struct IpcClient {
@@ -324,7 +324,7 @@ pub async fn connect<P: AsRef<Path>>(path: P) -> IpcResult<IpcClient> {
 }
 
 // ---------------------------------------------------------------------------
-// Tests — wire-contract round-trips only (no I/O, compile-time safety net)
+// Tests - wire-contract round-trips only (no I/O, compile-time safety net)
 // ---------------------------------------------------------------------------
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-//! Per-PID **exfil-chain correlation** — the kernel-free userspace half of the
+//! Per-PID **exfil-chain correlation** - the kernel-free userspace half of the
 //! kernel PEP (PRODUCT.md B.6 step 2).
 //!
 //! The dangerous, kernel-observable pattern is an `openat` of a secret-shaped
@@ -23,7 +23,7 @@ use crate::{SyscallEvent, SyscallKind};
 
 /// Default correlation window: an `openat(secret)` chains with a later
 /// `connect` only if they occur within this many milliseconds on the same PID
-/// (PRODUCT.md B.6 — "within a short per-PID time window").
+/// (PRODUCT.md B.6 - "within a short per-PID time window").
 pub const DEFAULT_TTL_MS: u64 = 500;
 
 /// A confirmed `openat(secret) → connect(unknown)` exfil chain on one PID.
@@ -77,7 +77,7 @@ struct PidState {
 /// Interior-mutable via a `Mutex<HashMap>` so a single shared correlator can be
 /// fed from the daemon's event-drain task; the map is keyed by PID. (A
 /// lock-free `DashMap` is an option, but the drain is single-consumer, so a
-/// `Mutex` keeps the dependency surface — and `#![forbid(unsafe_code)]` — clean.)
+/// `Mutex` keeps the dependency surface - and `#![forbid(unsafe_code)]` - clean.)
 #[derive(Debug)]
 pub struct ChainCorrelator {
     ttl_ms: u64,
@@ -114,7 +114,7 @@ impl ChainCorrelator {
         self.observe_at(ev, now)
     }
 
-    /// Observe with an explicit timestamp — deterministic, for tests and replay.
+    /// Observe with an explicit timestamp - deterministic, for tests and replay.
     pub fn observe_at(&self, ev: &SyscallEvent, now_ms: u64) -> Option<ExfilChain> {
         let mut states = self.states.lock().expect("chain state mutex poisoned");
         match ev.kind {
@@ -144,7 +144,7 @@ impl ChainCorrelator {
                         gap_ms: gap,
                     })
                 } else {
-                    None // window expired — not a chain
+                    None // window expired - not a chain
                 }
             }
             // Keep process identity fresh for an in-window PID.
@@ -180,7 +180,7 @@ impl ChainCorrelator {
 ///
 /// Inline deny is only real on Linux with the `ebpf` feature and an LSM-BPF
 /// hook; on macOS / kernel-free builds `Enforce` still alerts and trips the
-/// circuit breaker but cannot block the syscall — the egress proxy PEP enforces.
+/// circuit breaker but cannot block the syscall - the egress proxy PEP enforces.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum EnforcementMode {
     /// Detect + escalate only.
@@ -244,7 +244,7 @@ mod tests {
     fn connect_after_ttl_expiry_is_not_a_chain() {
         let c = ChainCorrelator::new(500);
         assert_eq!(c.observe_at(&open(7, "/root/.env"), 1_000), None);
-        // 501ms later — window expired.
+        // 501ms later - window expired.
         assert_eq!(c.observe_at(&connect(7, "1.2.3.4:443"), 1_501), None);
     }
 

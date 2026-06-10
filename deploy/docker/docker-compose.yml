@@ -1,4 +1,4 @@
-# SecureOps on Docker — EC2, VM, or local Linux host.
+# SecureOps on Docker - EC2, VM, or local Linux host.
 # From rust/:  just docker-up   OR   docker compose -f deploy/docker/docker-compose.yml up -d
 
 services:

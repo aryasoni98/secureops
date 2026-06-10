@@ -1,6 +1,6 @@
-# SecureOps — Rust workspace
+# SecureOps - Rust workspace
 #
-# Migration of the @adversa/secureops TypeScript tool (v2.2.0) to Rust,
+# Migration of the @aryasoni98/secureops TypeScript tool (v2.2.0) to Rust,
 # structured as the three-trust-ring / PDP-PEP architecture described in
 # PRODUCT.md. All 16 crates are implemented (no `todo!()` stubs); the JSON
 # wire contract in `secureops-core` stays byte-compatible with the TS tool.
@@ -10,7 +10,7 @@
 resolver = "2"
 members = [
     # ---- Rings 0–1 + shared core (blueprint Phases 1–3) ----
-    "crates/secureops-core",     # types, Check/AuditContext traits, scoring — no I/O (IMPLEMENTED)
+    "crates/secureops-core",     # types, Check/AuditContext traits, scoring - no I/O (IMPLEMENTED)
     "crates/secureops-checks",   # one Check impl per audit* fn
     "crates/secureops-fs",       # tokio::fs AuditContext + localhost port probe
     "crates/secureops-intel",    # signed IOC feed, aho-corasick/strsim, tree-sitter scan

@@ -1,4 +1,4 @@
-# SecureOps Rust workspace — local dev, Docker, and K8s helpers.
+# SecureOps Rust workspace - local dev, Docker, and K8s helpers.
 # Install: brew install just   OR   cargo install just
 # One-shot bootstrap:  just setup
 
@@ -161,7 +161,7 @@ bpf-load:
     #!/usr/bin/env bash
     set -euo pipefail
     if ! uname -s | grep -qi linux; then
-      echo "bpf-load: kernel PEP is Linux-only — no-op on $(uname -s)."; exit 0
+      echo "bpf-load: kernel PEP is Linux-only - no-op on $(uname -s)."; exit 0
     fi
     just bpf-build
     echo "eBPF object built. Start the PEP with: just bpf-daemon"
@@ -171,7 +171,7 @@ bpf-status:
     #!/usr/bin/env bash
     set -euo pipefail
     if ! uname -s | grep -qi linux; then
-      echo "bpf-status: Linux-only — no-op on $(uname -s)."; exit 0
+      echo "bpf-status: Linux-only - no-op on $(uname -s)."; exit 0
     fi
     sudo bpftool prog show 2>/dev/null | grep -i secureops || echo "no SecureOps eBPF programs attached"
 
@@ -180,7 +180,7 @@ bpf-unload:
     #!/usr/bin/env bash
     set -euo pipefail
     if ! uname -s | grep -qi linux; then
-      echo "bpf-unload: Linux-only — no-op on $(uname -s)."; exit 0
+      echo "bpf-unload: Linux-only - no-op on $(uname -s)."; exit 0
     fi
     echo "Stop secureops-daemon to detach; eBPF programs are unpinned on exit."
 

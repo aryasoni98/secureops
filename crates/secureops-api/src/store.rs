@@ -30,7 +30,7 @@ pub struct FindingFilter {
 /// The persistence contract every backend implements.
 #[async_trait]
 pub trait Store: Send + Sync {
-    /// Readiness probe — `true` when the backend is reachable.
+    /// Readiness probe - `true` when the backend is reachable.
     async fn health(&self) -> bool;
     /// Resolve a hashed API key to its principal claims.
     async fn lookup_api_key(&self, hashed: &str) -> anyhow::Result<Option<Claims>>;

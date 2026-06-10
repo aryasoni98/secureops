@@ -23,7 +23,7 @@ use secureops_api::{build_router, AppState};
 
 const SECRET: &str = "test-secret";
 
-/// A store that is always unreachable — every call errors, health is false.
+/// A store that is always unreachable - every call errors, health is false.
 struct DeadStore;
 
 #[async_trait]
@@ -114,7 +114,7 @@ async fn readyz_is_503_with_retry_after_when_store_down() {
 
 #[tokio::test]
 async fn livez_stays_ok_even_when_store_down() {
-    // Liveness is independent of the DB — the process is up.
+    // Liveness is independent of the DB - the process is up.
     let app = build_router(state_with(Arc::new(DeadStore)));
     let r = app
         .oneshot(

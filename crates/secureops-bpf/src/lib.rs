@@ -2,7 +2,7 @@
 //!
 //! The **kernel Policy Enforcement Point (PEP)**: in-kernel syscall observation
 //! and correlation that catches the prompt-injection *exfil chain* before the
-//! bytes ever leave the box — see **PRODUCT.md B.6** ("Syscall correlation —
+//! bytes ever leave the box - see **PRODUCT.md B.6** ("Syscall correlation -
 //! catching the exfil *chain*") and the crate map in **PRODUCT.md A.4**
 //! ("kernel PEP: aya loader + CO-RE; ES-framework fallback").
 //!
@@ -28,7 +28,7 @@
 //!   `connect`, and `execve`. Events stream to the daemon over a ring buffer
 //!   with PID + `comm` attached (B.6 step 1). The daemon keeps a short per-PID
 //!   state window and, on a match, the PDP can escalate (alert + trip the
-//!   circuit breaker) or — with **LSM-BPF** — **deny the `connect` inline,
+//!   circuit breaker) or - with **LSM-BPF** - **deny the `connect` inline,
 //!   in-kernel** (B.6 step 2-3).
 //! - **macOS** ([`macos`]): the Endpoint Security framework provides the same
 //!   `openat`/`connect`/`execve` event stream but is **observe-only** (no inline
@@ -49,7 +49,7 @@
 // so the API surface references the FROZEN `secureops-core` contract directly.
 use secureops_core::{MaestroLayer, NistAttackType, Severity};
 
-/// Per-PID exfil-chain correlation (PRODUCT.md B.6 step 2) — kernel-free,
+/// Per-PID exfil-chain correlation (PRODUCT.md B.6 step 2) - kernel-free,
 /// unit-testable on every platform.
 pub mod chain;
 /// seccomp-bpf "learn mode" allowlist generation (PRODUCT.md B.6).
@@ -90,7 +90,7 @@ pub mod mock {
 
 /// A single in-kernel syscall observation, lifted out of the eBPF ring buffer
 /// (Linux) or the Endpoint Security event stream (macOS) with the originating
-/// process attached — PRODUCT.md B.6 step 1 ("events stream to the daemon over
+/// process attached - PRODUCT.md B.6 step 1 ("events stream to the daemon over
 /// a ring buffer with PID/comm attached").
 ///
 /// These are the atoms the per-PID correlation window is built from: a sequence
@@ -100,7 +100,7 @@ pub mod mock {
 pub struct SyscallEvent {
     /// Originating process id, as reported by the kernel.
     pub pid: i32,
-    /// Process command name (`comm`) — the short executable name, for human-
+    /// Process command name (`comm`) - the short executable name, for human-
     /// readable alerts and for `execve`-based process-identity tracking.
     pub comm: String,
     /// Which syscall family this event belongs to.
@@ -111,7 +111,7 @@ pub struct SyscallEvent {
     pub path_or_host: String,
 }
 
-/// The kernel syscalls SecureOps hooks to reconstruct the exfil chain —
+/// The kernel syscalls SecureOps hooks to reconstruct the exfil chain -
 /// PRODUCT.md B.6 step 1 ("eBPF programs hook `openat`, `connect`, `execve`").
 ///
 /// Only these three are needed for the headline behavioral rule:
@@ -119,13 +119,13 @@ pub struct SyscallEvent {
 /// providing process identity / lineage for the per-PID state window.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SyscallKind {
-    /// File open — the "read-a-secret" half of the chain when the path is a
+    /// File open - the "read-a-secret" half of the chain when the path is a
     /// credential / `.env` / canary file.
     Openat,
-    /// Outbound connection — the "then-connect-to-an-unknown-host" half of the
+    /// Outbound connection - the "then-connect-to-an-unknown-host" half of the
     /// chain when the destination is not allowlisted.
     Connect,
-    /// Program execution — tracks process identity and lineage across the
+    /// Program execution - tracks process identity and lineage across the
     /// per-PID state window.
     Execve,
 }
@@ -148,7 +148,7 @@ impl SyscallEvent {
     }
 
     /// Whether this event is the *first* half of the exfil chain: an `Openat`
-    /// of something secret-shaped (PRODUCT.md B.6 step 2 — "read-a-secret").
+    /// of something secret-shaped (PRODUCT.md B.6 step 2 - "read-a-secret").
     ///
     /// Uses path-based heuristics; the daemon can refine with the full IOC
     /// `infostealer_artifacts` list once the eBPF loader is wired.
@@ -191,7 +191,7 @@ impl SyscallEvent {
 
     /// NIST AI 100-2 attack family a matched chain represents: the exfil chain
     /// is an *evasion* of the intended behavioral guardrail (PRODUCT.md B.6
-    /// step 4 — "a kernel fact the agent cannot evade").
+    /// step 4 - "a kernel fact the agent cannot evade").
     pub fn nist_attack_type(&self) -> NistAttackType {
         NistAttackType::Evasion
     }
@@ -209,7 +209,7 @@ impl SyscallEvent {
 ///
 /// On Linux this loads the aya CO-RE programs and (where available) the LSM-BPF
 /// inline-deny hook; on macOS it attaches the observe-only Endpoint Security
-/// client. On any other target it returns an error — there is no kernel PEP.
+/// client. On any other target it returns an error - there is no kernel PEP.
 pub fn load() -> anyhow::Result<()> {
     #[cfg(all(target_os = "linux", feature = "ebpf"))]
     {
@@ -222,14 +222,14 @@ pub fn load() -> anyhow::Result<()> {
     #[cfg(not(any(all(target_os = "linux", feature = "ebpf"), target_os = "macos")))]
     {
         anyhow::bail!(
-            "secureops-bpf: no kernel PEP in this build — enable the `ebpf` feature \
+            "secureops-bpf: no kernel PEP in this build - enable the `ebpf` feature \
              on Linux (and build the secureops-ebpf programs), or this platform has \
              no kernel PEP (PRODUCT.md B.6)"
         )
     }
 }
 
-/// Linux kernel PEP — the full-strength path: aya CO-RE eBPF loader hooking
+/// Linux kernel PEP - the full-strength path: aya CO-RE eBPF loader hooking
 /// `openat`/`connect`/`execve`, plus **LSM-BPF inline deny** that can RST the
 /// exfil `connect` in-kernel (PRODUCT.md B.6 steps 1-4).
 /// Linux kernel PEP: aya CO-RE eBPF loader.
@@ -293,10 +293,10 @@ pub mod linux {
         }
 
         tracing::info!(
-            "secureops-bpf: kernel PEP loaded — syscall correlation active (PRODUCT.md B.6)"
+            "secureops-bpf: kernel PEP loaded - syscall correlation active (PRODUCT.md B.6)"
         );
 
-        // Keep `bpf` alive — caller must hold the returned handle.
+        // Keep `bpf` alive - caller must hold the returned handle.
         // For now we leak it into the daemon loop; a production daemon would
         // store it in the JoinSet state or a OnceCell.
         std::mem::forget(bpf);
@@ -304,7 +304,7 @@ pub mod linux {
     }
 }
 
-/// macOS kernel PEP — the **observe-only** fallback via the Endpoint Security
+/// macOS kernel PEP - the **observe-only** fallback via the Endpoint Security
 /// framework. It produces the same `openat`/`connect`/`execve` event stream for
 /// correlation, but cannot deny inline in-kernel; enforcement falls back to the
 /// egress proxy PEP (PRODUCT.md B.5 / B.6).
@@ -316,7 +316,7 @@ pub mod macos {
     /// circuit breaker and the proxy PEP enforces (PRODUCT.md B.6 step 3).
     pub fn load() -> anyhow::Result<()> {
         anyhow::bail!(
-            "Endpoint Security framework client not compiled — requires Apple entitlement \
+            "Endpoint Security framework client not compiled - requires Apple entitlement \
              + native ES framework binding (Phase 4, macOS-only, PRODUCT.md B.6)"
         )
     }
