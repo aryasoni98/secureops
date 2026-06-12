@@ -17,7 +17,7 @@ export function LicenseActivation() {
     try {
       const r = await api.activateLicense(key);
       token.set(r.token);
-      setMsg(`Activated ${r.tier} — features: ${r.features.join(", ") || "(none)"}.`);
+      setMsg(`Activated ${r.tier} - features: ${r.features.join(", ") || "(none)"}.`);
       nav("/setup/llm-keys");
     } catch (e) {
       setMsg(String(e));
@@ -54,19 +54,19 @@ export function SetupLlmKeys() {
   const nav = useNavigate();
   function save() {
     if (!key) return setMsg("paste a key");
-    // Only a "configured" marker is kept client-side — never the key itself.
+    // Only a "configured" marker is kept client-side - never the key itself.
     // The key must be supplied to the API/scanner via env (OPENAI_API_KEY /
     // ANTHROPIC_API_KEY); see docs.
     localStorage.setItem(`secureops.llm.${provider}`, "configured");
     setup.mark("llm");
-    setMsg(`${provider} marked configured — set the key as an env var on the API/scanner.`);
+    setMsg(`${provider} marked configured - set the key as an env var on the API/scanner.`);
     nav("/setup/cloud");
   }
   return (
-    <Page title="Step 2 — LLM keys">
+    <Page title="Step 2 - LLM keys">
       <p className="text-slate-400 mb-3">
         Provide a key for at least one LLM provider so SecureOps can run the bug-hunt loop. The
-        key itself is never stored in the browser — configure it as an environment variable on
+        key itself is never stored in the browser - configure it as an environment variable on
         the API/scanner (`OPENAI_API_KEY` / `ANTHROPIC_API_KEY`); this step only records which
         provider you chose.
       </p>
@@ -125,7 +125,7 @@ export function SetupCloud() {
     nav("/setup/scan");
   }
   return (
-    <Page title="Step 3 — Cloud read-only credential">
+    <Page title="Step 3 - Cloud read-only credential">
       <p className="text-slate-400 mb-3">
         SecureOps only needs read-only access for inventory + checks. Cloud mutations only happen
         through human-approved playbooks.
@@ -188,13 +188,13 @@ export function SetupScan() {
       setup.mark("scan");
       setMsg("");
     } catch {
-      setMsg("Could not start the scan — is the API reachable?");
+      setMsg("Could not start the scan - is the API reachable?");
     } finally {
       setStarting(false);
     }
   }
   return (
-    <Page title="Step 4 — first scan">
+    <Page title="Step 4 - first scan">
       <div className="flex items-center gap-3">
         <select
           value={scope}

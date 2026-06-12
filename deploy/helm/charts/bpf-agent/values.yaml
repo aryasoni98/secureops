@@ -1,4 +1,4 @@
-# bpf-agent — SecureOps kernel PEP DaemonSet (PRODUCT.md B.6).
+# bpf-agent - SecureOps kernel PEP DaemonSet (PRODUCT.md B.6).
 #
 # Gated to the Enterprise tier: the parent chart should only enable this
 # subchart when license features include kernel enforcement. The DaemonSet
@@ -19,7 +19,7 @@ image:
 # daemon's SECUREOPS_BPF_ENFORCE env var.
 enforce: false
 
-# Only schedule onto Linux nodes — the kernel PEP is a no-op elsewhere.
+# Only schedule onto Linux nodes - the kernel PEP is a no-op elsewhere.
 nodeSelector:
   kubernetes.io/os: linux
 

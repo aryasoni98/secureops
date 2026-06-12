@@ -3,12 +3,12 @@
 //! The **Ring 1** in-process engine surface (PRODUCT.md A.2, Part G Phase 1:
 //! *"Rust core behind napi"*). This crate is built as a Node native addon
 //! (`crate-type = ["cdylib", "rlib"]`) and loaded by a thin TypeScript shim that
-//! replaces the legacy `@adversa/secureops` audit body with a single FFI call.
+//! replaces the legacy `@aryasoni98/secureops` audit body with a single FFI call.
 //!
 //! ## Why a plain-Rust seam
 //!
 //! The actual `#[napi]` wrappers (provided by `napi-derive`) are intentionally
-//! *not* compiled in this scaffold — the `napi` / `napi-derive` / `napi-build`
+//! *not* compiled in this scaffold - the `napi` / `napi-derive` / `napi-build`
 //! crates require a Node toolchain and pull a large native build, which would
 //! break the offline-fast workspace build. So the public functions here are
 //! ordinary Rust (`String`-in / `String`-out, JSON on the wire). Each is annotated
@@ -26,7 +26,7 @@
 //! Node, and the FFI layer stays a thin, generated shim.
 //!
 //! The full OpenClaw plugin surface (lifecycle hooks, command dispatch, MCP
-//! tools — the TS `legacyPlugin`) is ported in [`plugin`]; the TS shim wires
+//! tools - the TS `legacyPlugin`) is ported in [`plugin`]; the TS shim wires
 //! OpenClaw's callbacks to those functions.
 //!
 //! ## Trust model (PRODUCT.md A.2)

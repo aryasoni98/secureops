@@ -1,6 +1,6 @@
 //! # secureops-harden
 //!
-//! The hardening engine — faithful port of `secureops/src/hardener.ts` and the
+//! The hardening engine - faithful port of `secureops/src/hardener.ts` and the
 //! five `src/hardening/*` modules (PRODUCT.md **B.3**). Unlike checks, hardening
 //! *mutates* state, so this crate performs real file I/O (`tokio::fs`): it
 //! backs up `openclaw.json` into a timestamped backup dir, runs each module
@@ -32,7 +32,7 @@ use std::sync::Arc;
 
 /// A hardening module: detects issues ([`check`](HardeningModule::check)) and
 /// applies fixes ([`fix`](HardeningModule::fix)). Per-module rollback is a no-op
-/// in the TS source — the orchestrator restores the whole config backup.
+/// in the TS source - the orchestrator restores the whole config backup.
 #[async_trait]
 pub trait HardeningModule: Send + Sync {
     fn name(&self) -> &'static str;
@@ -219,7 +219,7 @@ pub async fn rollback(state_dir: &str, timestamp: Option<&str>) -> anyhow::Resul
         ));
     }
 
-    // Restore any other backed-up files. A failed restore must surface — a
+    // Restore any other backed-up files. A failed restore must surface - a
     // rollback that silently skips files leaves the host in a state the
     // operator believes was reverted.
     let mut failed: Vec<String> = Vec::new();

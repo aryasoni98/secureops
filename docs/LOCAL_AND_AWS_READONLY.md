@@ -5,7 +5,7 @@ existing `aws configure` credentials **without creating anything, without cost,
 and without impacting the account.**
 
 > **Key fact:** SecureOps has **no AWS integration**. It audits *OpenClaw agent*
-> configs on the local filesystem — it does not read your AWS account, instances,
+> configs on the local filesystem - it does not read your AWS account, instances,
 > or IAM. Your AWS credentials are only relevant when you *deploy the daemon* to
 > EC2/EKS (see [DEPLOY_AWS_K8S.md](DEPLOY_AWS_K8S.md)), which **does** cost money.
 > Everything in this doc is local + read-only.
@@ -18,7 +18,7 @@ and without impacting the account.**
    bill describe/list API calls) and cannot change state.
 2. **Never** run `create-*`, `run-instances`, `ecr ... push`, `kubectl apply`,
    `delete-*`, `put-*`, or `modify-*` against a real account without explicit
-   intent — those can incur cost and change infrastructure.
+   intent - those can incur cost and change infrastructure.
 3. **Never deploy to a production account/cluster** casually. Use a dedicated,
    isolated, non-prod target.
 4. After any inspection, **verify state is unchanged** (see §4).
@@ -31,7 +31,7 @@ and without impacting the account.**
 aws --version
 aws configure list            # keys are masked by AWS; shows region + source
 aws configure list-profiles
-aws sts get-caller-identity   # account id + IAM ARN — read-only, free
+aws sts get-caller-identity   # account id + IAM ARN - read-only, free
 aws configure get region
 ```
 
@@ -46,17 +46,17 @@ export AWS_REGION=us-east-1
 
 ## 2. Read-only resource inventory (free)
 
-See what exists (e.g. to plan a future deploy) — none of this changes anything:
+See what exists (e.g. to plan a future deploy) - none of this changes anything:
 
 ```sh
 R="${AWS_REGION:-us-east-1}"
 
-# EC2 — running instances are what cost money (you are NOT starting any here)
+# EC2 - running instances are what cost money (you are NOT starting any here)
 aws ec2 describe-instances --region "$R" \
   --query 'Reservations[].Instances[].{id:InstanceId,type:InstanceType,state:State.Name}' \
   --output table
 
-# ECR repositories (image registry — a deploy target)
+# ECR repositories (image registry - a deploy target)
 aws ecr describe-repositories --region "$R" --query 'repositories[].repositoryName' --output json
 
 # EKS clusters (k8s deploy target)
@@ -72,7 +72,7 @@ aws ec2 describe-vpcs --region "$R" --filters Name=isDefault,Values=true \
 ## 3. Run SecureOps locally (no AWS)
 
 Install the CLI (from crates.io or a release binary), then run it entirely
-locally — it makes **zero** AWS calls:
+locally - it makes **zero** AWS calls:
 
 ```sh
 cargo install secureops-cli            # or download a release binary
@@ -94,7 +94,7 @@ export HTTPS_PROXY=http://127.0.0.1:8889
 
 ## 4. Verify zero AWS impact (the double review)
 
-Snapshot resource counts twice and compare — identical counts prove the
+Snapshot resource counts twice and compare - identical counts prove the
 read-only inspection changed nothing. Also confirm no SecureOps resources were
 created:
 
@@ -110,7 +110,7 @@ echo "review 1: $(snapshot)"
 sleep 2
 echo "review 2: $(snapshot)"
 
-# expect <none> / 0 — nothing was created
+# expect <none> / 0 - nothing was created
 aws ecr describe-repositories --region "$R" --query "repositories[?contains(repositoryName,'secureops')].repositoryName" --output text
 aws eks list-clusters --region "$R" --query "clusters[?contains(@,'secureops')]" --output text
 aws ec2 describe-instances --region "$R" --filters Name=tag:Name,Values='*secureops*' --query 'length(Reservations[].Instances[])' --output text
@@ -150,4 +150,4 @@ account or cluster.
 | Run SecureOps CLI/daemon locally | $0 | none (no AWS calls) |
 | `kind` local K8s deploy | $0 | none (no AWS) |
 | Push image to ECR | ~storage cents | adds an artifact |
-| EC2 / EKS deploy | **billed** | **changes infrastructure** — non-prod only |
+| EC2 / EKS deploy | **billed** | **changes infrastructure** - non-prod only |

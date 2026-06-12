@@ -2,7 +2,7 @@
 //! RL ranker, bug-hunt loop, and self-healing playbook engines over HTTP.
 //!
 //! Engine state lives in [`AppState`] (per-tenant, in-memory). Cloud mutations
-//! for remediations go through a [`NoopCloud`] backend by default — it performs
+//! for remediations go through a [`NoopCloud`] backend by default - it performs
 //! no real changes, so approving a destructive playbook is safe out of the box;
 //! real AWS/GCP/Azure backends slot in behind the same `CloudBackend` trait.
 
@@ -65,7 +65,7 @@ impl CloudBackend for NoopCloud {
 
 /// Resolve the right cloud backend for a playbook by looking at the `execute`
 /// step's provider prefix (e.g. `gcs.bucket.set_acl` → GCP). Unhandled prefixes
-/// fall back to the safe [`NoopCloud`] — no real mutations.
+/// fall back to the safe [`NoopCloud`] - no real mutations.
 fn cloud_backend_for(pb: &Playbook) -> Box<dyn CloudBackend> {
     match pb.execute.split('.').next().unwrap_or("") {
         "gcs" | "gcp" => Box::new(GcpCloud::new()),
@@ -189,7 +189,7 @@ pub struct GraphSpec {
     pub edges: Vec<EdgeSpec>,
 }
 
-/// `POST /api/v1/graph/rebuild` — ingest a topology (nodes + typed edges) for
+/// `POST /api/v1/graph/rebuild` - ingest a topology (nodes + typed edges) for
 /// the tenant. Later fed by the scanner; for now accepted directly.
 pub async fn graph_rebuild(
     State(s): State<AppState>,
@@ -214,7 +214,7 @@ pub async fn graph_rebuild(
     Ok(Json(json!({ "nodes": nodes })))
 }
 
-/// `GET /api/v1/graph/paths` — attack paths (internet→sensitive), ranked.
+/// `GET /api/v1/graph/paths` - attack paths (internet→sensitive), ranked.
 pub async fn graph_paths(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,
@@ -227,7 +227,7 @@ pub async fn graph_paths(
     Ok(Json(json!({ "paths": paths })))
 }
 
-/// `GET /api/v1/graph/blast-radius/{node}` — sensitive nodes reachable if `node`
+/// `GET /api/v1/graph/blast-radius/{node}` - sensitive nodes reachable if `node`
 /// is compromised.
 pub async fn graph_blast_radius(
     State(s): State<AppState>,
@@ -264,7 +264,7 @@ pub struct FeedbackReq {
     pub finding_id: Option<String>,
 }
 
-/// `POST /api/v1/rl/feedback` — train the ranker from an analyst decision.
+/// `POST /api/v1/rl/feedback` - train the ranker from an analyst decision.
 pub async fn rl_feedback(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,
@@ -307,7 +307,7 @@ pub async fn rl_feedback(
     Ok(Json(json!({ "updates": updates })))
 }
 
-/// `GET /api/v1/rl/stats` — ranker telemetry for the tenant.
+/// `GET /api/v1/rl/stats` - ranker telemetry for the tenant.
 pub async fn rl_stats(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,
@@ -330,7 +330,7 @@ pub struct BugHuntReq {
     pub scope: String,
 }
 
-/// `POST /api/v1/bughunt` — run a bounded bug-hunt over the tenant's findings
+/// `POST /api/v1/bughunt` - run a bounded bug-hunt over the tenant's findings
 /// using the offline LocalProvider, store the result, return a job id. Cedar
 /// gates the `bughunt` capability (Community → 403).
 pub async fn bughunt_run(
@@ -380,7 +380,7 @@ pub async fn bughunt_run(
     Ok(Json(json!({ "jobId": job_id, "status": status })))
 }
 
-/// `GET /api/v1/bughunt/{job_id}` — fetch a stored bug-hunt result.
+/// `GET /api/v1/bughunt/{job_id}` - fetch a stored bug-hunt result.
 pub async fn bughunt_get(
     State(s): State<AppState>,
     Authenticated(_claims): Authenticated,
@@ -405,7 +405,7 @@ pub struct RemediationReq {
     pub playbook_id: String,
 }
 
-/// `POST /api/v1/remediations` — queue a remediation for a finding (persisted).
+/// `POST /api/v1/remediations` - queue a remediation for a finding (persisted).
 pub async fn remediation_create(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,
@@ -432,7 +432,7 @@ pub async fn remediation_create(
     Ok(Json(rem))
 }
 
-/// `POST /api/v1/remediations/circuit/{class}/reset` — operator-only reset of
+/// `POST /api/v1/remediations/circuit/{class}/reset` - operator-only reset of
 /// a halted playbook class. `class` is one of `safe|reversible|destructive`.
 pub async fn remediation_circuit_reset(
     State(s): State<AppState>,
@@ -444,7 +444,7 @@ pub async fn remediation_circuit_reset(
     Ok(Json(json!({ "class": class, "halted": false })))
 }
 
-/// `GET /api/v1/remediations/queue` — the tenant's remediation queue.
+/// `GET /api/v1/remediations/queue` - the tenant's remediation queue.
 pub async fn remediations_queue(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,
@@ -457,8 +457,8 @@ pub async fn remediations_queue(
     Ok(Json(json!({ "remediations": items })))
 }
 
-/// `POST /api/v1/remediations/{id}/approve` — approve + run a queued remediation
-/// through the self-healing engine (NoopCloud by default — no real mutation).
+/// `POST /api/v1/remediations/{id}/approve` - approve + run a queued remediation
+/// through the self-healing engine (NoopCloud by default - no real mutation).
 pub async fn remediation_approve(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,
@@ -504,7 +504,7 @@ pub async fn remediation_approve(
     ))
 }
 
-/// `POST /api/v1/remediations/{id}/deny` — deny a queued remediation (never runs).
+/// `POST /api/v1/remediations/{id}/deny` - deny a queued remediation (never runs).
 pub async fn remediation_deny(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,

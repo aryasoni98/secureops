@@ -32,7 +32,7 @@ pub trait OidcVerifier: Send + Sync {
     async fn verify(&self, token: &str) -> Option<OidcClaims>;
 }
 
-/// `GET /api/v1/auth/oidc/metadata` — SP metadata. Gated on the `sso` feature.
+/// `GET /api/v1/auth/oidc/metadata` - SP metadata. Gated on the `sso` feature.
 pub async fn oidc_metadata(
     State(s): State<AppState>,
     crate::auth::Authenticated(claims): crate::auth::Authenticated,
@@ -54,7 +54,7 @@ pub struct CallbackReq {
     pub token: String,
 }
 
-/// `POST /api/v1/auth/oidc/callback` — exchange an IdP token for a session JWT.
+/// `POST /api/v1/auth/oidc/callback` - exchange an IdP token for a session JWT.
 /// Public (this *is* the login): `404` if SSO isn't configured, `401` if the
 /// token doesn't verify.
 pub async fn oidc_callback(

@@ -1,4 +1,4 @@
-// SecureOps dashboard SPA (PRODUCT.md Phase 8) — routing only.
+// SecureOps dashboard SPA (PRODUCT.md Phase 8) - routing only.
 // Wizard pages live in `wizard.tsx`, dashboard pages in `pages.tsx`, and
 // shared chrome / guards in `components.tsx`.
 

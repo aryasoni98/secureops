@@ -1,4 +1,4 @@
-//! **seccomp-bpf allowlist generation** — the "learn mode" half of PRODUCT.md
+//! **seccomp-bpf allowlist generation** - the "learn mode" half of PRODUCT.md
 //! B.6 ("self-tuning seccomp profiles: learn the syscall footprint, then
 //! auto-generate a tight enforce profile").
 //!
@@ -10,7 +10,7 @@
 //!
 //! The emitted JSON is consumed directly by Docker (`--security-opt
 //! seccomp=profile.json`), containerd/CRI-O, and Kubernetes
-//! `securityContext.seccompProfile`. It is pure data — no kernel, no `unsafe` —
+//! `securityContext.seccompProfile`. It is pure data - no kernel, no `unsafe` -
 //! so it round-trips and serializes on every platform.
 
 use std::collections::BTreeSet;

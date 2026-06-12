@@ -1,6 +1,6 @@
 //! Live-Postgres integration tests (PRODUCT.md Phase 5b).
 //!
-//! `#[ignore]` by default — they need a real database. Run with:
+//! `#[ignore]` by default - they need a real database. Run with:
 //! ```sh
 //! DATABASE_URL=postgres://secureops_app:pw@localhost/secureops \
 //!   cargo test -p secureops-api --test pg_integration -- --ignored

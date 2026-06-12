@@ -1,4 +1,4 @@
-//! OpenClaw plugin surface — Rust port of the `legacyPlugin` object + lifecycle
+//! OpenClaw plugin surface - Rust port of the `legacyPlugin` object + lifecycle
 //! hooks + command/tool dispatch from `src/index.ts`.
 //!
 //! The TypeScript tool registered itself with OpenClaw's plugin runtime
@@ -53,7 +53,7 @@ pub async fn on_gateway_start(state_dir: &str) -> String {
         return json!({
             "started": false,
             "killSwitchActive": true,
-            "reason": "KILL SWITCH ACTIVE — all operations suspended",
+            "reason": "KILL SWITCH ACTIVE - all operations suspended",
         })
         .to_string();
     }
@@ -166,7 +166,7 @@ pub async fn dispatch_command(cmd: &str, args: &[String]) -> String {
             let report = secureops_monitors::cost::generate_cost_report(&entries, now_ms(), false);
             serde_json::to_string(&report).unwrap_or_default()
         }
-        // Skill lifecycle was shell-script driven in TS (install.sh, etc.) —
+        // Skill lifecycle was shell-script driven in TS (install.sh, etc.) -
         // managed outside the Rust addon.
         "skill-install" | "skill-audit" | "skill-update" | "skill-uninstall" => {
             json!({ "skip": format!("`{cmd}` is shell-script managed (skill/scripts/*.sh)") })

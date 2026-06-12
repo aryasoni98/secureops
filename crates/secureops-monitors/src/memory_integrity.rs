@@ -1,4 +1,4 @@
-//! Memory-integrity monitor — port of `monitors/memory-integrity.ts`.
+//! Memory-integrity monitor - port of `monitors/memory-integrity.ts`.
 //!
 //! `scan_for_prompt_injection` and `check_memory_content` are faithful pure
 //! ports (hashing via `secureops-intel`); the [`Monitor::run`] loop is the

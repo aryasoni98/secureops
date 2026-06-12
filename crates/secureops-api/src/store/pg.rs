@@ -219,6 +219,14 @@ impl Store for PgStore {
         }))
     }
 
+    async fn any_license(&self) -> anyhow::Result<bool> {
+        let client = self.pool.get().await?;
+        let row = client
+            .query_one("SELECT EXISTS(SELECT 1 FROM licenses)", &[])
+            .await?;
+        Ok(row.get::<_, bool>(0))
+    }
+
     async fn create_scan(&self, scan: &Scan) -> anyhow::Result<()> {
         let client = self.pool.get().await?;
         client

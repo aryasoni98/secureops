@@ -67,7 +67,7 @@ pub use secureops_core::Severity;
 /// Generate a cryptographically-random token as lowercase hex.
 ///
 /// Faithful port of `generateToken` (`utils/crypto.ts`):
-/// `crypto.randomBytes(length).toString('hex')` — `length` *bytes* of OS
+/// `crypto.randomBytes(length).toString('hex')` - `length` *bytes* of OS
 /// randomness, rendered as `2 * length` hex chars (default 32 bytes → 64 chars).
 /// Used by gateway hardening to mint a strong auth token.
 pub fn generate_token(length: usize) -> String {
@@ -151,9 +151,9 @@ pub type Result<T> = std::result::Result<T, CryptoError>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum KeystoreVersion {
-    /// Legacy format — decrypt-only, never written by this crate.
+    /// Legacy format - decrypt-only, never written by this crate.
     V1,
-    /// Current format — Argon2id-derived key, AES-256-GCM sealed.
+    /// Current format - Argon2id-derived key, AES-256-GCM sealed.
     V2,
 }
 
@@ -187,14 +187,65 @@ pub struct KdfParams {
 
 impl Default for KdfParams {
     fn default() -> Self {
-        // Conservative interactive Argon2id defaults; the real impl should
-        // calibrate `memory_kib` to the host (TODO, Phase 3).
+        // Conservative interactive Argon2id defaults. `calibrated()` tunes
+        // `memory_kib` to the host at `secureops init` time.
         KdfParams {
             memory_kib: 64 * 1024,
             iterations: 3,
             parallelism: 1,
             key_len: 32,
         }
+    }
+}
+
+impl KdfParams {
+    /// OWASP minimum memory for Argon2id (19 MiB at t=2): never calibrate
+    /// below this even on slow hosts.
+    pub const MIN_MEMORY_KIB: u32 = 19 * 1024;
+    /// Upper clamp so calibration on very fast hosts stays deployable on
+    /// memory-constrained containers (256 MiB).
+    pub const MAX_MEMORY_KIB: u32 = 256 * 1024;
+
+    /// Calibrate `memory_kib` to the host so one full derivation lands near
+    /// `target_ms` (closes the Phase 3 calibration TODO).
+    ///
+    /// Strategy: time one probe derivation at a small fixed cost, then scale
+    /// memory linearly (Argon2 wall time is ~linear in `memory × iterations`)
+    /// and clamp to `[MIN_MEMORY_KIB, MAX_MEMORY_KIB]`. Iterations stay at
+    /// the default (3) so stored params remain OWASP-shaped; only the memory
+    /// dimension is host-tuned.
+    ///
+    /// The probe runs synchronously and costs one ~8 MiB derivation
+    /// (a few milliseconds on current hardware).
+    pub fn calibrated(target_ms: u64) -> Result<Self> {
+        const PROBE_MEMORY_KIB: u32 = 8 * 1024;
+        const PROBE_ITERATIONS: u32 = 1;
+        let defaults = KdfParams::default();
+
+        let probe = KdfParams {
+            memory_kib: PROBE_MEMORY_KIB,
+            iterations: PROBE_ITERATIONS,
+            ..defaults
+        };
+        let started = std::time::Instant::now();
+        derive_key(b"secureops-calibration-probe", b"calibration-salt", &probe)?;
+        let probe_ms = started.elapsed().as_secs_f64() * 1000.0;
+
+        // probe cost ∝ PROBE_MEMORY × PROBE_ITERATIONS; solve for the memory
+        // that hits `target_ms` at `defaults.iterations`.
+        let per_kib_iter_ms =
+            (probe_ms / f64::from(PROBE_MEMORY_KIB * PROBE_ITERATIONS)).max(f64::MIN_POSITIVE);
+        let memory_kib = (target_ms as f64 / per_kib_iter_ms / f64::from(defaults.iterations))
+            .round()
+            .clamp(
+                f64::from(Self::MIN_MEMORY_KIB),
+                f64::from(Self::MAX_MEMORY_KIB),
+            ) as u32;
+
+        Ok(KdfParams {
+            memory_kib,
+            ..defaults
+        })
     }
 }
 
@@ -480,10 +531,10 @@ pub mod signing {
             // Key creation: in production, create an ECC NIST P-256 signing key
             // under the owner hierarchy and persist at a well-known NV index
             // derived from key_id. Full implementation requires tss_esapi::utils
-            // key template + CreateLoaded + NV persist — scaffolded here.
+            // key template + CreateLoaded + NV persist - scaffolded here.
             let _ = key_id;
             Err(CryptoError::Backend(
-                "TPM key creation requires NV index allocation — \
+                "TPM key creation requires NV index allocation - \
                  wire the full tss_esapi::utils key template (PRODUCT.md A.3)"
                     .into(),
             ))
@@ -500,7 +551,7 @@ pub mod signing {
             .map_err(|e| CryptoError::Backend(format!("TPM context: {e}")))?;
             let _ = (key_id, digest);
             Err(CryptoError::Backend(
-                "TPM sign requires loaded key handle — \
+                "TPM sign requires loaded key handle - \
                  wire key load from NV persistent storage (PRODUCT.md A.3)"
                     .into(),
             ))
@@ -510,7 +561,7 @@ pub mod signing {
         fn public_key(&self, key_id: &str) -> Result<Vec<u8>> {
             let _ = key_id;
             Err(CryptoError::Backend(
-                "TPM public key export requires ReadPublic — \
+                "TPM public key export requires ReadPublic - \
                  wire tss_esapi::Context::read_public (PRODUCT.md A.3)"
                     .into(),
             ))
@@ -604,6 +655,34 @@ mod keystore_tests {
             parallelism: 1,
             key_len: 32,
         }
+    }
+
+    #[test]
+    fn calibrated_params_stay_within_clamps() {
+        let p = KdfParams::calibrated(100).unwrap();
+        assert!(p.memory_kib >= KdfParams::MIN_MEMORY_KIB);
+        assert!(p.memory_kib <= KdfParams::MAX_MEMORY_KIB);
+        // Iterations/parallelism/key_len keep the OWASP-shaped defaults.
+        let d = KdfParams::default();
+        assert_eq!(p.iterations, d.iterations);
+        assert_eq!(p.parallelism, d.parallelism);
+        assert_eq!(p.key_len, d.key_len);
+    }
+
+    #[test]
+    fn calibrated_params_scale_with_target() {
+        // A 10x larger budget can never produce a *smaller* memory cost
+        // (both may clamp to the same bound, hence <=).
+        let small = KdfParams::calibrated(20).unwrap();
+        let large = KdfParams::calibrated(200).unwrap();
+        assert!(small.memory_kib <= large.memory_kib);
+    }
+
+    #[test]
+    fn calibrated_params_derive_a_key() {
+        let p = KdfParams::calibrated(50).unwrap();
+        let k = derive_key(b"pass", b"salt1234salt1234salt1234salt1234", &p).unwrap();
+        assert_eq!(k.0.len(), 32);
     }
 
     #[test]

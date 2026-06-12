@@ -1,7 +1,7 @@
 {
   "name": "secureops-dashboard",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "description": "SecureOps platform dashboard (PRODUCT.md Phase 8). Vite + React + TS + Tailwind (Play CDN) + Playwright E2E.",
   "scripts": {

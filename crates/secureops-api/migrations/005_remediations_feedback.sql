@@ -1,4 +1,4 @@
--- 005_remediations_feedback — self-healing queue (P7) + RL feedback signal (P7).
+-- 005_remediations_feedback - self-healing queue (P7) + RL feedback signal (P7).
 
 CREATE TABLE IF NOT EXISTS remediations (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

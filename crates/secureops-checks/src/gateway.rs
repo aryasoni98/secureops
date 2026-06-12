@@ -1,8 +1,8 @@
 //! Gateway exposure category (PRODUCT.md A.4, B.2).
 //!
 //! Ports `auditGateway` from `secureops/src/auditor.ts`: inspects the
-//! `gateway` config block — bind host, auth mode, TLS, mDNS advertisement,
-//! control-UI exposure, reverse-proxy trust — for the most checks of any
+//! `gateway` config block - bind host, auth mode, TLS, mDNS advertisement,
+//! control-UI exposure, reverse-proxy trust - for the most checks of any
 //! category (SC-GW-\*). Deep mode actively probes the gateway and browser
 //! relay ports via `secureops_fs::probe_port`. MAESTRO mostly L4.
 
@@ -134,7 +134,7 @@ impl Check for GatewayCheck {
                 secureops_fs::probe_port(gateway_port, "127.0.0.1", Duration::from_millis(2000))
                     .await;
             if listening {
-                // Port is open — check if bind is loopback-only
+                // Port is open - check if bind is loopback-only
                 let bind_mode = bind.unwrap_or("all");
                 let is_loopback =
                     bind_mode == "loopback" || bind_mode == "127.0.0.1" || bind_mode == "localhost";
@@ -162,7 +162,7 @@ impl Check for GatewayCheck {
                     })
                     .evidence(format!("Port: {}, Bind: {}, Status: open", gateway_port, bind_mode))
                     .remediation(if is_loopback {
-                        "No action needed — loopback binding is secure"
+                        "No action needed - loopback binding is secure"
                     } else {
                         "Set gateway.bind to \"loopback\" to restrict access to localhost only"
                     })
@@ -321,10 +321,10 @@ impl Check for GatewayCheck {
                     AuditFinding::builder("SC-GW-007", Severity::Medium, "gateway")
                         .title("mDNS broadcasting in full mode")
                         .description("mDNS is broadcasting sensitive instance information on the local network.")
-                        // `gateway.mdns.mode = "${gw.mdns.mode}"` — an absent mode
+                        // `gateway.mdns.mode = "${gw.mdns.mode}"` - an absent mode
                         // renders as "undefined" in a JS template literal.
                         .evidence(format!("gateway.mdns.mode = \"{}\"", mdns_mode.unwrap_or("undefined")))
-                        .remediation("Manually set gateway.mdns.mode to \"minimal\" (not auto-fixable — key not in OpenClaw config schema)")
+                        .remediation("Manually set gateway.mdns.mode to \"minimal\" (not auto-fixable - key not in OpenClaw config schema)")
                         .owasp_asi("ASI05")
                         .maestro(MaestroLayer::L4)
                         .nist(NistAttackType::Evasion)
@@ -424,7 +424,7 @@ mod tests {
 
     /// A fully-hardened config (loopback, token auth, TLS, minimal mDNS,
     /// trusted proxies, secure Control UI) should emit no config-based GW
-    /// findings — only the non-deep GW-004/GW-005 informational placeholders.
+    /// findings - only the non-deep GW-004/GW-005 informational placeholders.
     #[tokio::test]
     async fn hardened_config_emits_only_info_placeholders() {
         let config = OpenClawConfig {

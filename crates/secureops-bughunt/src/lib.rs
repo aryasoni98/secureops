@@ -79,7 +79,7 @@ impl ToolBox for NoTools {
 pub enum JobStatus {
     /// Produced a valid [`FindingReport`].
     Completed,
-    /// Errored (provider failure or malformed report) — no panic.
+    /// Errored (provider failure or malformed report) - no panic.
     Failed,
     /// Hit a safety bound (`max_depth` / `max_tool_calls`) without a report.
     Halted,
@@ -274,7 +274,7 @@ impl LlmProvider for MockProvider {
     }
 }
 
-/// Offline heuristic provider — emits a templated [`FindingReport`] immediately
+/// Offline heuristic provider - emits a templated [`FindingReport`] immediately
 /// (no network, no tools). For air-gapped/dev use; not a substitute for a real
 /// model. Returns a low-confidence INFO report scoped to the request.
 pub struct LocalProvider;
@@ -284,7 +284,7 @@ impl LlmProvider for LocalProvider {
     async fn complete(&self, req: CompletionReq) -> anyhow::Result<CompletionResp> {
         let report = FindingReport {
             title: "Heuristic review (local provider)".into(),
-            attack_vector: "offline heuristic — no model reasoning applied".into(),
+            attack_vector: "offline heuristic - no model reasoning applied".into(),
             affected_assets: vec![],
             evidence_refs: vec![],
             severity: "info".into(),

@@ -19,11 +19,11 @@ path = "src/main.rs"
 # Reuse the frozen core contract (Severity, now_iso) for wire consistency.
 secureops-core = { workspace = true }
 # Intelligence + autonomy engines (Phase 6b/7b wiring). All pure-Rust, cc-safe.
-secureops-graph = { path = "../secureops-graph", version = "0.0.1" }
-secureops-tokenbudget = { path = "../secureops-tokenbudget", version = "0.0.1" }
-secureops-bughunt = { path = "../secureops-bughunt", version = "0.0.1" }
-secureops-rl = { path = "../secureops-rl", version = "0.0.1" }
-secureops-selfheal = { path = "../secureops-selfheal", version = "0.0.1" }
+secureops-graph = { path = "../secureops-graph", version = "0.0.2" }
+secureops-tokenbudget = { path = "../secureops-tokenbudget", version = "0.0.2" }
+secureops-bughunt = { path = "../secureops-bughunt", version = "0.0.2" }
+secureops-rl = { path = "../secureops-rl", version = "0.0.2" }
+secureops-selfheal = { path = "../secureops-selfheal", version = "0.0.2" }
 
 # Shared workspace deps.
 serde = { workspace = true }
@@ -53,7 +53,7 @@ uuid = { version = "1", features = ["v4", "serde"] }
 utoipa = { version = "5", features = ["axum_extras", "uuid", "time"] }
 
 # Storage (5b). tokio-postgres (pure-Rust wire protocol, NO sqlite/C transitive,
-# so no cc-cap clash with intel's tree-sitter — unlike sqlx, which force-pulls
+# so no cc-cap clash with intel's tree-sitter - unlike sqlx, which force-pulls
 # sqlx-sqlite). No TLS feature → no ring/cc. deadpool-* for connection pooling.
 tokio-postgres = { version = "0.7", features = ["with-uuid-1", "with-serde_json-1"] }
 deadpool-postgres = "0.14"

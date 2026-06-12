@@ -6,8 +6,8 @@
 //! is no matrix inversion and therefore no BLAS/LAPACK dependency (keeps the
 //! crate pure-Rust and clear of the workspace `cc` cap).
 //!
-//! Reward comes from analyst actions — confirm `+1.0`, escalate `+1.5`,
-//! dismiss `-1.0` — decayed by recency. Ranking quality is measured with
+//! Reward comes from analyst actions - confirm `+1.0`, escalate `+1.5`,
+//! dismiss `-1.0` - decayed by recency. Ranking quality is measured with
 //! [`ndcg_at_k`] / [`precision_at_k`]. Weights serialize for a model registry.
 
 #![forbid(unsafe_code)]
@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 
 /// Base reward for a confirmed finding.
 pub const REWARD_CONFIRM: f32 = 1.0;
-/// Base reward for an escalated finding (highest — caught something real & urgent).
+/// Base reward for an escalated finding (highest - caught something real & urgent).
 pub const REWARD_ESCALATE: f32 = 1.5;
 /// Base reward for a dismissed finding (noise; negative).
 pub const REWARD_DISMISS: f32 = -1.0;

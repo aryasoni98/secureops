@@ -9,7 +9,7 @@ ignore = []
 
 [licenses]
 version = 2
-# Permissive licenses only — no copyleft beyond MPL/weak-copyleft.
+# Permissive licenses only - no copyleft beyond MPL/weak-copyleft.
 allow = [
     "MIT",
     "Apache-2.0",

@@ -10,8 +10,8 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-secureops-api = { path = "../secureops-api", version = "0.0.1" }
-secureops-scanner = { path = "../secureops-scanner", version = "0.0.1" }
+secureops-api = { path = "../secureops-api", version = "0.0.2" }
+secureops-scanner = { path = "../secureops-scanner", version = "0.0.2" }
 async-trait = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
 anyhow = { workspace = true }

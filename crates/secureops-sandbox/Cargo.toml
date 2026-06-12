@@ -11,7 +11,7 @@ homepage.workspace = true
 
 [dependencies]
 secureops-core = { workspace = true }
-secureops-policy = { path = "../secureops-policy", version = "0.0.1" }
+secureops-policy = { path = "../secureops-policy", version = "0.0.2" }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 

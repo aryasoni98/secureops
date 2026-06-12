@@ -19,7 +19,7 @@ use crate::state::AppState;
 /// Authenticated principal carried in the session JWT / minted from an API key.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Claims {
-    /// Subject — user id.
+    /// Subject - user id.
     pub sub: String,
     /// Tenant id (multi-tenancy boundary).
     pub tenant: String,

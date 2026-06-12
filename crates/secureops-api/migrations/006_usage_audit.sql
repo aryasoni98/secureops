@@ -1,4 +1,4 @@
--- 006_usage_audit — LLM token/cost usage + the tamper-evident, APPEND-ONLY
+-- 006_usage_audit - LLM token/cost usage + the tamper-evident, APPEND-ONLY
 -- audit log (PRODUCT.md Phase 5 LAW ⑤: REVOKE UPDATE, DELETE on every mutation).
 
 CREATE TABLE IF NOT EXISTS usage (

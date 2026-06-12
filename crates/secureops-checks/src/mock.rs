@@ -1,6 +1,6 @@
 //! In-memory [`AuditContext`] for unit-testing checks without touching disk.
 //!
-//! Not part of the production path — exposed (doc-hidden) so each category
+//! Not part of the production path - exposed (doc-hidden) so each category
 //! module's `#[cfg(test)]` block can build a context with exactly the files,
 //! permissions, config and metadata that finding needs.
 

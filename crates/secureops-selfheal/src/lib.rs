@@ -3,10 +3,10 @@
 //! YAML-defined **self-healing playbooks** (PRODUCT.md §19 + Phase 7). Each
 //! playbook declares a remediation class that fixes the execution path:
 //!
-//! - **Safe** — `dry_run → execute → audit`.
-//! - **Reversible** — `snapshot → execute → health_check`; on failure
+//! - **Safe** - `dry_run → execute → audit`.
+//! - **Reversible** - `snapshot → execute → health_check`; on failure
 //!   `rollback(snapshot) → audit(RolledBack)`.
-//! - **Destructive** — requires human approval first; without an `Approved`
+//! - **Destructive** - requires human approval first; without an `Approved`
 //!   decision the cloud is **never touched** (`Aborted`).
 //!
 //! A per-class **circuit breaker** halts a class once its 5-minute error rate
@@ -27,11 +27,11 @@ use std::time::Instant;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PlaybookClass {
-    /// Idempotent, no data loss — apply directly.
+    /// Idempotent, no data loss - apply directly.
     Safe,
-    /// Mutating but undoable — snapshot first, roll back on failure.
+    /// Mutating but undoable - snapshot first, roll back on failure.
     Reversible,
-    /// Irreversible / high-impact — requires human approval.
+    /// Irreversible / high-impact - requires human approval.
     Destructive,
 }
 
@@ -67,7 +67,7 @@ impl Playbook {
     }
 }
 
-/// The cloud mutation surface — implemented for real providers (AWS/GCP/Azure)
+/// The cloud mutation surface - implemented for real providers (AWS/GCP/Azure)
 /// or a mock. All steps are opaque command strings the backend interprets.
 #[async_trait]
 pub trait CloudBackend: Send + Sync {
@@ -143,7 +143,7 @@ impl AuditSink for VecAudit {
 pub struct ExecOutcome {
     pub state: ExecState,
     /// Whether the backend's `execute` was actually invoked (false for an
-    /// aborted destructive run — the key safety guarantee).
+    /// aborted destructive run - the key safety guarantee).
     pub executed: bool,
 }
 
@@ -486,7 +486,7 @@ pub enum CloudAction {
         firewall: String,
         cidr: String,
     },
-    /// Unrecognized op — carries the raw step (a backend may log/skip it).
+    /// Unrecognized op - carries the raw step (a backend may log/skip it).
     Unknown(String),
 }
 

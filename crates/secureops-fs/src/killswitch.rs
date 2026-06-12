@@ -1,4 +1,4 @@
-//! Kill switch (directive G2 — CSA / CoSAI) — port of the `isKillSwitchActive` /
+//! Kill switch (directive G2 - CSA / CoSAI) - port of the `isKillSwitchActive` /
 //! `activateKillSwitch` / `deactivateKillSwitch` functions in `src/index.ts`.
 //!
 //! The kill switch is a single file at `<stateDir>/.secureops/killswitch`. Its
@@ -32,7 +32,7 @@ pub async fn is_kill_switch_active(state_dir: &str) -> bool {
         .is_ok()
 }
 
-/// Activate the kill switch — writes the record (blocks all tool calls). Port of
+/// Activate the kill switch - writes the record (blocks all tool calls). Port of
 /// `activateKillSwitch`. `now` is an injected RFC3339 timestamp; `reason`
 /// defaults to `"Manual activation"`.
 pub async fn activate_kill_switch(
@@ -51,7 +51,7 @@ pub async fn activate_kill_switch(
     tokio::fs::write(sc_dir.join("killswitch"), content).await
 }
 
-/// Deactivate the kill switch — removes the file (resumes normal operation).
+/// Deactivate the kill switch - removes the file (resumes normal operation).
 /// Port of `deactivateKillSwitch` (already-inactive is not an error).
 pub async fn deactivate_kill_switch(state_dir: &str) -> std::io::Result<()> {
     match tokio::fs::remove_file(kill_switch_path(state_dir)).await {

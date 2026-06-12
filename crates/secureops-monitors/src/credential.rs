@@ -1,4 +1,4 @@
-//! Credential monitor — port of `monitors/credential-monitor.ts`.
+//! Credential monitor - port of `monitors/credential-monitor.ts`.
 //!
 //! The TS module watches the credentials dir + `.env` with chokidar and alerts
 //! on new/changed/deleted files and over-permissive modes. The verifiable core
@@ -46,7 +46,7 @@ pub async fn scan_credentials(state_dir: &str) -> HashMap<String, u32> {
 }
 
 /// Alert if a credential file's mode is group/other-accessible
-/// (`(mode & 0o077) != 0`) — port of the chokidar `change` handler check.
+/// (`(mode & 0o077) != 0`) - port of the chokidar `change` handler check.
 /// `mode` is the permission bits (already masked to `0o777`).
 pub fn permission_alert(path: &str, mode: u32, now_iso: &str) -> Option<MonitorAlert> {
     if is_group_or_other_accessible(mode) {

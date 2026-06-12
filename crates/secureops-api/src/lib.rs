@@ -1,14 +1,14 @@
-//! # secureops-api — SecureOps platform HTTP API (PRODUCT.md Phase 5)
+//! # secureops-api - SecureOps platform HTTP API (PRODUCT.md Phase 5)
 //!
 //! An axum service exposing the multi-cloud security platform over REST +
 //! WebSocket. It is the front door for the platform tier (the CLI/daemon remain
 //! the host-local enforcement surface):
 //!
-//! - **License activation** — Ed25519-verified keys gate tiers/features ([`license`]).
-//! - **Auth** — dual JWT (HMAC) + per-tenant API key, hashed at rest ([`auth`]).
-//! - **Authorization** — Cedar policy gates every tier-locked capability ([`authz`]).
-//! - **Realtime** — a `tokio::broadcast` hub fans findings/scan progress to WS clients ([`ws`]).
-//! - **Storage** — a [`store::Store`] trait over Postgres (prod) / in-memory (test).
+//! - **License activation** - Ed25519-verified keys gate tiers/features ([`license`]).
+//! - **Auth** - dual JWT (HMAC) + per-tenant API key, hashed at rest ([`auth`]).
+//! - **Authorization** - Cedar policy gates every tier-locked capability ([`authz`]).
+//! - **Realtime** - a `tokio::broadcast` hub fans findings/scan progress to WS clients ([`ws`]).
+//! - **Storage** - a [`store::Store`] trait over Postgres (prod) / in-memory (test).
 //!
 //! Handlers depend on the [`AppState`] only, so the whole surface unit-tests
 //! against an in-memory store with no external infrastructure.
@@ -52,7 +52,7 @@ pub mod state {
     use crate::store::Store;
     use crate::ws::Hub;
 
-    /// Cloneable handle to all shared services. `Clone` is cheap — everything is
+    /// Cloneable handle to all shared services. `Clone` is cheap - everything is
     /// behind an `Arc` or a pool handle.
     #[derive(Clone)]
     pub struct AppState {

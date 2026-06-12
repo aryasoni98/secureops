@@ -1,4 +1,4 @@
-//! The `AuditContext` trait — dependency injection for every environment touch.
+//! The `AuditContext` trait - dependency injection for every environment touch.
 //!
 //! Port of the `AuditContext` interface in `src/types.ts`. Checks receive
 //! `&dyn AuditContext` and never touch the filesystem directly, so they stay

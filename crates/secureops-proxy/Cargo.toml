@@ -26,4 +26,4 @@ tracing.workspace = true
 # rustls           = "0.23"        # parse ClientHello / SNI without MITM (no cert interception)
 # tokio-rustls     = "0.26"        # async TLS plumbing for the proxy listener
 hickory-proto = { version = "0.24", default-features = false }
-# hickory-resolver / hickory-server — full async resolver + authority server (future B.5)
+# hickory-resolver / hickory-server - full async resolver + authority server (future B.5)

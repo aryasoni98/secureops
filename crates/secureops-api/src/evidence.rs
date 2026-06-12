@@ -2,7 +2,7 @@
 //! evidence upload, GET for snapshot restore).
 //!
 //! Implements AWS Signature V4 *query-string* presigning in pure Rust (HMAC-
-//! SHA256) — no `aws-sdk` (which would drag `aws-lc-sys`/`cc >=1.1` and clash
+//! SHA256) - no `aws-sdk` (which would drag `aws-lc-sys`/`cc >=1.1` and clash
 //! with the workspace `cc <1.1` cap). Works against AWS S3 and MinIO (path-style).
 
 use hmac::{Hmac, Mac};
@@ -143,7 +143,7 @@ impl S3Presigner {
 mod tests {
     use super::*;
 
-    /// Canonical AWS SigV4 example — "GET Object (using query parameters)" from
+    /// Canonical AWS SigV4 example - "GET Object (using query parameters)" from
     /// the AWS docs. Verifies our signature byte-for-byte against AWS's published
     /// expected value, proving the algorithm is correct (not just deterministic).
     #[test]

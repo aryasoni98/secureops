@@ -1,7 +1,7 @@
 //! Execution / sandbox category (PRODUCT.md A.4, B.2).
 //!
 //! Ports `auditExecution` from `secureops/src/auditor.ts`: validates the
-//! `exec`/`sandbox` config — command execution gating, sandbox enforcement,
+//! `exec`/`sandbox` config - command execution gating, sandbox enforcement,
 //! and tool-invocation surface (SC-EXEC-\*), plus Docker-compose hardening.
 
 use async_trait::async_trait;
@@ -45,7 +45,7 @@ impl Check for ExecutionCheck {
                     )
                     .evidence("exec.approvals = \"off\"")
                     .remediation(
-                        "Manually set exec.approvals to \"always\" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)",
+                        "Manually set exec.approvals to \"always\" in your OpenClaw settings (not auto-fixable - key not in OpenClaw config schema)",
                     )
                     .references(["CVE-2026-25253"])
                     .owasp_asi("ASI02")
@@ -92,7 +92,7 @@ impl Check for ExecutionCheck {
                     ))
                     .evidence(format!("sandbox.mode = \"{}\"", mode_label))
                     .remediation(
-                        "Manually set sandbox.mode to \"all\" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)",
+                        "Manually set sandbox.mode to \"all\" in your OpenClaw settings (not auto-fixable - key not in OpenClaw config schema)",
                     )
                     .owasp_asi("ASI05")
                     .maestro(MaestroLayer::L3)

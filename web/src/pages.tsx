@@ -1,10 +1,10 @@
-// Authenticated dashboard pages (PRODUCT.md Phase 8 — seven screens).
+// Authenticated dashboard pages (PRODUCT.md Phase 8 - seven screens).
 // All fetches go through the typed `api` client. Each page is self-contained;
 // shared chrome lives in `components.tsx`. Every data fetch keeps a separate
 // error state so "empty" never masks "API failed", and mutating buttons are
 // disabled while their request is in flight.
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   api,
   downloadBlob,
@@ -16,6 +16,7 @@ import {
   type Remediation,
 } from "./api";
 import { EmptyRow, ErrorNotice, Page, PillButton, SeverityBadge } from "./components";
+import { buildGraph, layoutGraph } from "./graphLayout";
 
 const SEVERITY_FILTERS: ReadonlyArray<"" | Finding["severity"]> = [
   "",
@@ -90,7 +91,7 @@ export function Findings() {
                 <SeverityBadge severity={f.severity} />
               </td>
               <td className="p-2">{f.title}</td>
-              <td className="p-2">{f.cloud || "—"}</td>
+              <td className="p-2">{f.cloud || "-"}</td>
               <td className="p-2">{f.blastRadius}</td>
               <td className="p-2">{f.status}</td>
               <td className="p-2 flex gap-2">
@@ -119,7 +120,7 @@ export function Findings() {
             </tr>
           ))}
           {items.length === 0 && !error && (
-            <EmptyRow colSpan={6}>No findings yet — run a scan from /setup/scan.</EmptyRow>
+            <EmptyRow colSpan={6}>No findings yet - run a scan from /setup/scan.</EmptyRow>
           )}
         </tbody>
       </table>
@@ -201,10 +202,15 @@ export function Compliance() {
   );
 }
 
+const GRAPH_W = 800;
+const GRAPH_H = 460;
+
 export function Graph() {
   const [paths, setPaths] = useState<AttackPath[]>([]);
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [blast, setBlast] = useState<number | null>(null);
   useEffect(() => {
     api
       .attackPaths()
@@ -214,13 +220,115 @@ export function Graph() {
       })
       .catch(() => setError("Could not load attack paths."));
   }, [reloadKey]);
+
+  const graph = useMemo(() => buildGraph(paths), [paths]);
+  const nodes = useMemo(() => layoutGraph(graph, GRAPH_W, GRAPH_H), [graph]);
+  const pos = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
+  // Entry points (first node of a path) render emerald; targets rose.
+  const entries = useMemo(() => new Set(paths.map((p) => p.nodes[0])), [paths]);
+  const targets = useMemo(
+    () => new Set(paths.map((p) => p.nodes[p.nodes.length - 1])),
+    [paths],
+  );
+
+  function pick(id: string) {
+    setSelected(id);
+    setBlast(null);
+    api
+      .blastRadius(id)
+      .then((r) => setBlast(r.blastRadius))
+      .catch(() => setBlast(null));
+  }
+
   return (
     <Page title="Attack paths">
       {error && <ErrorNotice message={error} onRetry={() => setReloadKey((k) => k + 1)} />}
       <p className="text-slate-400 mb-4">
-        Internet → sensitive nodes ranked by blast radius. (D3 force-graph view rendered on the
-        same payload when `@adversa/d3` is added.)
+        Internet → sensitive nodes ranked by blast radius. Click a node for its blast radius.
       </p>
+      {nodes.length > 0 && (
+        <div className="bg-slate-900 border border-slate-800 rounded mb-4 overflow-hidden">
+          <svg
+            viewBox={`0 0 ${GRAPH_W} ${GRAPH_H}`}
+            className="w-full"
+            role="img"
+            aria-label="Attack path graph"
+          >
+            <defs>
+              <marker
+                id="arrow"
+                viewBox="0 0 10 10"
+                refX="22"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569" />
+              </marker>
+            </defs>
+            {graph.edges.map(([s, t]) => {
+              const a = pos.get(s);
+              const b = pos.get(t);
+              if (!a || !b) return null;
+              return (
+                <line
+                  key={`${s}->${t}`}
+                  x1={a.x}
+                  y1={a.y}
+                  x2={b.x}
+                  y2={b.y}
+                  stroke="#475569"
+                  strokeWidth="1.5"
+                  markerEnd="url(#arrow)"
+                />
+              );
+            })}
+            {nodes.map((n) => {
+              const fill = entries.has(n.id)
+                ? "#10b981"
+                : targets.has(n.id)
+                  ? "#f43f5e"
+                  : "#64748b";
+              return (
+                <g
+                  key={n.id}
+                  onClick={() => pick(n.id)}
+                  className="cursor-pointer"
+                  data-testid={`graph-node-${n.id}`}
+                >
+                  <circle
+                    cx={n.x}
+                    cy={n.y}
+                    r={selected === n.id ? 14 : 10}
+                    fill={fill}
+                    stroke={selected === n.id ? "#f8fafc" : "#0f172a"}
+                    strokeWidth="2"
+                  />
+                  <text
+                    x={n.x}
+                    y={n.y - 16}
+                    textAnchor="middle"
+                    fill="#cbd5e1"
+                    fontSize="11"
+                    fontFamily="monospace"
+                  >
+                    {n.id}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+          {selected && (
+            <div className="px-3 py-2 border-t border-slate-800 text-sm text-slate-300">
+              <code>{selected}</code>{" "}
+              <span className="text-amber-400">
+                blast radius {blast ?? "…"}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
       <ul className="space-y-2">
         {paths.map((p, i) => (
           <li key={i} className="bg-slate-900 border border-slate-800 rounded p-3 text-sm">
@@ -229,7 +337,7 @@ export function Graph() {
           </li>
         ))}
         {paths.length === 0 && !error && (
-          <li className="text-slate-500">No path data yet — call POST /graph/rebuild.</li>
+          <li className="text-slate-500">No path data yet - call POST /graph/rebuild.</li>
         )}
       </ul>
     </Page>

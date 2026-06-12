@@ -2,7 +2,7 @@
 //!
 //! Ports `auditCostExposure` from `secureops/src/auditor.ts`: validates LLM
 //! spending guardrails so a compromised or runaway agent cannot incur unbounded
-//! spend — provider spending limits, session-log cost estimation, high-frequency
+//! spend - provider spending limits, session-log cost estimation, high-frequency
 //! cron invocation, and the configured daily cost threshold (SC-COST-\*). Emits
 //! the `"cost"` wire category.
 
@@ -15,7 +15,7 @@ use secureops_core::{
 use std::sync::{Arc, LazyLock};
 
 /// High-frequency cron schedule detector (TS inline regex in COST-003):
-/// `/(\*\/[1-4]\s|\*\s\*\s\*\s\*\s\*)/` — a `*/1`..`*/4` step or the
+/// `/(\*\/[1-4]\s|\*\s\*\s\*\s\*\s\*)/` - a `*/1`..`*/4` step or the
 /// every-minute `* * * * *` pattern.
 static HIGH_FREQ_CRON: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(\*/[1-4]\s|\*\s\*\s\*\s\*\s\*)").expect("static high-freq cron pattern compiles")
@@ -85,12 +85,12 @@ fn parse_log_line(line: &str) -> Option<LogEntry> {
     })
 }
 
-/// Minimal recursive-descent JSON parser — just enough to validate a line and
+/// Minimal recursive-descent JSON parser - just enough to validate a line and
 /// read top-level numeric fields, matching `JSON.parse` accept/reject behavior.
 /// Not a public API; lives only to keep this crate free of a `serde_json` dep.
 mod json {
     /// All JSON value kinds are represented for parser completeness, but only
-    /// `Object`/`Number` are read by callers — the parser still has to walk
+    /// `Object`/`Number` are read by callers - the parser still has to walk
     /// past strings/bools/nulls/arrays to validate the surrounding object.
     #[allow(dead_code)]
     pub enum JsonValue {

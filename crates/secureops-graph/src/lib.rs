@@ -4,10 +4,10 @@
 //! cloud assets and identities as nodes, typed security relationships as edges.
 //! Two analyses drive remediation priority:
 //!
-//! - [`SecurityGraph::attack_paths`] — shortest (lowest exploit-difficulty)
+//! - [`SecurityGraph::attack_paths`] - shortest (lowest exploit-difficulty)
 //!   paths from any internet-`Exposes`d node to any `sensitive` node, via
 //!   Dijkstra with path reconstruction, sorted by blast radius then difficulty.
-//! - [`SecurityGraph::blast_radius`] — how many sensitive nodes become reachable
+//! - [`SecurityGraph::blast_radius`] - how many sensitive nodes become reachable
 //!   if a given node is compromised (BFS).
 //!
 //! Pure in-memory + deterministic (no DB), so it unit-tests anywhere. A Neo4j
@@ -44,7 +44,7 @@ pub enum EdgeKind {
     Owns,
 }
 
-/// A graph node — a cloud asset or identity.
+/// A graph node - a cloud asset or identity.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeData {
     pub id: String,

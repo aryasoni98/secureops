@@ -1,7 +1,7 @@
 //! **Signed incident-report export** (PRODUCT.md Phase 8): bundle findings + a
 //! manifest into a ZIP and **Ed25519-sign** the contents, so a regulator can
 //! verify the package is intact and authentic with the embedded vendor public
-//! key. Uses stored (uncompressed) ZIP entries — no compression C deps.
+//! key. Uses stored (uncompressed) ZIP entries - no compression C deps.
 //!
 //! Bundle layout: `findings.json`, `manifest.json`, `signature.hex` (sig over
 //! `findings.json ‖ manifest.json`), `pubkey.hex`.

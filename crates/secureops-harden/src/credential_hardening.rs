@@ -1,4 +1,4 @@
-//! Credential hardening (priority 2) — port of `hardening/credential-hardening.ts`.
+//! Credential hardening (priority 2) - port of `hardening/credential-hardening.ts`.
 //!
 //! Locks down secrets on disk: `chmod 700` the state dir, `chmod 600` the
 //! config / credential files / per-agent `auth-profiles.json`, and redacts
@@ -6,7 +6,7 @@
 //!
 //! `.env` encryption: when a `.env` is present, it is backed up and encrypted
 //! to `.env.enc` (AES-256-GCM, machine-keyed via
-//! [`secureops_crypto::machinekey`]), pushing `cred-env-encrypt` — a faithful
+//! [`secureops_crypto::machinekey`]), pushing `cred-env-encrypt` - a faithful
 //! port of the TS block (kept inside a `try`-equivalent: keystore failure skips
 //! the action rather than erroring the run).
 //!
@@ -203,7 +203,7 @@ impl CredentialHardening {
                 }
             }
         }
-        // else: no credentials directory — nothing to do.
+        // else: no credentials directory - nothing to do.
 
         // 4. Lock auth-profiles
         let agents_dir = state_dir.join("agents");
@@ -235,7 +235,7 @@ impl CredentialHardening {
         }
         // else: no agents directory.
 
-        // 5. Encrypt .env file (AES-256-GCM, machine-keyed) — port of the TS
+        // 5. Encrypt .env file (AES-256-GCM, machine-keyed) - port of the TS
         //    `.env` block. Back up, derive the machine key via the keystore,
         //    encrypt to `.env.enc` (0o600), and record `cred-env-encrypt`.
         let env_path = state_dir.join(".env");
@@ -314,7 +314,7 @@ mod tests {
     use secureops_core::OpenClawConfig;
     use std::collections::HashMap;
 
-    /// Minimal in-crate mock — only implements the accessors the tests touch.
+    /// Minimal in-crate mock - only implements the accessors the tests touch.
     struct MockCtx {
         state_dir: String,
         config: OpenClawConfig,

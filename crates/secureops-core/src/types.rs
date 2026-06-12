@@ -1,4 +1,4 @@
-//! Audit finding / report value types — the JSON wire contract.
+//! Audit finding / report value types - the JSON wire contract.
 //!
 //! Faithful port of `src/types.ts`. Field names are pinned to the TypeScript
 //! shapes via serde renames; do not change them without updating the TS shim.
@@ -187,7 +187,7 @@ pub struct AuditSummary {
     pub auto_fixable: u32,
 }
 
-/// Full audit report — the top-level JSON document.
+/// Full audit report - the top-level JSON document.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AuditReport {

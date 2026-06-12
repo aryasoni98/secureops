@@ -1,4 +1,4 @@
-//! Gateway hardening (priority 1) — faithful port of `hardening/gateway-hardening.ts`.
+//! Gateway hardening (priority 1) - faithful port of `hardening/gateway-hardening.ts`.
 //!
 //! `check()` reports findings SC-GW-001/002/003/009/010/007; `fix()` backs up
 //! `openclaw.json` into the backup dir, then enforces loopback bind, enables
@@ -135,7 +135,7 @@ impl HardeningModule for GatewayHardening {
                         .title("mDNS in full mode")
                         .description("mDNS is broadcasting in full mode, exposing service information to the local network.")
                         .evidence(format!("mdns.mode = \"{}\"", mode.unwrap_or("")))
-                        .remediation("Manually set gateway.mdns.mode to \"minimal\" (not auto-fixable — key not in OpenClaw config schema)")
+                        .remediation("Manually set gateway.mdns.mode to \"minimal\" (not auto-fixable - key not in OpenClaw config schema)")
                         .owasp_asi("ASI05")
                         .build(),
                 );
@@ -164,7 +164,7 @@ impl HardeningModule for GatewayHardening {
     }
 }
 
-/// Inner fix routine — the body of the TS `try {}` block. The caller wraps the
+/// Inner fix routine - the body of the TS `try {}` block. The caller wraps the
 /// `Err` into the `errors` vec (ports the `catch`).
 async fn fix_inner(
     ctx: &dyn AuditContext,
@@ -172,7 +172,7 @@ async fn fix_inner(
     applied: &mut Vec<HardeningAction>,
 ) -> std::io::Result<()> {
     // Backup current config. A missing file is fine (nothing to back up yet,
-    // like the TS try/catch); any other I/O failure aborts — we must not
+    // like the TS try/catch); any other I/O failure aborts - we must not
     // rewrite a config we could not back up.
     let config_path = format!("{}/openclaw.json", ctx.state_dir());
     if let Err(e) = tokio::fs::copy(&config_path, backup_dir.join("openclaw.json")).await {
@@ -249,7 +249,7 @@ async fn fix_inner(
         });
     }
 
-    // 4. Strip gateway.mdns — NOT a valid OpenClaw config key.
+    // 4. Strip gateway.mdns - NOT a valid OpenClaw config key.
     // mDNS findings are reported as non-auto-fixable in the auditor.
     // TS `delete gwAny['mdns']` -> set the Option field to None.
     if gw.mdns.is_some() {

@@ -10,12 +10,12 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-secureops-tokenbudget = { path = "../secureops-tokenbudget", version = "0.0.1" }
+secureops-tokenbudget = { path = "../secureops-tokenbudget", version = "0.0.2" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 async-trait = { workspace = true }
 anyhow = { workspace = true }
-# Real HTTP LLM providers — optional so the default build stays offline/light.
+# Real HTTP LLM providers - optional so the default build stays offline/light.
 # rustls (not native-tls) reuses the workspace-locked ring → no cc-cap bump.
 reqwest = { version = "0.12", default-features = false, features = [
     "json",

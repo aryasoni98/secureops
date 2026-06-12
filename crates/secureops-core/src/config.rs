@@ -270,7 +270,7 @@ pub struct OpenClawConfig {
 
 impl OpenClawConfig {
     /// Parse `openclaw.json` content, falling back to [`OpenClawConfig::default`]
-    /// on missing or malformed input — the shared parse-or-default contract used
+    /// on missing or malformed input - the shared parse-or-default contract used
     /// by every loader (CLI, napi, harden, daemon). Pass the file content (or
     /// an empty string when the file is absent); the result is identical to the
     /// TS tool's `try { JSON.parse(...) } catch { {} }`.

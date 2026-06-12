@@ -1,4 +1,4 @@
-# secureops-ebpf — kernel-side eBPF programs for the SecureOps kernel PEP.
+# secureops-ebpf - kernel-side eBPF programs for the SecureOps kernel PEP.
 #
 # Built separately from the main workspace (requires bpfel-unknown-none target):
 #   cargo install bpf-linker

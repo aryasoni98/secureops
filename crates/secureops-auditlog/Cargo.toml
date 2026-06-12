@@ -28,4 +28,4 @@ tempfile = "3"
 # sha2 = "0.10"           # SHA-256: hash = H(prev_hash || canonical(payload)) chain link
 # ed25519-dalek = "2"     # ed25519 sign/verify each LogEntry; key from keychain/TPM (A.3)
 # rekor-client = "0.1"    # optional anchor of the chain head to a Rekor transparency log (W6)
-# (RFC3161 timestamp-authority anchoring — alternative to Rekor — via a TSA client crate)
+# (RFC3161 timestamp-authority anchoring - alternative to Rekor - via a TSA client crate)

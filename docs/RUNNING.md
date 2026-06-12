@@ -47,8 +47,8 @@ cargo install just
 
 Optional:
 
-- **eBPF kernel PEP**: Linux only — [§1.6 eBPF](#16-ebpf-linux-only)
-- **N-API / TS parity**: Node + `../secureops` npm build — [§1.7](#17-optional-n-api-and-ts-parity)
+- **eBPF kernel PEP**: Linux only - [§1.6 eBPF](#16-ebpf-linux-only)
+- **N-API / TS parity**: Node + `../secureops` npm build - [§1.7](#17-optional-n-api-and-ts-parity)
 
 ### 1.2 One-command setup
 
@@ -60,10 +60,10 @@ just setup
 
 This runs, in order:
 
-1. `check-deps` — `cargo`, `rustc`, `node` on PATH  
-2. `build` — `cargo build --workspace`  
-3. `test` — `cargo test --workspace` (~165 tests)  
-4. `state-init` — creates `OPENCLAW_STATE_DIR` (default `/tmp/secureops-demo`) and runs `secureops init`
+1. `check-deps` - `cargo`, `rustc`, `node` on PATH  
+2. `build` - `cargo build --workspace`  
+3. `test` - `cargo test --workspace` (~165 tests)  
+4. `state-init` - creates `OPENCLAW_STATE_DIR` (default `/tmp/secureops-demo`) and runs `secureops init`
 
 Override the state directory:
 
@@ -213,7 +213,7 @@ git clone https://github.com/aryasoni98/secureops.git
 cd secureops
 ```
 
-**Option A — Just (recommended):**
+**Option A - Just (recommended):**
 
 ```sh
 # Install just on the instance (once)
@@ -222,7 +222,7 @@ cargo install just   # needs Rust on EC2, or download just binary from GitHub re
 just docker-up
 ```
 
-**Option B — Compose directly:**
+**Option B - Compose directly:**
 
 ```sh
 docker compose -f deploy/docker/docker-compose.yml up -d --build
@@ -281,7 +281,7 @@ Do **not** expose the state directory or daemon admin interfaces to the internet
 0 6 * * * ec2-user cd /home/ec2-user/secureops/rust && docker compose -f deploy/docker/docker-compose.yml --profile tools run --rm secureops-audit >> /var/log/secureops-audit.log 2>&1
 ```
 
-Exit code `2` from `audit --json` means score below threshold — treat as failure in monitoring.
+Exit code `2` from `audit --json` means score below threshold - treat as failure in monitoring.
 
 ---
 
@@ -289,10 +289,10 @@ Exit code `2` from `audit --json` means score below threshold — treat as failu
 
 Manifests live in **`deploy/k8s/`** (Kustomize). They deploy:
 
-- **Deployment** `secureops-daemon` — Ring-2 daemon (init container runs `secureops init`)
-- **CronJob** `secureops-audit` — daily `secureops audit --json` (06:00 UTC)
-- **PVC** `openclaw-state` — shared state at `/data/openclaw`
-- **ConfigMap** `openclaw-config` — sample `openclaw.json`
+- **Deployment** `secureops-daemon` - Ring-2 daemon (init container runs `secureops init`)
+- **CronJob** `secureops-audit` - daily `secureops audit --json` (06:00 UTC)
+- **PVC** `openclaw-state` - shared state at `/data/openclaw`
+- **ConfigMap** `openclaw-config` - sample `openclaw.json`
 
 ### 3.1 Prerequisites
 
@@ -300,7 +300,7 @@ Manifests live in **`deploy/k8s/`** (Kustomize). They deploy:
 |-------------|-------|
 | Cluster | EKS, GKE, AKS, or local kind/minikube |
 | `kubectl` | Configured for the cluster |
-| Container image | `secureops-rust:latest` (build and load/push — below) |
+| Container image | `secureops-rust:latest` (build and load/push - below) |
 
 ### 3.2 Build and publish the image
 
@@ -398,8 +398,8 @@ just k8s-delete
 | Variable | Default | Used by |
 |----------|---------|---------|
 | `OPENCLAW_STATE_DIR` | `~/.openclaw` (CLI/daemon) or `/tmp/secureops-demo` (Justfile) | CLI, daemon, containers |
-| `SECUREOPS_BPF_OBJ` | (unset) | Daemon — path to eBPF object (Linux) |
-| `SECUREOPS_NETWORK_MODE` | `bridge` | docker-compose — set `host` on Linux EC2 for egress |
+| `SECUREOPS_BPF_OBJ` | (unset) | Daemon - path to eBPF object (Linux) |
+| `SECUREOPS_NETWORK_MODE` | `bridge` | docker-compose - set `host` on Linux EC2 for egress |
 
 ---
 
@@ -409,10 +409,10 @@ just k8s-delete
 |---------|-----|
 | `napi-build` / Node errors on build | Install Node 18+; or build only CLI/daemon: `cargo build -p secureops-cli -p secureops-daemon` |
 | `just: command not found` | `brew install just` or use manual `cargo` commands in §1.3 |
-| Daemon exits immediately | Kill switch active — `just kill-off` or remove `$STATE_DIR/.secureops/killswitch` |
+| Daemon exits immediately | Kill switch active - `just kill-off` or remove `$STATE_DIR/.secureops/killswitch` |
 | Egress proxy unreachable from host | Use `SECUREOPS_NETWORK_MODE=host` on Linux, or run daemon natively |
 | K8s `ImagePullBackOff` | Push image to cluster registry or `kind load docker-image` |
-| Audit exit code 2 | Score &lt; 80 — inspect JSON findings; not a crash |
+| Audit exit code 2 | Score &lt; 80 - inspect JSON findings; not a crash |
 
 ---
 

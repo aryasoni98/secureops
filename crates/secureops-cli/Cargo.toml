@@ -22,13 +22,13 @@ secureops-core = { workspace = true }
 # Sibling scaffold crates wired in once their stubs are filled (PRODUCT.md Part G).
 # `secureops_checks::default_checks()` supplies the `Vec<Box<dyn Check>>` and
 # `secureops_fs::FsAuditContext` supplies the on-disk `AuditContext`.
-secureops-checks = { path = "../secureops-checks", version = "0.0.1" }
-secureops-fs = { path = "../secureops-fs", version = "0.0.1" }
-secureops-intel = { path = "../secureops-intel", version = "0.0.1" }   # load the bundled IOC database
-secureops-harden = { path = "../secureops-harden", version = "0.0.1" } # harden + rollback engine
-secureops-monitors = { path = "../secureops-monitors", version = "0.0.1" } # live monitor daemon
-secureops-crypto = { path = "../secureops-crypto", version = "0.0.1" }     # keystore init + keychain signer
-secureops-auditlog = { path = "../secureops-auditlog", version = "0.0.1" } # hash-chain incident anchor (B.9)
+secureops-checks = { path = "../secureops-checks", version = "0.0.2" }
+secureops-fs = { path = "../secureops-fs", version = "0.0.2" }
+secureops-intel = { path = "../secureops-intel", version = "0.0.2" }   # load the bundled IOC database
+secureops-harden = { path = "../secureops-harden", version = "0.0.2" } # harden + rollback engine
+secureops-monitors = { path = "../secureops-monitors", version = "0.0.2" } # live monitor daemon
+secureops-crypto = { path = "../secureops-crypto", version = "0.0.2" }     # keystore init + keychain signer
+secureops-auditlog = { path = "../secureops-auditlog", version = "0.0.2" } # hash-chain incident anchor (B.9)
 
 # CLI plumbing.
 clap = { workspace = true }

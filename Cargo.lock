@@ -336,6 +336,58 @@ dependencies = [
 ]
 
 [[package]]
+name = "aws-sdk-ec2"
+version = "1.230.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81638652cf034d91ea836945433d937cf11e848a8bda5a4c1a8e8fe1844b9351"
+dependencies = [
+ "arc-swap",
+ "aws-credential-types",
+ "aws-runtime",
+ "aws-smithy-async",
+ "aws-smithy-http",
+ "aws-smithy-json",
+ "aws-smithy-observability",
+ "aws-smithy-query",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "aws-smithy-xml",
+ "aws-types",
+ "fastrand",
+ "http 0.2.12",
+ "http 1.4.1",
+ "regex-lite",
+ "tracing",
+]
+
+[[package]]
+name = "aws-sdk-iam"
+version = "1.112.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7acc751928cdc586dfd0d5bddb73c08d146cfcad6eeee70efd93ad8e4a48e76"
+dependencies = [
+ "arc-swap",
+ "aws-credential-types",
+ "aws-runtime",
+ "aws-smithy-async",
+ "aws-smithy-http",
+ "aws-smithy-json",
+ "aws-smithy-observability",
+ "aws-smithy-query",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "aws-smithy-xml",
+ "aws-types",
+ "fastrand",
+ "http 0.2.12",
+ "http 1.4.1",
+ "regex-lite",
+ "tracing",
+]
+
+[[package]]
 name = "aws-sdk-s3"
 version = "1.135.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4830,7 +4882,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-api"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4869,7 +4921,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-auditlog"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "ed25519-dalek",
@@ -4884,7 +4936,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-bench"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "criterion",
  "secureops-graph",
@@ -4894,7 +4946,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-bpf"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "aya",
@@ -4906,7 +4958,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-bughunt"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4919,7 +4971,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-chaos"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4934,7 +4986,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-checks"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "async-trait",
  "regex",
@@ -4946,7 +4998,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-cli"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -4966,7 +5018,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-core"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "async-trait",
  "serde",
@@ -4977,7 +5029,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-crypto"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -4998,7 +5050,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-daemon"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "secureops-auditlog",
@@ -5014,7 +5066,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-fs"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "async-trait",
  "secureops-core",
@@ -5026,7 +5078,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-graph"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "criterion",
@@ -5037,7 +5089,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-harden"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5051,7 +5103,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-intel"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "minisign-verify",
@@ -5069,7 +5121,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-ipc"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "async-trait",
  "secureops-core",
@@ -5081,7 +5133,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-license-server"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "axum",
@@ -5100,7 +5152,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-monitors"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5118,7 +5170,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-napi"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "napi",
  "napi-build",
@@ -5136,7 +5188,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-policy"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "cedar-policy",
  "regorus",
@@ -5149,7 +5201,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-proxy"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5161,7 +5213,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-rl"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -5169,7 +5221,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-sandbox"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "libc",
@@ -5185,10 +5237,15 @@ dependencies = [
 
 [[package]]
 name = "secureops-scanner"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "async-trait",
+ "aws-config",
+ "aws-sdk-cloudtrail",
+ "aws-sdk-ec2",
+ "aws-sdk-iam",
+ "aws-sdk-s3",
  "deadpool-redis",
  "secureops-api",
  "serde",
@@ -5201,7 +5258,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-selfheal"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5216,7 +5273,7 @@ dependencies = [
 
 [[package]]
 name = "secureops-tokenbudget"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "criterion",
  "serde",

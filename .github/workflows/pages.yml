@@ -1,4 +1,4 @@
-# GitHub Pages: landing page (site/ — Vite + React + Framer Motion) at /,
+# GitHub Pages: landing page (site/index.html - static, no build step) at /,
 # mkdocs-material docs at /docs/.
 name: Pages
 
@@ -28,18 +28,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: site/package-lock.json
-
-      - name: Build landing page
-        working-directory: site
-        run: |
-          npm ci
-          npm run build
-
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -52,7 +40,7 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp -r site/dist/* _site/
+          cp -r site/* _site/
           mkdir -p _site/docs
           cp -r _docs_build/* _site/docs/
           # Bypass Jekyll processing on Pages.

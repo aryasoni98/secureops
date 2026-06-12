@@ -36,7 +36,7 @@ spec:
               value: {{ .Values.api.otelEndpoint | quote }}
             # JWT secret + license pubkey from a Secret named per values.api.jwtSecretName
             # (keys: jwt-secret, license-pubkey). Create it out-of-band or via your
-            # secrets operator — required: the API refuses to start without them.
+            # secrets operator - required: the API refuses to start without them.
             - name: SECUREOPS_JWT_SECRET
               valueFrom:
                 secretKeyRef:

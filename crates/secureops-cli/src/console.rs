@@ -1,4 +1,4 @@
-//! Colored console report — faithful port of
+//! Colored console report - faithful port of
 //! `secureops/src/reporters/console-reporter.ts` (`formatConsoleReport`).
 //!
 //! Same ANSI codes, same grade thresholds, same layout and severity grouping

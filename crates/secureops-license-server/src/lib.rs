@@ -2,7 +2,7 @@
 //!
 //! A stateless license server (PRODUCT.md Phase 8): verifies Ed25519-signed
 //! license keys on `/heartbeat` and maintains an in-memory revocation list
-//! updated via the admin-authenticated `/revoke`. No database — the signature
+//! updated via the admin-authenticated `/revoke`. No database - the signature
 //! and the (process-lifetime) revocation set are the only state. Single-VPS
 //! deployable.
 
@@ -46,7 +46,7 @@ fn now_unix() -> i64 {
         .unwrap_or(0)
 }
 
-/// Recover the revocation set even if a prior panic poisoned the mutex — a
+/// Recover the revocation set even if a prior panic poisoned the mutex - a
 /// `HashSet` insert/contains cannot leave the set in a broken state, and a
 /// license server that panics on every later request is worse than one that
 /// keeps serving the last-known revocation list.

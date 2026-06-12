@@ -30,7 +30,7 @@ pub struct FindingFilter {
 /// The persistence contract every backend implements.
 #[async_trait]
 pub trait Store: Send + Sync {
-    /// Readiness probe — `true` when the backend is reachable.
+    /// Readiness probe - `true` when the backend is reachable.
     async fn health(&self) -> bool;
     /// Resolve a hashed API key to its principal claims.
     async fn lookup_api_key(&self, hashed: &str) -> anyhow::Result<Option<Claims>>;
@@ -38,6 +38,9 @@ pub trait Store: Send + Sync {
     async fn put_license(&self, lic: &License) -> anyhow::Result<()>;
     /// Fetch a tenant's active license.
     async fn get_license(&self, tenant: &str) -> anyhow::Result<Option<License>>;
+    /// `true` once at least one license has been activated on this instance.
+    /// Drives the server-enforced first-run wizard redirect (P8).
+    async fn any_license(&self) -> anyhow::Result<bool>;
     /// Persist a newly-queued scan job.
     async fn create_scan(&self, scan: &Scan) -> anyhow::Result<()>;
     /// Fetch one scan scoped to a tenant.
@@ -154,6 +157,10 @@ impl Store for InMemoryStore {
             .licenses
             .get(tenant)
             .cloned())
+    }
+
+    async fn any_license(&self) -> anyhow::Result<bool> {
+        Ok(!self.inner.lock().expect("mem lock").licenses.is_empty())
     }
 
     async fn create_scan(&self, scan: &Scan) -> anyhow::Result<()> {

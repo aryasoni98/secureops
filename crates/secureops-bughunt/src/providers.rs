@@ -116,7 +116,7 @@ impl AnthropicProvider {
 }
 
 // ---------------------------------------------------------------------------
-// Live HTTP implementations (gated — pull reqwest only with `live-llm`).
+// Live HTTP implementations (gated - pull reqwest only with `live-llm`).
 // ---------------------------------------------------------------------------
 
 #[cfg(feature = "live-llm")]

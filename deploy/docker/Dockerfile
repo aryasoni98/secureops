@@ -1,4 +1,4 @@
-# SecureOps Rust — multi-stage image (CLI + Ring-2 daemon + platform API)
+# SecureOps Rust - multi-stage image (CLI + Ring-2 daemon + platform API)
 # Build context: repo root   (docker build -f deploy/docker/Dockerfile .)
 
 # Pin the toolchain minor so image rebuilds are reproducible (MSRV: api crate 1.82).
@@ -10,7 +10,9 @@ RUN cargo build --release -p secureops-cli -p secureops-daemon -p secureops-api 
 
 # -----------------------------------------------------------------------------
 
-FROM debian:bookworm-slim AS runtime
+# Runtime base pinned by multi-arch index digest (resolved 2026-06-10) so a
+# repository retag can never silently change what ships.
+FROM debian:bookworm-slim@sha256:0104b334637a5f19aa9c983a91b54c89887c0984081f2068983107a6f6c21eeb AS runtime
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates tini \

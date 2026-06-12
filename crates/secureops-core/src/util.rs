@@ -7,7 +7,7 @@
 
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
-/// Current UTC time as an RFC3339 string — the Rust equivalent of TS
+/// Current UTC time as an RFC3339 string - the Rust equivalent of TS
 /// `new Date().toISOString()` (PRODUCT.md A.5 wire format). On the (impossible)
 /// formatting error, falls back to the epoch so an audit never aborts over a clock.
 pub fn now_iso() -> String {
@@ -29,14 +29,14 @@ pub fn parse_ms(ts: &str) -> Option<i128> {
         .map(|t| t.unix_timestamp_nanos() / 1_000_000)
 }
 
-/// Final path component — port of Node's `path.basename`. Trailing slashes are
+/// Final path component - port of Node's `path.basename`. Trailing slashes are
 /// trimmed first (`"a/b/" -> "b"`); a path with no separator returns itself.
 pub fn basename(p: &str) -> &str {
     p.trim_end_matches('/').rsplit('/').next().unwrap_or(p)
 }
 
 /// True if a unix permission `mode` grants any group or other access
-/// (`mode & 0o077 != 0`) — the credential-permission red flag used by the
+/// (`mode & 0o077 != 0`) - the credential-permission red flag used by the
 /// checks, hardening and credential monitor. `mode` is the permission bits,
 /// already masked to `0o777` by the caller.
 pub fn is_group_or_other_accessible(mode: u32) -> bool {

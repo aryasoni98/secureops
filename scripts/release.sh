@@ -4,7 +4,7 @@
 # Example: ./scripts/release.sh 0.2.0
 #
 # This repo is the Rust workspace at its root. The npm shim
-# (@adversa/secureops) is released from its own repository.
+# (@aryasoni98/secureops) is released from its own repository.
 set -euo pipefail
 
 VERSION="${1:-}"

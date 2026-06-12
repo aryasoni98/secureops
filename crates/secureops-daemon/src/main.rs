@@ -1,10 +1,10 @@
-//! # secureops-daemon — Ring-2 root-of-trust daemon
+//! # secureops-daemon - Ring-2 root-of-trust daemon
 //!
 //! The privileged, out-of-band process (PRODUCT.md A.1/A.3) that survives agent
 //! compromise. This binary implements the **Phase-2** slice of the B.4 runtime
 //! loop end-to-end:
 //!
-//! 1. **Kill switch first** — if `<stateDir>/.secureops/killswitch` exists,
+//! 1. **Kill switch first** - if `<stateDir>/.secureops/killswitch` exists,
 //!    refuse to bring anything up and exit (B.4 step 1 / B.9).
 //! 2. Open the persisted hash-chain audit log, then open the **AlertBus** and
 //!    spawn its consumer (prints + appends alerts).
@@ -14,7 +14,7 @@
 //! 4. Run until SIGINT; `cancel()` fans a clean shutdown to every task (step 5).
 //!
 //! The **PEPs** (egress proxy + DNS sinkhole, eBPF/LSM, WASM sandbox) and the
-//! **PDP** wiring are **Phase 4** — this daemon logs that enforcement is
+//! **PDP** wiring are **Phase 4** - this daemon logs that enforcement is
 //! disabled rather than pretending to enforce (PRODUCT.md W0: never over-trust a
 //! weaker tier).
 
@@ -80,7 +80,7 @@ fn spawn_egress_proxy(tasks: &mut JoinSet<()>, config: &secureops_core::OpenClaw
         Arc::new(secureops_proxy::AllowlistPdp::new(hosts.clone()));
     let addr: std::net::SocketAddr = "127.0.0.1:8889".parse().unwrap();
     println!(
-        "  egress proxy: ON at {addr} (set agent HTTPS_PROXY) — {} allowlisted host(s), fail-closed",
+        "  egress proxy: ON at {addr} (set agent HTTPS_PROXY) - {} allowlisted host(s), fail-closed",
         hosts.len()
     );
     tasks.spawn(async move {
@@ -105,7 +105,7 @@ fn append_audit(audit: &Arc<Mutex<AuditLog>>, payload: Value) {
 async fn main() -> Result<()> {
     let state_dir = resolve_state_dir();
 
-    println!("SecureOps daemon — Ring-2 root of trust (PRODUCT.md A.1)");
+    println!("SecureOps daemon - Ring-2 root of trust (PRODUCT.md A.1)");
     println!("  state dir: {state_dir}");
 
     let audit = open_audit_log(&state_dir)?;
@@ -118,7 +118,7 @@ async fn main() -> Result<()> {
         }),
     );
 
-    // Step 1 — kill switch first (B.4 step 1 / B.9).
+    // Step 1 - kill switch first (B.4 step 1 / B.9).
     if secureops_fs::killswitch::is_kill_switch_active(&state_dir).await {
         append_audit(
             &audit,
@@ -128,13 +128,13 @@ async fn main() -> Result<()> {
             }),
         );
         println!(
-            "  kill switch ACTIVE — refusing to bring up monitors/enforcement.\n  \
+            "  kill switch ACTIVE - refusing to bring up monitors/enforcement.\n  \
              Run `secureops kill --deactivate` to resume."
         );
         return Ok(());
     }
 
-    // Step 2 — AlertBus + consumer. Alerts print to stdout and append to the
+    // Step 2 - AlertBus + consumer. Alerts print to stdout and append to the
     // persisted hash-chain audit log. Production keychain/TPM signing remains a
     // follow-up; the current signer is process-local.
     let bus = AlertBus::new();
@@ -156,7 +156,7 @@ async fn main() -> Result<()> {
                     "details": a.details,
                 }),
             );
-            let details = a.details.map(|d| format!(" — {d}")).unwrap_or_default();
+            let details = a.details.map(|d| format!(" - {d}")).unwrap_or_default();
             println!(
                 "[{:?}] {} :: {}{}",
                 a.severity, a.monitor, a.message, details
@@ -174,7 +174,7 @@ async fn main() -> Result<()> {
     let circuit_tx_bpf = circuit_tx.clone();
     let (cancel_src, cancel) = CancellationToken::new();
 
-    // Steps 3–4 — spawn monitors by value into the JoinSet.
+    // Steps 3–4 - spawn monitors by value into the JoinSet.
     let monitors: Vec<Box<dyn Monitor>> = vec![
         Box::new(CostMonitor::new(circuit_tx).with_state_dir(state_dir.clone())),
         Box::new(CredentialMonitor::new().with_state_dir(state_dir.clone())),
@@ -201,14 +201,14 @@ async fn main() -> Result<()> {
                     }),
                 );
                 eprintln!(
-                    "[circuit] TRIPPED — new agent sessions would be refused (PRODUCT.md B.9 step 2)"
+                    "[circuit] TRIPPED - new agent sessions would be refused (PRODUCT.md B.9 step 2)"
                 );
             }
         }
     });
 
     // PEP: egress proxy (PRODUCT.md B.5, the P0 enforcement lever). Brought up
-    // only when the operator enables the egress allowlist — fail-closed.
+    // only when the operator enables the egress allowlist - fail-closed.
     let config = load_config(&state_dir);
     spawn_egress_proxy(&mut tasks, &config);
 
@@ -229,12 +229,12 @@ async fn main() -> Result<()> {
     );
 
     println!(
-        "  {} tasks running. WASM-sandbox PEP DISABLED — Phase 4.",
+        "  {} tasks running. WASM-sandbox PEP DISABLED - Phase 4.",
         tasks.len()
     );
     println!("  Ctrl-C to stop.");
 
-    // Step 5 — run until SIGINT or SIGTERM, then fan a clean shutdown.
+    // Step 5 - run until SIGINT or SIGTERM, then fan a clean shutdown.
     #[cfg(unix)]
     {
         use tokio::signal::unix::{signal, SignalKind};
@@ -247,7 +247,7 @@ async fn main() -> Result<()> {
     #[cfg(not(unix))]
     tokio::signal::ctrl_c().await?;
 
-    println!("\nshutdown signal — cancelling monitors...");
+    println!("\nshutdown signal - cancelling monitors...");
     cancel_src.cancel();
     while tasks.join_next().await.is_some() {}
     consumer.abort();

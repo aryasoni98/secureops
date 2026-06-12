@@ -1,4 +1,4 @@
-# SecureOps — Claude Opus 4.8 Prompt Pack
+# SecureOps - Claude Opus 4.8 Prompt Pack
 ## Phases P4 → P9 · Build + Test prompts · Master system prompt
 
 > **How to use:** Open a new Claude Opus 4.8 conversation.
@@ -14,7 +14,7 @@
 
 ```
 ROLE: SecureOps Senior Rust/Cloud-Security Engineer.
-STACK: 16-crate Rust workspace — axum | cedar-policy | regorus | aya | tokio
+STACK: 16-crate Rust workspace - axum | cedar-policy | regorus | aya | tokio
        | sqlx | ed25519-dalek | async-openai | petgraph | ndarray.
 PHASES DONE: P0-P3 (workspace+license-core, audit+harden,
   Ring-2: egress-proxy + DNS-sinkhole + signed-log + IPC unix socket).
@@ -31,13 +31,13 @@ Zero prose filler. Start with code.
 
 ---
 
-## P4 — eBPF Kernel Enforcement
+## P4 - eBPF Kernel Enforcement
 *Weeks 4-8 after P0-P3 · Feature-gated, Linux x86_64 · ~195 tokens build · ~90 tokens test*
 
 ### P4 BUILD
 
 ```
-PHASE P4 — eBPF Kernel Enforcement
+PHASE P4 - eBPF Kernel Enforcement
 PRIOR STATE: secureops-bpf scaffolded, feature-gated off.
   Daemon has: IPC unix socket + AlertBus + append-only auditlog.
 
@@ -50,7 +50,7 @@ DELIVER:
    deny connect() syscall on ExfilChain match → return EPERM to caller
 4. Daemon wiring in secureops-daemon/src/bpf_wire.rs:
    spawn BpfAgent as JoinSet task, subscribe to AlertBus, push ExfilChain
-5. seccomp generator: learn_mode() — ptrace-observe syscalls 30s →
+5. seccomp generator: learn_mode() - ptrace-observe syscalls 30s →
    emit seccomp-bpf JSON allowlist suitable for systemd LoadFilter
 6. Helm DaemonSet (Enterprise tier, label: tier=enterprise):
    hostPID: true, capabilities: add: [BPF, NET_RAW, SYS_ADMIN],
@@ -70,7 +70,7 @@ OUTPUT FILES:
 ### P4 TEST
 
 ```
-P4 TEST VALIDATION — assert each:
+P4 TEST VALIDATION - assert each:
 
 UNIT openat("/root/.env") + connect("1.2.3.4:443") same PID within 400ms
   → ExfilChain alert fires on AlertBus within 50ms
@@ -95,13 +95,13 @@ QUALITY: cargo clippy --features bpf -- -D warnings → clean
 
 ---
 
-## P5 — Platform Services (HTTP API + Storage Stack)
+## P5 - Platform Services (HTTP API + Storage Stack)
 *Creates all storage infra · ~220 tokens build · ~110 tokens test*
 
 ### P5 BUILD
 
 ```
-PHASE P5 — Platform Services (HTTP API + Storage Stack)
+PHASE P5 - Platform Services (HTTP API + Storage Stack)
 PRIOR STATE: P0-P3 done. No HTTP server, no Postgres, no Redis, no MinIO.
 
 DELIVER:
@@ -156,7 +156,7 @@ OUTPUT:
 ### P5 TEST
 
 ```
-P5 TEST VALIDATION — assert each:
+P5 TEST VALIDATION - assert each:
 
 API: POST /license/activate valid Ed25519 key → 200 {tier,expiry,features}
 API: POST /license/activate tampered key → 403 {error:"invalid_signature"}
@@ -185,13 +185,13 @@ QUALITY: cargo clippy -p secureops-api -- -D warnings clean
 
 ---
 
-## P6 — Intelligence Layer (Graph + LLM Bug-Hunt + TokenBudget)
+## P6 - Intelligence Layer (Graph + LLM Bug-Hunt + TokenBudget)
 *Builds knowledge graph + agentic loop · ~240 tokens build · ~125 tokens test*
 
 ### P6 BUILD
 
 ```
-PHASE P6 — Intelligence Layer
+PHASE P6 - Intelligence Layer
 PRIOR STATE: Postgres+Redis live, findings persisted.
   No graph DB, no LLM integration, no TokenBudget.
 
@@ -248,7 +248,7 @@ OUTPUT:
 ### P6 TEST
 
 ```
-P6 TEST VALIDATION — assert each:
+P6 TEST VALIDATION - assert each:
 
 GRAPH: ingest 50 mock assets + 20 identities
   → edge count correct (verify with Cypher MATCH or pg CTE COUNT)
@@ -288,13 +288,13 @@ QUALITY: cargo clippy -- -D warnings clean
 
 ---
 
-## P7 — Autonomy (RL Ranking + Self-Healing Cloud Playbooks)
+## P7 - Autonomy (RL Ranking + Self-Healing Cloud Playbooks)
 *All cloud mutation lives here · ~250 tokens build · ~140 tokens test*
 
 ### P7 BUILD
 
 ```
-PHASE P7 — Autonomy (RL Engine + Self-Healing Playbooks)
+PHASE P7 - Autonomy (RL Engine + Self-Healing Playbooks)
 PRIOR STATE: Findings scored+graphed, HITL queue table exists.
   No RL, no cloud mutations.
 
@@ -347,13 +347,13 @@ OUTPUT:
   playbooks/*.yaml (5 samples)
   trait CloudBackend + mock implementations
   API route additions, Justfile additions
-  #[cfg(test)] suite — NO live cloud calls (all via mock backend)
+  #[cfg(test)] suite - NO live cloud calls (all via mock backend)
 ```
 
 ### P7 TEST
 
 ```
-P7 TEST VALIDATION — assert each:
+P7 TEST VALIDATION - assert each:
 
 RL: LinUCB matrices update correctly after 10 known-reward feedbacks
   (verify expected posterior within 1e-6 for 2-arm case)
@@ -392,13 +392,13 @@ QUALITY: cargo test -p secureops-{rl,selfheal} green (all via mock backends)
 
 ---
 
-## P8 — Enterprise (React Dashboard + SSO + License UI + Audit Export)
+## P8 - Enterprise (React Dashboard + SSO + License UI + Audit Export)
 *First visual user-facing layer · ~245 tokens build · ~150 tokens test*
 
 ### P8 BUILD
 
 ```
-PHASE P8 — Enterprise (React Dashboard + SSO + License UI)
+PHASE P8 - Enterprise (React Dashboard + SSO + License UI)
 PRIOR STATE: All backend live (P5-P7). No web UI, no SSO, no signed export.
 
 DELIVER:
@@ -412,13 +412,13 @@ DELIVER:
    /setup/scan   → one-click → POST /scans → WS progress bar
 
    Dashboard screens:
-   /findings     — RL-ranked, filter(severity/cloud/status), CVSS badges
-   /compliance   — framework heatmap, gap %, export PDF/CSV button
-   /graph        — D3 force-directed; click→blast-radius; "explain path"
-   /remediation  — HITL queue; diff preview; approve/deny; countdown timer
-   /usage        — tokens in/out per provider; cost estimate chart
-   /license      — status badge; expiry; tier; features list; renewal link
-   /profile      — RBAC roles; API keys; notification settings
+   /findings     - RL-ranked, filter(severity/cloud/status), CVSS badges
+   /compliance   - framework heatmap, gap %, export PDF/CSV button
+   /graph        - D3 force-directed; click→blast-radius; "explain path"
+   /remediation  - HITL queue; diff preview; approve/deny; countdown timer
+   /usage        - tokens in/out per provider; cost estimate chart
+   /license      - status badge; expiry; tier; features list; renewal link
+   /profile      - RBAC roles; API keys; notification settings
 
 2. SAML/OIDC SSO (Enterprise, cedar gate: features contains "sso"):
    axum-oidc OR custom SAML2 SP. IdPs: Okta, Azure AD, Google.
@@ -456,7 +456,7 @@ OUTPUT:
 ### P8 TEST
 
 ```
-P8 TEST VALIDATION — assert each:
+P8 TEST VALIDATION - assert each:
 
 UI: GET / with no activated license → HTTP 302 → /license (server-enforced)
 UI: POST /license/activate success → wizard step 1→2 (Playwright E2E)
@@ -492,13 +492,13 @@ QUALITY: npx vitest run green; npx playwright test green
 
 ---
 
-## P9 — Hardening & GA (Supply Chain + Chaos + Pen-Test + Docs)
+## P9 - Hardening & GA (Supply Chain + Chaos + Pen-Test + Docs)
 *Ships GA-ready product · ~200 tokens build · ~145 tokens test*
 
 ### P9 BUILD
 
 ```
-PHASE P9 — Hardening & GA
+PHASE P9 - Hardening & GA
 PRIOR STATE: All features live (P0-P8). No supply-chain attestation,
   chaos tests, or docs site.
 
@@ -559,7 +559,7 @@ OUTPUT:
 ### P9 TEST
 
 ```
-P9 TEST VALIDATION — assert each:
+P9 TEST VALIDATION - assert each:
 
 SUPPLY: cargo deny check exits 0 (no banned licenses, no RustSec advisories)
 SUPPLY: cargo audit exits 0 (no known vulnerabilities)

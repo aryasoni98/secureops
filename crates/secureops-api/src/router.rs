@@ -1,26 +1,49 @@
 //! Router assembly + OpenAPI document (PRODUCT.md Phase 5).
 
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
 use axum::extract::State;
-use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse};
+use axum::http::{StatusCode, Uri};
+use axum::response::{Html, IntoResponse, Redirect};
 use axum::routing::{get, post};
 use axum::Router;
 use tower_http::services::ServeDir;
 use utoipa::OpenApi;
 
 use crate::state::AppState;
+use crate::store::Store;
 use crate::{health, intel, routes, sso, ws};
 
 /// Embed the built dashboard SPA (PRODUCT.md Phase 8): static assets under
 /// `/assets`, and any unmatched (client-side) route falls back to the SPA
 /// `index.html`. API routes still take precedence over the fallback.
-pub fn with_spa(router: Router, web_dir: &str) -> Router {
+///
+/// **First-run wizard enforcement (P8):** until a license has been activated
+/// on this instance, every SPA route except `/license` answers
+/// `302 → /license` - server-side, so the wizard cannot be skipped by typing
+/// a deep link. Once a license exists the check memoizes and the fallback
+/// never touches the store again.
+pub fn with_spa(router: Router, web_dir: &str, store: Arc<dyn Store>) -> Router {
     let index_path = format!("{web_dir}/index.html");
+    let activated = Arc::new(AtomicBool::new(false));
     router
         .nest_service("/assets", ServeDir::new(format!("{web_dir}/assets")))
-        .fallback(move || {
+        .fallback(move |uri: Uri| {
             let path = index_path.clone();
+            let store = store.clone();
+            let activated = activated.clone();
             async move {
+                if uri.path() != "/license" && !activated.load(Ordering::Relaxed) {
+                    match store.any_license().await {
+                        Ok(true) => activated.store(true, Ordering::Relaxed),
+                        // No license yet, or the store is unreachable: land on
+                        // the wizard's license step either way.
+                        Ok(false) | Err(_) => {
+                            return Redirect::temporary("/license").into_response()
+                        }
+                    }
+                }
                 match tokio::fs::read_to_string(&path).await {
                     Ok(html) => Html(html).into_response(),
                     Err(_) => (StatusCode::NOT_FOUND, "dashboard not built").into_response(),
@@ -32,7 +55,7 @@ pub fn with_spa(router: Router, web_dir: &str) -> Router {
 /// Generated OpenAPI document, served at `/api/v1/openapi.json`.
 #[derive(OpenApi)]
 #[openapi(
-    info(title = "SecureOps Platform API", version = "0.0.1"),
+    info(title = "SecureOps Platform API", version = "0.0.2"),
     components(schemas(
         crate::models::Finding,
         crate::models::Scan,

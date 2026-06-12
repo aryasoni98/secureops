@@ -1,4 +1,4 @@
--- 002_clouds — connected cloud accounts + (encrypted) LLM provider keys.
+-- 002_clouds - connected cloud accounts + (encrypted) LLM provider keys.
 
 CREATE TABLE IF NOT EXISTS clouds (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

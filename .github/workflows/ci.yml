@@ -53,22 +53,17 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: CI=1 npm run e2e
 
-  # ── Landing page: type-check + build (deploy happens in pages.yml) ──────
+  # ── Landing page: static HTML, no build - validate markup (deploy in pages.yml) ──
   site:
     name: Landing page
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: site
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: "npm"
-          cache-dependency-path: site/package-lock.json
-      - run: npm ci
-      - run: npm run build
+      - name: Validate HTML
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq tidy
+          # tidy exits 1 on warnings, 2 on errors; fail only on errors.
+          tidy -q -e site/index.html || [ $? -lt 2 ]
 
   # ── Postgres integration: runs the `#[ignore]`-gated PgStore tests ──────
   postgres-integration:
@@ -146,7 +141,7 @@ jobs:
             --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
   # ── Release: publish crates.io on version tag ───────────────────────────
-  # The npm shim (@adversa/secureops) lives in a separate repository and is
+  # The npm shim (@aryasoni98/secureops) lives in a separate repository and is
   # released from there; this workspace publishes only the Rust crates.
   publish-crates:
     name: Publish crates.io
@@ -202,7 +197,7 @@ jobs:
                 echo "skip $crate (already published)"; break
               fi
               if echo "$out" | grep -qiE '429|Too Many Requests'; then
-                echo "rate limited on $crate — sleeping 11m"; sleep 660; continue
+                echo "rate limited on $crate - sleeping 11m"; sleep 660; continue
               fi
               echo "$out"; exit 1
             done

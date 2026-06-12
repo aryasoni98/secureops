@@ -3,9 +3,9 @@ name: neo4j
 description: >-
   Neo4j graph database for the SecureOps knowledge graph (PRODUCT.md §11/Phase 6).
   Pro/Enterprise tiers; Community uses the Postgres-CTE fallback (no extra
-  container). Off by default — enable via the parent chart's `neo4j.enabled`.
+  container). Off by default - enable via the parent chart's `neo4j.enabled`.
 type: application
-version: 0.0.1
+version: 0.0.2
 appVersion: "5"
 keywords:
   - graph

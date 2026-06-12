@@ -1,4 +1,4 @@
-//! Behavioral baseline (directive G3) — faithful port of `logToolCall` /
+//! Behavioral baseline (directive G3) - faithful port of `logToolCall` /
 //! `getBehavioralBaseline` from `src/index.ts`.
 //!
 //! Tool calls are appended as JSONL to

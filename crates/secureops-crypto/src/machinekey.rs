@@ -1,8 +1,8 @@
-//! Machine-keyed AES-256-GCM encryption — faithful port of `utils/crypto.ts`.
+//! Machine-keyed AES-256-GCM encryption - faithful port of `utils/crypto.ts`.
 //!
 //! Keys are derived from a machine id + state-dir path via PBKDF2-HMAC-SHA512
-//! (100k iters). The on-disk byte layout is **identical to the TS tool** —
-//! `salt(32) || iv(16) || authTag(16) || ciphertext` — so `.enc` files written
+//! (100k iters). The on-disk byte layout is **identical to the TS tool** -
+//! `salt(32) || iv(16) || authTag(16) || ciphertext` - so `.enc` files written
 //! by either tool decrypt with the other (PRODUCT.md A.5 frozen on-disk shapes).
 
 use aes_gcm::aead::consts::U16;
@@ -233,8 +233,8 @@ mod tests {
 
     /// Interop regression: a ciphertext produced by the **TypeScript** tool
     /// (`encrypt('secureclaw-interop-test', 'machine-xyz', '/var/state')`) must
-    /// decrypt here — proves the byte layout + KDF + cipher match exactly.
-    /// NOTE: plaintext literal is the pre-rename brand on purpose — this blob is
+    /// decrypt here - proves the byte layout + KDF + cipher match exactly.
+    /// NOTE: plaintext literal is the pre-rename brand on purpose - this blob is
     /// a frozen TS-generated fixture; the bytes cannot be renamed.
     #[test]
     fn decrypts_typescript_ciphertext() {

@@ -14,7 +14,7 @@ name = "secureops-scanner"
 path = "src/main.rs"
 
 [dependencies]
-secureops-api = { path = "../secureops-api", version = "0.0.1" }
+secureops-api = { path = "../secureops-api", version = "0.0.2" }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "signal"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -24,3 +24,19 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 deadpool-redis = "0.18"
 async-trait = { workspace = true }
+# Read-only AWS collector (gated). aws-sdk v1 pulls aws-lc-rs (cc>=1.1) -
+# usable since the tree-sitter bump lifted the workspace cc cap.
+aws-config = { version = "1", optional = true }
+aws-sdk-s3 = { version = "1", optional = true }
+aws-sdk-ec2 = { version = "1", optional = true }
+aws-sdk-iam = { version = "1", optional = true }
+aws-sdk-cloudtrail = { version = "1", optional = true }
+
+[features]
+aws = [
+    "dep:aws-config",
+    "dep:aws-sdk-s3",
+    "dep:aws-sdk-ec2",
+    "dep:aws-sdk-iam",
+    "dep:aws-sdk-cloudtrail",
+]

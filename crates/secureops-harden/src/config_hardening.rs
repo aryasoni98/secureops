@@ -1,4 +1,4 @@
-//! Config hardening (priority 3) — port of `hardening/config-hardening.ts`.
+//! Config hardening (priority 3) - port of `hardening/config-hardening.ts`.
 //!
 //! `check()` emits three finding kinds:
 //!   * `SC-EXEC-001` when `exec.approvals == "off"` (CRITICAL, not auto-fixable),
@@ -37,7 +37,7 @@ impl HardeningModule for ConfigHardening {
                     .title("Execution approvals disabled")
                     .description("Execution approvals are disabled. This allows commands to run without user confirmation.")
                     .evidence("exec.approvals = \"off\"")
-                    .remediation("Manually set exec.approvals to \"always\" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)")
+                    .remediation("Manually set exec.approvals to \"always\" in your OpenClaw settings (not auto-fixable - key not in OpenClaw config schema)")
                     .owasp_asi("ASI02")
                     .build(),
             );
@@ -51,7 +51,7 @@ impl HardeningModule for ConfigHardening {
                     .title("Sandbox not set to all")
                     .description("Sandbox mode is not set to \"all\". Not all commands run in a sandboxed environment.")
                     .evidence(format!("sandbox.mode = \"{}\"", sandbox_mode.unwrap_or("undefined")))
-                    .remediation("Manually set sandbox.mode to \"all\" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)")
+                    .remediation("Manually set sandbox.mode to \"all\" in your OpenClaw settings (not auto-fixable - key not in OpenClaw config schema)")
                     .owasp_asi("ASI05")
                     .build(),
             );
@@ -81,7 +81,7 @@ impl HardeningModule for ConfigHardening {
         let skipped: Vec<HardeningAction> = Vec::new();
         let mut errors: Vec<String> = Vec::new();
 
-        // Backup current config (config may not exist yet — ignore failure).
+        // Backup current config (config may not exist yet - ignore failure).
         let config_path = format!("{}/openclaw.json", ctx.state_dir());
         let _ = tokio::fs::copy(&config_path, backup_dir.join("openclaw-config.json")).await;
 

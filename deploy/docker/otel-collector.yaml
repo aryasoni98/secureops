@@ -1,6 +1,6 @@
 # Minimal OpenTelemetry Collector config for the SecureOps platform stack.
 # Receives OTLP from the API and logs to stdout (swap the exporter for a real
-# backend — Tempo/Jaeger/Honeycomb — in production).
+# backend - Tempo/Jaeger/Honeycomb - in production).
 receivers:
   otlp:
     protocols:

@@ -1,10 +1,10 @@
-//! # secureops-policy — the Policy Decision Point (PDP)
+//! # secureops-policy - the Policy Decision Point (PDP)
 //!
 //! The PDP is **the single authoritative place** that answers the question
 //! *"is this allowed?"*. It evaluates structured policy (Rego/Cedar) against a
-//! [`DecisionRequest`] — a request plus accumulated per-process context — and
+//! [`DecisionRequest`] - a request plus accumulated per-process context - and
 //! returns [`Decision::Allow`], [`Decision::Deny`], or [`Decision::Escalate`]
-//! in microseconds. (PRODUCT.md A.2 — *PDP/PEP split, the enforcement spine*.)
+//! in microseconds. (PRODUCT.md A.2 - *PDP/PEP split, the enforcement spine*.)
 //!
 //! ## Why a single authority
 //! Ring 2 is a classic **Policy Decision Point / Policy Enforcement Point**
@@ -12,22 +12,22 @@
 //! ([`secureops-proxy`] egress, [`secureops-bpf`] kernel,
 //! [`secureops-sandbox`] execution, the gateway hook). A new enforcer is
 //! added without touching policy, and policy is authored/versioned/tested
-//! without touching enforcers — and the *same* decision is logged once,
+//! without touching enforcers - and the *same* decision is logged once,
 //! centrally, to the signed audit log. (PRODUCT.md A.2.)
 //!
-//! ## The headline path (egress decision — PRODUCT.md B.5)
+//! ## The headline path (egress decision - PRODUCT.md B.5)
 //! 1. The agent attempts an outbound connection; the proxy reads the SNI /
 //!    requested host and asks the PDP *is this destination allowed for this
 //!    process?*
 //! 2. The PDP evaluates policy + accumulated process context
-//!    (e.g. *"this PID `openat`'d a credential file 200ms ago"* — the
+//!    (e.g. *"this PID `openat`'d a credential file 200ms ago"* - the
 //!    read-a-secret → connect-to-unknown-host exfil chain of B.6).
 //! 3. **Deny → hard RST** (bytes never leave the box); **Allow →** proceeds;
 //!    **Escalate →** alert + trip the circuit breaker. Either way one entry is
 //!    written to the signed audit log.
 //!
 //! ## Implementation status (Phase 4 LIVE)
-//! - **Rego eval**: `RegoPdp` backed by `regorus` — hot-reload, decision cache, default policy.
+//! - **Rego eval**: `RegoPdp` backed by `regorus` - hot-reload, decision cache, default policy.
 //! - **AllowlistEngine**: dependency-free fallback for simple host allowlists.
 //! - **Cedar**: future extension (cedar-policy dep, commented).
 //!
@@ -64,7 +64,7 @@ allow {
     input.action == "resolve"
     input.destinationHost == data.allowedHosts[_]
 }
-# Allow: non-egress actions (open/exec/capability — governed by other PEPs).
+# Allow: non-egress actions (open/exec/capability - governed by other PEPs).
 allow {
     input.action != "connect"
     input.action != "resolve"
@@ -147,13 +147,13 @@ impl Decision {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Action {
-    /// Outbound network connection (egress PEP — PRODUCT.md B.5).
+    /// Outbound network connection (egress PEP - PRODUCT.md B.5).
     Connect,
-    /// DNS resolution intercepted by the sinkhole (egress PEP — B.5 step 1).
+    /// DNS resolution intercepted by the sinkhole (egress PEP - B.5 step 1).
     Resolve,
-    /// File open observed by the kernel PEP (`openat` — PRODUCT.md B.6).
+    /// File open observed by the kernel PEP (`openat` - PRODUCT.md B.6).
     Open,
-    /// Process execution observed by the kernel PEP (`execve` — B.6).
+    /// Process execution observed by the kernel PEP (`execve` - B.6).
     Exec,
     /// A WASI capability grant requested by the execution PEP (A.2 sandbox row).
     Capability,
@@ -170,7 +170,7 @@ pub struct SyscallEvent {
     /// Primary argument (path for `openat`, host/addr for `connect`, …).
     pub target: Option<String>,
     /// Milliseconds before "now" that this event was observed (recency matters:
-    /// "`openat`'d a credential file 200ms ago" — B.5 step 3).
+    /// "`openat`'d a credential file 200ms ago" - B.5 step 3).
     pub age_ms: u64,
 }
 
@@ -184,7 +184,7 @@ pub struct DecisionRequest {
     /// What the PEP is asking about (connect / resolve / open / exec / capability).
     pub action: Action,
 
-    /// Destination host (SNI / requested host for an egress connect — B.5 step 2).
+    /// Destination host (SNI / requested host for an egress connect - B.5 step 2).
     pub destination_host: Option<String>,
 
     /// Destination port, when known.
@@ -196,7 +196,7 @@ pub struct DecisionRequest {
     /// The process `comm` / executable name, when known.
     pub comm: Option<String>,
 
-    /// Recent syscalls for this PID, newest first — the per-PID state window the
+    /// Recent syscalls for this PID, newest first - the per-PID state window the
     /// PDP correlates to catch the exfil chain (PRODUCT.md B.6).
     pub recent_syscalls: Vec<SyscallEvent>,
 
@@ -253,7 +253,7 @@ impl DecisionResponse {
     }
 
     /// The fail-closed default used whenever the PDP cannot reach a verdict
-    /// (PRODUCT.md B.5 step 4 — deny rather than implicitly allow).
+    /// (PRODUCT.md B.5 step 4 - deny rather than implicitly allow).
     pub fn fail_closed(reason: impl Into<String>) -> Self {
         Self::new(Decision::Deny, reason)
     }
@@ -275,7 +275,7 @@ pub trait PolicyEngine: Send + Sync {
     }
 
     /// Atomically swap in a new policy bundle without dropping in-flight
-    /// evaluations (hot-reload — PRODUCT.md A.2 "hot-reload"). The previous
+    /// evaluations (hot-reload - PRODUCT.md A.2 "hot-reload"). The previous
     /// bundle stays active if the new one is rejected.
     fn reload(&self, bundle: &PolicyBundle) -> Result<(), PolicyError> {
         Err(PolicyError::Reload("hot-reload not implemented".into()))
@@ -294,7 +294,7 @@ pub trait PolicyEngine: Send + Sync {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PolicyBundle {
-    /// Opaque version identifier (content hash or semver) — the decision-cache key.
+    /// Opaque version identifier (content hash or semver) - the decision-cache key.
     pub version: String,
     /// Which language the `source` is authored in.
     pub language: PolicyLanguage,
@@ -599,11 +599,11 @@ mod tests {
 }
 
 // =============================================================================
-// AllowlistEngine — a concrete, dependency-free PolicyEngine (egress allowlist)
+// AllowlistEngine - a concrete, dependency-free PolicyEngine (egress allowlist)
 // =============================================================================
 
 /// A minimal [`PolicyEngine`]: permits `connect`/`resolve` only to hosts on an
-/// egress allowlist (everything else denied — fail-closed); non-egress actions
+/// egress allowlist (everything else denied - fail-closed); non-egress actions
 /// are out of its scope and pass through as [`Decision::Allow`].
 ///
 /// This is the dependency-free engine the daemon can use today; [`RegoPdp`] is
@@ -732,10 +732,10 @@ mod rego_pdp_tests {
 }
 
 // =============================================================================
-// CedarPdp — AWS Cedar policy engine (PRODUCT.md A.2 / B.5)
+// CedarPdp - AWS Cedar policy engine (PRODUCT.md A.2 / B.5)
 // =============================================================================
 
-/// Default Cedar policy — mirrors the Rego default policy semantics.
+/// Default Cedar policy - mirrors the Rego default policy semantics.
 ///
 /// Allows egress to allowlisted hosts; permits non-egress actions; forbids all
 /// other outbound connections. Cedar's `forbid` is evaluated after all `permit`
@@ -751,7 +751,7 @@ when {
     context has allowedByPolicy && context.allowedByPolicy
 };
 
-// Allow: non-egress actions (file open, exec, capability) — governed elsewhere.
+// Allow: non-egress actions (file open, exec, capability) - governed elsewhere.
 permit(
     principal,
     action in [Action::"exec", Action::"open", Action::"capability"],
@@ -759,7 +759,7 @@ permit(
 );
 "#;
 
-/// AWS Cedar PDP (PRODUCT.md A.2 — alternative to Rego).
+/// AWS Cedar PDP (PRODUCT.md A.2 - alternative to Rego).
 ///
 /// Uses the `cedar-policy` crate's pure-Rust Cedar authorizer. Passes the
 /// allow-decision pre-computed in context so the Cedar policy stays simple
