@@ -1,22 +1,139 @@
 <!doctype html>
+<!--
+  SecureOps landing page — rebuilt on the Wooak Design System.
+  Tokens + primitives come from _ds/; page sections live in secureops/.
+-->
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SecureOps - Out-of-band security for AI agents</title>
-    <meta
-      name="description"
-      content="Audit, harden, and enforce AI agent security from outside the agent process. 26-crate Rust workspace: egress proxy, runtime monitors, kill switch, tamper-evident audit log."
-    />
-    <meta property="og:title" content="SecureOps - Out-of-band security for AI agents" />
-    <meta
-      property="og:description"
-      content="When an agent is compromised, in-process guardrails die with it. SecureOps moves enforcement outside the agent process."
-    />
-    <meta property="og:type" content="website" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SecureOps — Out-of-band security for AI agents</title>
+  <meta name="description" content="Audit, harden, and enforce AI agent security from outside the agent process. 26-crate Rust workspace: egress proxy, runtime monitors, kill switch, tamper-evident audit log." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%231E64E6'/%3E%3Cstop offset='1' stop-color='%2322C55E'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url(%23g)'/%3E%3Cpath d='M16 6l7 3.5v5.5c0 4.6-3.5 8.2-7 9-3.5-.8-7-4.4-7-9V9.5L16 6z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E" />
+
+  <link rel="stylesheet" href="_ds/wooak-design-system-8f397fde-8385-4531-9f29-83d01d526f1d/colors_and_type.css" />
+  <link rel="stylesheet" href="_ds/wooak-design-system-8f397fde-8385-4531-9f29-83d01d526f1d/ui_kits/app/app.css" />
+  <link rel="stylesheet" href="_ds/wooak-design-system-8f397fde-8385-4531-9f29-83d01d526f1d/ui_kits/landing/landing.css" />
+  <link rel="stylesheet" href="secureops/secureops.css" />
+
+  <!-- React + Babel (pinned) -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <!-- Framer Motion UMD (exposes window.Motion in v11) -->
+  <script src="https://unpkg.com/framer-motion@11.18.2/dist/framer-motion.js"></script>
+  <script>
+    // The framer-motion UMD dev build renders an internal unkeyed child array for
+    // motion components with motion-values in style, tripping React's "unique key"
+    // dev warning (component stack always bottoms out in framer's bundle). Filter
+    // exactly that known third-party warning — everything else passes through.
+    (function () {
+      var origError = console.error;
+      console.error = function () {
+        var joined = Array.prototype.map.call(arguments, String).join(" ");
+        if (joined.indexOf('unique "key" prop') !== -1 && joined.indexOf("framer-motion") !== -1) return;
+        return origError.apply(console, arguments);
+      };
+    })();
+  </script>
+  <script>
+    window.FramerMotion = window.Motion || window.FramerMotion || {};
+    // Rect-based useInView replacement: IntersectionObserver doesn't fire in some
+    // embedded/offscreen contexts, which would leave every Reveal at opacity 0.
+    (function () {
+      function safeUseInView(ref, opts) {
+        opts = opts || {};
+        const state = React.useState(false);
+        const inView = state[0], setInView = state[1];
+        React.useEffect(function () {
+          const el = ref.current;
+          if (!el) return;
+          let fired = false;
+          // Scroll events (and rAF/IO) are not dispatched in some embedded
+          // contexts — poll as a cheap, always-working fallback.
+          const poll = setInterval(check, 400);
+          function cleanup() {
+            window.removeEventListener("scroll", check);
+            window.removeEventListener("resize", check);
+            clearInterval(poll);
+          }
+          function check() {
+            if (fired && opts.once) return;
+            const r = el.getBoundingClientRect();
+            const vh = window.innerHeight || document.documentElement.clientHeight;
+            const vis = r.top < vh * 0.92 && r.bottom > vh * 0.06;
+            if (vis) {
+              setInView(true);
+              fired = true;
+              if (opts.once) cleanup();
+            } else if (!opts.once) {
+              setInView(false);
+            }
+          }
+          check();
+          window.addEventListener("scroll", check, { passive: true });
+          window.addEventListener("resize", check);
+          return cleanup;
+        }, []);
+        return inView;
+      }
+      window.FramerMotion = Object.assign({}, window.FramerMotion, { useInView: safeUseInView });
+    })();
+  </script>
+
+  <!-- Wooak DS bundle (Icon, Button, Reveal, Stagger, BlobCursor, …) -->
+  <script src="_ds/wooak-design-system-8f397fde-8385-4531-9f29-83d01d526f1d/_ds_bundle.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react" src="secureops/so-reveal.jsx"></script>
+  <script type="text/babel" data-presets="react" src="secureops/so-motion.jsx"></script>
+  <script type="text/babel" data-presets="react" src="secureops/so-sections-top.jsx"></script>
+  <script type="text/babel" data-presets="react" src="secureops/so-sections-mid.jsx"></script>
+  <script type="text/babel" data-presets="react" src="secureops/so-sections-bottom.jsx"></script>
+  <script type="text/babel" data-presets="react" src="secureops/App.jsx"></script>
+
+  <script>
+    // Watchdog: some embedded contexts never run the "update the rendering"
+    // loop step — no rAF, no scroll events, and WAAPI/CSS transitions stay
+    // frozen at their start values. Detect that once with a probe animation;
+    // if frozen, force entrance reveals to their end state (so-frozen class)
+    // and periodically finish stuck finite animations. No-op in normal tabs.
+    (function () {
+      function engage() {
+        document.documentElement.classList.add("so-frozen");
+        setInterval(function () {
+          var anims = document.getAnimations ? document.getAnimations() : [];
+          for (var j = 0; j < anims.length; j++) {
+            try {
+              var ef = anims[j].effect && anims[j].effect.getTiming ? anims[j].effect.getTiming() : null;
+              if (ef && ef.iterations !== Infinity) anims[j].finish();
+            } catch (e) { /* infinite or irreversible animation — skip */ }
+          }
+          var els = document.querySelectorAll('[style*="opacity"]');
+          for (var i = 0; i < els.length; i++) {
+            if (els[i].style.opacity === "0") els[i].style.opacity = "1";
+          }
+        }, 600);
+      }
+      function probe() {
+        try {
+          var p = document.createElement("div");
+          p.style.cssText = "position:absolute;width:1px;height:1px;opacity:0;pointer-events:none";
+          document.body.appendChild(p);
+          var a = p.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 80, fill: "forwards" });
+          setTimeout(function () {
+            var stalled = !a.currentTime || a.currentTime < 40;
+            p.remove();
+            if (stalled) engage();
+          }, 400);
+        } catch (e) { /* no WAAPI — nothing to fix */ }
+      }
+      if (document.body) probe();
+      else document.addEventListener("DOMContentLoaded", probe);
+    })();
+  </script>
+</body>
 </html>

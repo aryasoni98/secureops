@@ -146,11 +146,13 @@ const DEFAULT_FEED_PUBKEY: &str = ""; // set by Adversa AI on feed publication
 /// Conditional-GET + minisign-verified IOC feed update (PRODUCT.md B.8).
 ///
 /// Protocol:
+/// 0. Require an `https://` feed URL (override only with `SECUREOPS_IOC_FEED_INSECURE=1`).
 /// 1. GET `url` with `If-None-Match: <etag>` (etag derived from `current.version`).
 /// 2. 304 → `NotModified`.
 /// 3. Download `url + ".minisig"` sidecar.
 /// 4. Verify signature with the configured public key (env `SECUREOPS_IOC_FEED_PUBKEY`).
-///    If no key is configured, signature check is skipped (test/dev mode).
+///    Fail-closed: if no key is configured the update is refused; the only
+///    override is the explicit `SECUREOPS_IOC_FEED_INSECURE=1` dev/test opt-out.
 /// 5. Parse → enforce version monotonicity → return `Updated` or `Failed`.
 pub async fn update_feed(url: &str, current: &IocDatabase) -> FeedUpdateOutcome {
     match update_feed_inner(url, current).await {
@@ -161,6 +163,14 @@ pub async fn update_feed(url: &str, current: &IocDatabase) -> FeedUpdateOutcome 
 
 async fn update_feed_inner(url: &str, current: &IocDatabase) -> anyhow::Result<FeedUpdateOutcome> {
     use reqwest::StatusCode;
+
+    let insecure = std::env::var("SECUREOPS_IOC_FEED_INSECURE").as_deref() == Ok("1");
+
+    if !feed_url_allowed(url, insecure) {
+        return Err(anyhow::anyhow!(
+            "feed URL must be https:// (got {url}); set SECUREOPS_IOC_FEED_INSECURE=1 for dev/test"
+        ));
+    }
 
     let client = reqwest::Client::builder()
         .user_agent("secureops-intel/0.1 (PRODUCT.md B.8)")
@@ -183,19 +193,23 @@ async fn update_feed_inner(url: &str, current: &IocDatabase) -> anyhow::Result<F
 
     let raw_bytes = resp.bytes().await?;
 
-    // Verify detached minisign signature (PRODUCT.md B.8 step 2).
+    // Verify detached minisign signature (PRODUCT.md B.8 step 2). Fail-closed:
+    // no configured key refuses the update unless explicitly opted out.
     let pubkey_str = std::env::var("SECUREOPS_IOC_FEED_PUBKEY")
         .unwrap_or_else(|_| DEFAULT_FEED_PUBKEY.to_string());
 
-    if !pubkey_str.is_empty() {
-        let sig_url = format!("{}.minisig", url);
-        let sig_resp = client.get(&sig_url).send().await?;
-        if !sig_resp.status().is_success() {
-            return Err(anyhow::anyhow!("signature sidecar not found at {sig_url}"));
+    match resolve_sig_policy(&pubkey_str, insecure)? {
+        SigPolicy::Verify(pubkey) => {
+            let sig_url = format!("{}.minisig", url);
+            let sig_resp = client.get(&sig_url).send().await?;
+            if !sig_resp.status().is_success() {
+                return Err(anyhow::anyhow!("signature sidecar not found at {sig_url}"));
+            }
+            let sig_text = sig_resp.text().await?;
+            verify_minisign(&pubkey, &raw_bytes, &sig_text)
+                .map_err(|e| anyhow::anyhow!("signature verification failed: {e}"))?;
         }
-        let sig_text = sig_resp.text().await?;
-        verify_minisign(&pubkey_str, &raw_bytes, &sig_text)
-            .map_err(|e| anyhow::anyhow!("signature verification failed: {e}"))?;
+        SigPolicy::SkipInsecure => {}
     }
 
     // Parse and check version monotonicity (PRODUCT.md B.8 step 3).
@@ -211,6 +225,35 @@ async fn update_feed_inner(url: &str, current: &IocDatabase) -> anyhow::Result<F
     }
 
     Ok(FeedUpdateOutcome::Updated(Box::new(new_db)))
+}
+
+/// How the feed signature is handled for this update attempt.
+#[derive(Debug)]
+enum SigPolicy {
+    /// Verify the minisign sidecar with this public key.
+    Verify(String),
+    /// Explicit dev/test opt-out via `SECUREOPS_IOC_FEED_INSECURE=1`.
+    SkipInsecure,
+}
+
+/// Fail-closed signature policy: a configured key always wins; with no key,
+/// only the explicit insecure flag permits an unsigned update.
+fn resolve_sig_policy(pubkey_str: &str, insecure_flag: bool) -> anyhow::Result<SigPolicy> {
+    if !pubkey_str.is_empty() {
+        return Ok(SigPolicy::Verify(pubkey_str.to_string()));
+    }
+    if insecure_flag {
+        return Ok(SigPolicy::SkipInsecure);
+    }
+    Err(anyhow::anyhow!(
+        "no IOC feed public key configured; refusing unsigned update \
+         (set SECUREOPS_IOC_FEED_PUBKEY, or SECUREOPS_IOC_FEED_INSECURE=1 for dev/test)"
+    ))
+}
+
+/// Feed URLs must be https unless the insecure dev/test flag is set.
+fn feed_url_allowed(url: &str, insecure: bool) -> bool {
+    insecure || url.starts_with("https://")
 }
 
 fn verify_minisign(pubkey_b64: &str, data: &[u8], sig_text: &str) -> anyhow::Result<()> {
@@ -507,5 +550,43 @@ mod tests {
         let e = load_from_str("not json");
         assert_eq!(e.version, "0.0.0");
         assert!(e.c2_ips.is_empty());
+    }
+
+    #[test]
+    fn sig_policy_with_key_verifies() {
+        match resolve_sig_policy("RWQpubkey", false) {
+            Ok(SigPolicy::Verify(k)) => assert_eq!(k, "RWQpubkey"),
+            other => panic!("expected Verify, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn sig_policy_no_key_refuses() {
+        let err = resolve_sig_policy("", false).unwrap_err().to_string();
+        assert!(err.contains("SECUREOPS_IOC_FEED_PUBKEY"));
+        assert!(err.contains("SECUREOPS_IOC_FEED_INSECURE"));
+    }
+
+    #[test]
+    fn sig_policy_insecure_flag_skips() {
+        assert!(matches!(
+            resolve_sig_policy("", true),
+            Ok(SigPolicy::SkipInsecure)
+        ));
+    }
+
+    #[test]
+    fn sig_policy_key_wins_over_insecure_flag() {
+        assert!(matches!(
+            resolve_sig_policy("RWQpubkey", true),
+            Ok(SigPolicy::Verify(_))
+        ));
+    }
+
+    #[test]
+    fn feed_url_https_only_without_insecure_flag() {
+        assert!(feed_url_allowed("https://feed.example.com/ioc.json", false));
+        assert!(!feed_url_allowed("http://feed.example.com/ioc.json", false));
+        assert!(feed_url_allowed("http://127.0.0.1:8080/ioc.json", true));
     }
 }
