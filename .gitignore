@@ -7,6 +7,9 @@ Cargo.lock.orig
 # Graphify pipeline output (graph.json, graph.html, cache, reports)
 graphify-out/
 
+# Local agent/IDE settings (not part of the product)
+.claude/
+
 # OS
 .DS_Store
 **/.DS_Store
