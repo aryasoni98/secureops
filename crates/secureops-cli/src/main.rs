@@ -626,8 +626,8 @@ async fn run_export_incident() -> anyhow::Result<()> {
 
 /// Parse arguments and dispatch to the matching subcommand handler.
 ///
-/// Each arm returns `Ok(())` after printing a placeholder; only the (commented)
-/// audit gate path will ever `std::process::exit` non-zero.
+/// `audit --json` exits non-zero (EXIT_GATE_FAILED) below the score threshold;
+/// every other subcommand returns `Ok(())` after running its handler.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();

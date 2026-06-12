@@ -103,9 +103,7 @@ impl InMemoryStore {
 
     /// Builder: pre-register a hashed API key → claims mapping.
     pub fn with_api_key(self, hashed: impl Into<String>, claims: Claims) -> Self {
-        self.inner
-            .lock()
-            .expect("mem lock")
+        crate::lock_recover(&self.inner)
             .api_keys
             .insert(hashed.into(), claims);
         self
@@ -113,7 +111,7 @@ impl InMemoryStore {
 
     /// Builder: seed a finding.
     pub fn seed_finding(self, f: Finding) -> Self {
-        self.inner.lock().expect("mem lock").findings.push(f);
+        crate::lock_recover(&self.inner).findings.push(f);
         self
     }
 }
@@ -131,52 +129,39 @@ impl Store for InMemoryStore {
     }
 
     async fn lookup_api_key(&self, hashed: &str) -> anyhow::Result<Option<Claims>> {
-        Ok(self
-            .inner
-            .lock()
-            .expect("mem lock")
+        Ok(crate::lock_recover(&self.inner)
             .api_keys
             .get(hashed)
             .cloned())
     }
 
     async fn put_license(&self, lic: &License) -> anyhow::Result<()> {
-        self.inner
-            .lock()
-            .expect("mem lock")
+        crate::lock_recover(&self.inner)
             .licenses
             .insert(lic.tenant_id.clone(), lic.clone());
         Ok(())
     }
 
     async fn get_license(&self, tenant: &str) -> anyhow::Result<Option<License>> {
-        Ok(self
-            .inner
-            .lock()
-            .expect("mem lock")
+        Ok(crate::lock_recover(&self.inner)
             .licenses
             .get(tenant)
             .cloned())
     }
 
     async fn any_license(&self) -> anyhow::Result<bool> {
-        Ok(!self.inner.lock().expect("mem lock").licenses.is_empty())
+        Ok(!crate::lock_recover(&self.inner).licenses.is_empty())
     }
 
     async fn create_scan(&self, scan: &Scan) -> anyhow::Result<()> {
-        self.inner
-            .lock()
-            .expect("mem lock")
+        crate::lock_recover(&self.inner)
             .scans
             .insert(scan.id, scan.clone());
         Ok(())
     }
 
     async fn get_scan(&self, tenant: &str, id: Uuid) -> anyhow::Result<Option<Scan>> {
-        Ok(self
-            .inner
-            .lock()
-            .expect("mem lock")
+        Ok(crate::lock_recover(&self.inner)
             .scans
             .get(&id)
             .filter(|s| s.tenant_id == tenant)
@@ -184,7 +169,7 @@ impl Store for InMemoryStore {
     }
 
     async fn list_findings(&self, tenant: &str, f: &FindingFilter) -> anyhow::Result<Vec<Finding>> {
-        let mem = self.inner.lock().expect("mem lock");
+        let mem = crate::lock_recover(&self.inner);
         let offset = f.offset.max(0) as usize;
         let limit = if f.limit <= 0 { 50 } else { f.limit as usize };
         let out = mem
@@ -210,7 +195,7 @@ impl Store for InMemoryStore {
         id: Uuid,
         status: &str,
     ) -> anyhow::Result<bool> {
-        let mut mem = self.inner.lock().expect("mem lock");
+        let mut mem = crate::lock_recover(&self.inner);
         for x in mem.findings.iter_mut() {
             if x.id == id && x.tenant_id == tenant {
                 x.status = status.to_string();
@@ -221,18 +206,14 @@ impl Store for InMemoryStore {
     }
 
     async fn insert_finding(&self, finding: &Finding) -> anyhow::Result<()> {
-        self.inner
-            .lock()
-            .expect("mem lock")
+        crate::lock_recover(&self.inner)
             .findings
             .push(finding.clone());
         Ok(())
     }
 
     async fn insert_remediation(&self, tenant: &str, r: &Remediation) -> anyhow::Result<()> {
-        self.inner
-            .lock()
-            .expect("mem lock")
+        crate::lock_recover(&self.inner)
             .remediations
             .entry(tenant.to_string())
             .or_default()
@@ -241,10 +222,7 @@ impl Store for InMemoryStore {
     }
 
     async fn list_remediations(&self, tenant: &str) -> anyhow::Result<Vec<Remediation>> {
-        Ok(self
-            .inner
-            .lock()
-            .expect("mem lock")
+        Ok(crate::lock_recover(&self.inner)
             .remediations
             .get(tenant)
             .cloned()
@@ -257,7 +235,7 @@ impl Store for InMemoryStore {
         id: Uuid,
         state: &str,
     ) -> anyhow::Result<bool> {
-        let mut mem = self.inner.lock().expect("mem lock");
+        let mut mem = crate::lock_recover(&self.inner);
         if let Some(v) = mem.remediations.get_mut(tenant) {
             if let Some(r) = v.iter_mut().find(|r| r.id == id) {
                 r.state = state.to_string();
@@ -274,7 +252,7 @@ impl Store for InMemoryStore {
         _action: &str,
         _reward: f64,
     ) -> anyhow::Result<()> {
-        self.inner.lock().expect("mem lock").rl_feedback += 1;
+        crate::lock_recover(&self.inner).rl_feedback += 1;
         Ok(())
     }
 }

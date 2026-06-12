@@ -140,7 +140,7 @@ pub fn features_for(state: &AppState, f: &Finding) -> Vec<f32> {
 /// Re-order findings by the tenant's LinUCB score (best first). If the tenant
 /// has no trained model yet, the input order is preserved.
 pub fn rank_findings(state: &AppState, tenant: &str, items: Vec<Finding>) -> Vec<Finding> {
-    let ranker = state.ranker.lock().expect("ranker lock");
+    let ranker = crate::lock_recover(&state.ranker);
     match ranker.get(tenant) {
         Some(model) => {
             let feats: Vec<Vec<f32>> = items.iter().map(|f| features_for(state, f)).collect();
@@ -207,10 +207,7 @@ pub async fn graph_rebuild(
         g.add_edge(e.from, e.to, e.kind, e.difficulty);
     }
     let nodes = g.node_count();
-    s.graphs
-        .lock()
-        .expect("graphs lock")
-        .insert(claims.tenant.clone(), g);
+    crate::lock_recover(&s.graphs).insert(claims.tenant.clone(), g);
     Ok(Json(json!({ "nodes": nodes })))
 }
 
@@ -219,7 +216,7 @@ pub async fn graph_paths(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,
 ) -> ApiResult<Json<Value>> {
-    let graphs = s.graphs.lock().expect("graphs lock");
+    let graphs = crate::lock_recover(&s.graphs);
     let paths = graphs
         .get(&claims.tenant)
         .map(|g| g.attack_paths())
@@ -234,7 +231,7 @@ pub async fn graph_blast_radius(
     Authenticated(claims): Authenticated,
     Path(node): Path<String>,
 ) -> ApiResult<Json<Value>> {
-    let graphs = s.graphs.lock().expect("graphs lock");
+    let graphs = crate::lock_recover(&s.graphs);
     let radius = graphs
         .get(&claims.tenant)
         .map(|g| g.blast_radius(&node))
@@ -284,7 +281,7 @@ pub async fn rl_feedback(
 
     let updates = {
         let dim = s.feature_spec.dim();
-        let mut ranker = s.ranker.lock().expect("ranker lock");
+        let mut ranker = crate::lock_recover(&s.ranker);
         let model = ranker
             .entry(claims.tenant.clone())
             .or_insert_with(|| LinUcb::new(dim, 0.1));
@@ -312,7 +309,7 @@ pub async fn rl_stats(
     State(s): State<AppState>,
     Authenticated(claims): Authenticated,
 ) -> ApiResult<Json<Value>> {
-    let ranker = s.ranker.lock().expect("ranker lock");
+    let ranker = crate::lock_recover(&s.ranker);
     let updates = ranker.get(&claims.tenant).map(|m| m.updates).unwrap_or(0);
     Ok(Json(json!({
         "updates": updates,
@@ -373,10 +370,7 @@ pub async fn bughunt_run(
         iterations: outcome.iterations,
     };
     let status = job.status.clone();
-    s.bughunt_jobs
-        .lock()
-        .expect("jobs lock")
-        .insert(job_id, job);
+    crate::lock_recover(&s.bughunt_jobs).insert(job_id, job);
     Ok(Json(json!({ "jobId": job_id, "status": status })))
 }
 
@@ -386,9 +380,7 @@ pub async fn bughunt_get(
     Authenticated(_claims): Authenticated,
     Path(job_id): Path<Uuid>,
 ) -> ApiResult<Json<BugHuntJob>> {
-    s.bughunt_jobs
-        .lock()
-        .expect("jobs lock")
+    crate::lock_recover(&s.bughunt_jobs)
         .get(&job_id)
         .cloned()
         .map(Json)

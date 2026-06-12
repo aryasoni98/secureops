@@ -462,7 +462,7 @@ impl DnsSinkhole {
                 }
             };
 
-            let queries = msg.queries();
+            let queries = &msg.queries;
             if queries.is_empty() {
                 continue;
             }
@@ -502,14 +502,11 @@ impl DnsSinkhole {
 fn build_nxdomain(query: &hickory_proto::op::Message) -> Vec<u8> {
     use hickory_proto::op::{Message, MessageType, OpCode, ResponseCode};
 
-    let mut resp = Message::new();
-    resp.set_id(query.id());
-    resp.set_message_type(MessageType::Response);
-    resp.set_op_code(OpCode::Query);
-    resp.set_recursion_desired(query.recursion_desired());
-    resp.set_recursion_available(false);
-    resp.set_response_code(ResponseCode::NXDomain);
-    for q in query.queries() {
+    let mut resp = Message::new(query.metadata.id, MessageType::Response, OpCode::Query);
+    resp.metadata.recursion_desired = query.metadata.recursion_desired;
+    resp.metadata.recursion_available = false;
+    resp.metadata.response_code = ResponseCode::NXDomain;
+    for q in &query.queries {
         resp.add_query(q.clone());
     }
     resp.to_vec().unwrap_or_default()

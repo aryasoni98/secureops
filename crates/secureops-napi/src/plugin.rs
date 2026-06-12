@@ -241,6 +241,9 @@ mod tests {
     }
 
     #[tokio::test]
+    // The guard must span the awaits: it serializes OPENCLAW_STATE_DIR env
+    // mutation across tests, and each test runs on its own runtime.
+    #[allow(clippy::await_holding_lock)]
     async fn kill_then_resume_via_command() {
         let _g = ENV_LOCK.lock().unwrap();
         let dir = tempfile::tempdir().unwrap();
@@ -257,6 +260,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::await_holding_lock)]
     async fn tool_dispatch_maps_to_commands() {
         let _g = ENV_LOCK.lock().unwrap();
         let dir = tempfile::tempdir().unwrap();

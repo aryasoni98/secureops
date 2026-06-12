@@ -35,6 +35,16 @@ pub use error::{ApiError, ApiResult};
 pub use router::{build_router, with_spa};
 pub use state::AppState;
 
+/// Lock a mutex, recovering from poisoning instead of panicking.
+///
+/// A poisoned mutex means some earlier handler panicked while holding it; the
+/// shared maps guarded here (graphs/ranker/jobs/in-memory store) stay usable
+/// after such a panic, so recovering the guard keeps the API serving instead of
+/// turning one panic into a panic on every subsequent request.
+pub(crate) fn lock_recover<T>(m: &std::sync::Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 pub mod state {
     //! Shared application state injected into every handler.
     use std::collections::HashMap;
