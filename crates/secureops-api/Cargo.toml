@@ -70,9 +70,41 @@ reqwest = { version = "0.12", default-features = false, features = [
     "rustls-tls",
 ], optional = true }
 
+# TLS termination (gated `tls`): serve HTTPS directly via axum-server + rustls.
+# `tls-rustls-no-provider` keeps the ring crypto provider (already in the tree
+# via reqwest) and avoids pulling aws-lc-sys (C/cmake) for a cc-light build.
+axum-server = { version = "0.7", default-features = false, features = [
+    "tls-rustls-no-provider",
+], optional = true }
+rustls = { version = "0.23", default-features = false, features = [
+    "ring",
+], optional = true }
+
+# OTLP trace export (gated `otlp`): ship spans to the OpenTelemetry collector
+# over HTTP/protobuf (no tonic/gRPC → leaner tree). Wires a tracing layer.
+opentelemetry = { version = "0.27", optional = true }
+opentelemetry_sdk = { version = "0.27", features = [
+    "rt-tokio",
+], optional = true }
+opentelemetry-otlp = { version = "0.27", default-features = false, features = [
+    "trace",
+    "http-proto",
+    "reqwest-client",
+], optional = true }
+tracing-opentelemetry = { version = "0.28", optional = true }
+
 [features]
 # Compile the HTTP OIDC verifier (JWKS fetch + RS256 validation).
 live-oidc = ["dep:reqwest"]
+# Serve HTTPS directly (TLS termination in-process).
+tls = ["dep:axum-server", "dep:rustls"]
+# Export OTLP traces to the OpenTelemetry collector.
+otlp = [
+    "dep:opentelemetry",
+    "dep:opentelemetry_sdk",
+    "dep:opentelemetry-otlp",
+    "dep:tracing-opentelemetry",
+]
 
 [dev-dependencies]
 tokio = { workspace = true }

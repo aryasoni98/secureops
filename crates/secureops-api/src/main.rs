@@ -15,6 +15,16 @@
 //! - `REDIS_URL` - Redis DSN for the scan queue (degraded if unset/unreachable).
 //! - `MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD` (+ `S3_ENDPOINT`/`AWS_REGION`/`S3_SCHEME`)
 //!   - enable the evidence presigner.
+//! - `SECUREOPS_API_KEY_PEPPER` - server-side pepper for hashing API keys at
+//!   rest (defaults to the JWT secret if unset).
+//! - `SECUREOPS_ALLOW_INSECURE_BIND` - opt-in to bind a non-loopback addr in dev
+//!   mode (local container networks only).
+//! - `SECUREOPS_RL_GLOBAL`/`SECUREOPS_RL_AUTH`/`SECUREOPS_RL_WINDOW_SECS` - rate
+//!   limiter budgets.
+//! - `SECUREOPS_TLS_CERT`/`SECUREOPS_TLS_KEY` - PEM paths to serve HTTPS
+//!   in-process (build with `--features tls`; see docs/tls-and-otlp.md).
+//! - `OTEL_EXPORTER_OTLP_ENDPOINT` - collector URL (HTTP `:4318`) for OTLP span
+//!   export (build with `--features otlp`).
 
 #![forbid(unsafe_code)]
 
@@ -32,11 +42,7 @@ use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-        )
-        .init();
+    init_telemetry();
 
     let dev_mode = dev_mode();
     let jwt_secret = match std::env::var("SECUREOPS_JWT_SECRET") {
@@ -149,10 +155,109 @@ async fn main() -> anyhow::Result<()> {
              - INSECURE, local/dev only. Never expose this to an untrusted network."
         );
     }
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
-    tracing::info!("secureops-api listening on {addr}");
+    serve(app, &addr).await?;
+    Ok(())
+}
+
+/// Serve the app, terminating TLS in-process when built with `--features tls`
+/// and `SECUREOPS_TLS_CERT` / `SECUREOPS_TLS_KEY` (PEM paths) are set; otherwise
+/// plain HTTP (front with a TLS terminator).
+#[cfg(feature = "tls")]
+async fn serve(app: axum::Router, addr: &str) -> anyhow::Result<()> {
+    let cert = std::env::var("SECUREOPS_TLS_CERT").unwrap_or_default();
+    let key = std::env::var("SECUREOPS_TLS_KEY").unwrap_or_default();
+    if !cert.is_empty() && !key.is_empty() {
+        // rustls 0.23 needs a process-default crypto provider installed once.
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        let sockaddr: std::net::SocketAddr = addr.parse().map_err(|e| {
+            anyhow::anyhow!("TLS requires an ip:port SECUREOPS_API_ADDR ({addr}): {e}")
+        })?;
+        let config = axum_server::tls_rustls::RustlsConfig::from_pem_file(&cert, &key).await?;
+        tracing::info!("secureops-api listening on https://{addr} (TLS terminated in-process)");
+        axum_server::bind_rustls(sockaddr, config)
+            .serve(app.into_make_service())
+            .await?;
+        return Ok(());
+    }
+    tracing::warn!(
+        "tls feature built but SECUREOPS_TLS_CERT/KEY unset - serving plaintext HTTP on {addr}"
+    );
+    serve_plain(app, addr).await
+}
+
+/// Plain-HTTP serve (default build, or TLS build without cert/key configured).
+#[cfg(not(feature = "tls"))]
+async fn serve(app: axum::Router, addr: &str) -> anyhow::Result<()> {
+    serve_plain(app, addr).await
+}
+
+async fn serve_plain(app: axum::Router, addr: &str) -> anyhow::Result<()> {
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    tracing::info!("secureops-api listening on http://{addr}");
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+/// Initialise tracing. With `--features otlp`, spans are exported to the
+/// OpenTelemetry collector at `OTEL_EXPORTER_OTLP_ENDPOINT` (HTTP/protobuf, the
+/// `/v1/traces` path) in addition to stdout; otherwise stdout only.
+#[cfg(feature = "otlp")]
+fn init_telemetry() {
+    use tracing_subscriber::prelude::*;
+
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let fmt_layer = tracing_subscriber::fmt::layer();
+
+    match build_otlp_layer() {
+        Ok(otel_layer) => {
+            tracing_subscriber::registry()
+                .with(filter)
+                .with(fmt_layer)
+                .with(otel_layer)
+                .init();
+            tracing::info!("OTLP trace export enabled");
+        }
+        Err(e) => {
+            tracing_subscriber::registry()
+                .with(filter)
+                .with(fmt_layer)
+                .init();
+            tracing::warn!("OTLP export disabled (init failed: {e}); stdout tracing only");
+        }
+    }
+}
+
+#[cfg(feature = "otlp")]
+fn build_otlp_layer<S>(
+) -> anyhow::Result<tracing_opentelemetry::OpenTelemetryLayer<S, opentelemetry_sdk::trace::Tracer>>
+where
+    S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
+{
+    use opentelemetry::trace::TracerProvider as _;
+    use opentelemetry_otlp::WithExportConfig as _;
+
+    let endpoint = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+        .unwrap_or_else(|_| "http://localhost:4318".into());
+    let exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_http()
+        .with_endpoint(endpoint)
+        .build()?;
+    let provider = opentelemetry_sdk::trace::TracerProvider::builder()
+        .with_batch_exporter(exporter, opentelemetry_sdk::runtime::Tokio)
+        .build();
+    let tracer = provider.tracer("secureops-api");
+    opentelemetry::global::set_tracer_provider(provider);
+    Ok(tracing_opentelemetry::layer().with_tracer(tracer))
+}
+
+/// Stdout-only tracing (default build).
+#[cfg(not(feature = "otlp"))]
+fn init_telemetry() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .init();
 }
 
 /// True when `addr`'s host is a loopback address (127.0.0.0/8, ::1, localhost).

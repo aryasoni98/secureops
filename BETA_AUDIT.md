@@ -51,19 +51,26 @@ external pen test, a SOC 2 audit) — wired behind seams, listed under *Deferred
 
 ---
 
+## Now available behind feature flags (were deferred)
+
+- **In-process TLS** — `--features tls` serves HTTPS via `axum-server` + rustls
+  (ring, no aws-lc/C build); `SECUREOPS_TLS_CERT`/`_KEY` + `ip:port` addr. Falls
+  back to plain HTTP when unconfigured. See `docs/tls-and-otlp.md`.
+- **OTLP trace export** — `--features otlp` ships spans to the collector over
+  HTTP/protobuf (`OTEL_EXPORTER_OTLP_ENDPOINT`, port `:4318`); `/metrics` +
+  `TraceLayer` already in the default build. See `docs/tls-and-otlp.md`.
+- **Live OIDC IdP** — `HttpOidcVerifier` is real, issuer-validated, and
+  env-wired; requires `--features live-oidc` + a real IdP (Okta/Entra/Google).
+
+CI compiles all three (`api-feature-builds` job) so they don't bit-rot.
+
 ## Deferred (need infrastructure / third parties — seams in place)
 
 - **KMS / BYOK / CMK, key rotation** — no managed-KMS calls in-tree; the
   `secureops-crypto` keystore is the seam. Needs a cloud KMS account.
-- **Real TLS termination** — provided by the ingress/reverse proxy or service
-  mesh; the API speaks HTTP behind it. `rustls` wiring is the seam.
-- **Live OIDC IdP** — `HttpOidcVerifier` is real and now issuer-validated;
-  requires `--features live-oidc` + a real IdP (Okta/Entra/Google).
 - **GCP/Azure CSPM + remediation** — dry impls today; real SDKs are the seam.
 - **TPM/HSM-backed audit signer** — `InMemorySigner` default; `--features tpm`
   scaffolds real `tss-esapi`; needs `/dev/tpm0`.
 - **SOC 2 / ISO 27001 attestation, external pen test** — process/3rd-party.
-- **OTLP span export** — `/metrics` + `TraceLayer` land now; full OTLP exporter
-  (opentelemetry SDK) is the next increment.
 
 See `DEFERRED.md` for the canonical infra-blocked list.
