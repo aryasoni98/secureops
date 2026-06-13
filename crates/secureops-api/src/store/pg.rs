@@ -39,6 +39,10 @@ const MIGRATIONS: &[(&str, &str)] = &[
         "006_usage_audit",
         include_str!("../../migrations/006_usage_audit.sql"),
     ),
+    (
+        "007_rls_roles_retention",
+        include_str!("../../migrations/007_rls_roles_retention.sql"),
+    ),
 ];
 
 /// A far-future session expiry used for API-key-derived principals.
@@ -156,7 +160,9 @@ impl Store for PgStore {
         let client = self.pool.get().await?;
         let row = client
             .query_opt(
-                "SELECT tenant_id, sub, tier, features FROM api_keys \
+                "SELECT tenant_id, sub, tier, features, \
+                        COALESCE(role, 'member') AS role \
+                 FROM api_keys \
                  WHERE key_hash = $1 AND revoked = false",
                 &[&hashed],
             )
@@ -165,7 +171,9 @@ impl Store for PgStore {
             sub: r.get("sub"),
             tenant: r.get("tenant_id"),
             tier: r.get("tier"),
+            role: r.get("role"),
             features: features_from_json(&r.get::<_, Value>("features")),
+            iss: crate::auth::ISSUER.to_string(),
             exp: SESSION_EXP,
         }))
     }

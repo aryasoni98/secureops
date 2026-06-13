@@ -1,0 +1,64 @@
+name: security-scan
+
+# Beta gaps closed: secret scanning, IaC/misconfiguration scanning, and
+# dependency/filesystem vulnerability scanning - none of which existed before.
+#
+# Rollout posture: the secret scan HARD-FAILS (a leaked credential must never
+# merge). The vuln + IaC scans currently report (soft-fail) so the gate can be
+# adopted without an immediate red build; flip `exit-code: '1'` / remove
+# `soft_fail` once the backlog is triaged.
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    - cron: "0 7 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  vulns:
+    name: Dependency + filesystem vuln scan (trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scanners: vuln,secret
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '0' # report-only for now; set to '1' to gate
+          format: table
+
+  iac:
+    name: IaC / misconfig scan (trivy config + kube-linter)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Trivy config scan (Dockerfile, k8s, Helm, compose)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          severity: HIGH,CRITICAL
+          exit-code: '0' # report-only for now; set to '1' to gate
+          format: table
+      - name: kube-linter (k8s manifests + Helm)
+        uses: stackrox/kube-linter-action@v1
+        continue-on-error: true
+        with:
+          directory: deploy

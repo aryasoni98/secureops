@@ -3,11 +3,17 @@ enabled: false
 
 image:
   repository: neo4j
+  # Pin a specific minor/patch (or a digest) in production rather than the
+  # floating major tag "5".
   tag: "5"
   pullPolicy: IfNotPresent
 
-# Auth as user/password. Provide via a Secret in production; this default is dev.
+# Auth as user/password.
+# Production: set existingSecret to a Secret whose `secretKey` holds the
+# "user/password" string; the inline username/password below is dev-only.
 auth:
+  existingSecret: ""
+  secretKey: "NEO4J_AUTH"
   username: neo4j
   password: change-me-neo4j
 

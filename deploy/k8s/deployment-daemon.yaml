@@ -16,11 +16,15 @@ spec:
         app.kubernetes.io/name: secureops-daemon
         app.kubernetes.io/component: ring2-daemon
     spec:
+      serviceAccountName: secureops
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
         runAsGroup: 65532
         fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
       # Uncomment hostNetwork when egress PEP is enabled and agents run on the
       # same node (proxy listens on 127.0.0.1:8889 inside the pod network ns).
       # hostNetwork: true
@@ -30,6 +34,11 @@ spec:
           image: secureops-rust:latest
           imagePullPolicy: IfNotPresent
           command: ["secureops", "init"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: OPENCLAW_STATE_DIR
               value: /data/openclaw
@@ -39,11 +48,20 @@ spec:
             - name: config
               mountPath: /data/openclaw/openclaw.json
               subPath: openclaw.json
+            - name: tmp
+              mountPath: /tmp
       containers:
         - name: daemon
           image: secureops-rust:latest
           imagePullPolicy: IfNotPresent
           command: ["secureops-daemon"]
+          # Restricted PSS: no privilege escalation, read-only root fs, all
+          # Linux capabilities dropped. Writable paths are explicit volume mounts.
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: OPENCLAW_STATE_DIR
               value: /data/openclaw
@@ -53,6 +71,8 @@ spec:
             - name: config
               mountPath: /data/openclaw/openclaw.json
               subPath: openclaw.json
+            - name: tmp
+              mountPath: /tmp
           resources:
             requests:
               cpu: 100m
@@ -66,6 +86,12 @@ spec:
               command: ["test", "-d", "/data/openclaw/.secureops"]
             initialDelaySeconds: 15
             periodSeconds: 30
+          # Readiness: same signal, shorter cadence, so a slow start sheds traffic.
+          readinessProbe:
+            exec:
+              command: ["test", "-d", "/data/openclaw/.secureops"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
       volumes:
         - name: state
           persistentVolumeClaim:
@@ -73,3 +99,6 @@ spec:
         - name: config
           configMap:
             name: openclaw-config
+        # Writable scratch so readOnlyRootFilesystem doesn't block temp writes.
+        - name: tmp
+          emptyDir: {}

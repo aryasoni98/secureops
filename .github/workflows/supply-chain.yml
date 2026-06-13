@@ -8,6 +8,10 @@ on:
   schedule:
     - cron: "0 6 * * 1" # weekly advisory refresh
 
+# Least-privilege default token: read-only unless a job opts into more.
+permissions:
+  contents: read
+
 jobs:
   deny:
     runs-on: ubuntu-latest
@@ -19,6 +23,10 @@ jobs:
 
   audit:
     runs-on: ubuntu-latest
+    # audit-check posts advisory annotations as a check run.
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v6
       - uses: rustsec/audit-check@v2

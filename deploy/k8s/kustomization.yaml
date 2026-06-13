@@ -5,6 +5,7 @@ namespace: secureops
 
 resources:
   - namespace.yaml
+  - serviceaccount.yaml
   - pvc.yaml
   - configmap-openclaw.yaml
   - deployment-daemon.yaml

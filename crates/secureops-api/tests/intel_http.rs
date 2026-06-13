@@ -24,13 +24,19 @@ fn state() -> AppState {
 }
 
 fn jwt(features: &[&str]) -> String {
+    jwt_role("admin", features)
+}
+
+fn jwt_role(role: &str, features: &[&str]) -> String {
     issue_jwt(
         SECRET,
         &Claims {
             sub: "u1".into(),
             tenant: "tenant_1".into(),
             tier: "pro".into(),
+            role: role.into(),
             features: features.iter().map(|s| s.to_string()).collect(),
+            iss: "secureops".into(),
             exp: FAR as usize,
         },
     )
@@ -217,6 +223,86 @@ async fn remediation_queue_and_approve_destructive() {
     let v = body(r).await;
     assert_eq!(v["state"], "completed");
     assert_eq!(v["executed"], true);
+}
+
+fn jwt_tenant(tenant: &str, role: &str) -> String {
+    issue_jwt(
+        SECRET,
+        &Claims {
+            sub: "u1".into(),
+            tenant: tenant.into(),
+            tier: "pro".into(),
+            role: role.into(),
+            features: vec!["bughunt".into()],
+            iss: "secureops".into(),
+            exp: FAR as usize,
+        },
+    )
+    .unwrap()
+}
+
+#[tokio::test]
+async fn remediation_approve_forbidden_for_member() {
+    let app = build_router(state());
+    // Queue as admin.
+    let r = app
+        .clone()
+        .oneshot(post(
+            "/api/v1/remediations",
+            &jwt(&[]),
+            json!({"finding_id": "f1", "playbook_id": "k8s-privileged-pod"}),
+        ))
+        .await
+        .unwrap();
+    let id = body(r).await["id"].as_str().unwrap().to_string();
+
+    // A non-admin (member) cannot approve a destructive remediation.
+    let r = app
+        .oneshot(post(
+            &format!("/api/v1/remediations/{id}/approve"),
+            &jwt_role("member", &[]),
+            json!({}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(r.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn bughunt_job_is_tenant_isolated() {
+    let app = build_router(state());
+    // tenant_1 runs a bug-hunt and gets a job id.
+    let r = app
+        .clone()
+        .oneshot(post(
+            "/api/v1/bughunt",
+            &jwt_tenant("tenant_1", "member"),
+            json!({"scope": "all"}),
+        ))
+        .await
+        .unwrap();
+    let job_id = body(r).await["jobId"].as_str().unwrap().to_string();
+
+    // tenant_2 must not be able to read tenant_1's job (was a cross-tenant leak).
+    let r = app
+        .clone()
+        .oneshot(get(
+            &format!("/api/v1/bughunt/{job_id}"),
+            &jwt_tenant("tenant_2", "member"),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(r.status(), StatusCode::NOT_FOUND);
+
+    // The owning tenant still can.
+    let r = app
+        .oneshot(get(
+            &format!("/api/v1/bughunt/{job_id}"),
+            &jwt_tenant("tenant_1", "member"),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(r.status(), StatusCode::OK);
 }
 
 #[tokio::test]

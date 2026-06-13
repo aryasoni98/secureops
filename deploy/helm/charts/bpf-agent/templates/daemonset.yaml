@@ -21,6 +21,16 @@ spec:
     spec:
       # Kernel PEP must see host PIDs to correlate syscalls per process.
       hostPID: true
+      # No Kubernetes API access needed - don't mount an SA token.
+      automountServiceAccountToken: false
+      # eBPF program load + perf ring buffers require syscalls (bpf(2), perf_*)
+      # that the RuntimeDefault seccomp profile blocks, so this agent runs
+      # Unconfined *by necessity*. It MUST live in a dedicated namespace with a
+      # privileged PSA exemption - never in a Restricted namespace alongside the
+      # API/daemon.
+      securityContext:
+        seccompProfile:
+          type: Unconfined
       nodeSelector:
         {{- toYaml .Values.nodeSelector | nindent 8 }}
         {{- with .Values.extraNodeSelector }}

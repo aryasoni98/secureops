@@ -19,16 +19,26 @@ spec:
             app.kubernetes.io/name: secureops-audit
         spec:
           restartPolicy: Never
+          serviceAccountName: secureops
+          automountServiceAccountToken: false
           securityContext:
             runAsNonRoot: true
             runAsUser: 65532
             runAsGroup: 65532
             fsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
           containers:
             - name: audit
               image: secureops-rust:latest
               imagePullPolicy: IfNotPresent
               command: ["secureops", "audit", "--json"]
+              # Restricted PSS container hardening.
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
               env:
                 - name: OPENCLAW_STATE_DIR
                   value: /data/openclaw
@@ -36,6 +46,8 @@ spec:
                 - name: state
                   mountPath: /data/openclaw
                   readOnly: true
+                - name: tmp
+                  mountPath: /tmp
               resources:
                 requests:
                   cpu: 100m
@@ -47,3 +59,5 @@ spec:
             - name: state
               persistentVolumeClaim:
                 claimName: openclaw-state
+            - name: tmp
+              emptyDir: {}

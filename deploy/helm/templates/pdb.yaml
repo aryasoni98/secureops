@@ -1,0 +1,15 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+# Keep at least one API replica serving during voluntary disruptions (node
+# drains, rolling upgrades) so the platform stays available.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "secureops.fullname" . }}
+  labels:
+    {{- include "secureops.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "secureops.selectorLabels" . | nindent 6 }}
+{{- end }}

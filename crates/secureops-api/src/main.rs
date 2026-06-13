@@ -23,6 +23,7 @@ use std::sync::Arc;
 use base64::Engine as _;
 use secureops_api::authz::PolicyEngine;
 use secureops_api::evidence::S3Presigner;
+use secureops_api::ratelimit::RateLimiter;
 use secureops_api::redis_queue::RedisQueue;
 use secureops_api::store::pg::PgStore;
 use secureops_api::store::{InMemoryStore, Store};
@@ -69,7 +70,21 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    let mut state = AppState::new(store, authz, jwt_secret, license_pubkey);
+    let mut state = AppState::new(store, authz, jwt_secret, license_pubkey)
+        .with_rate_limiter(RateLimiter::from_env());
+
+    // Dedicated API-key pepper (so key hashes and JWTs don't share a secret).
+    if let Ok(pepper) = std::env::var("SECUREOPS_API_KEY_PEPPER") {
+        if !pepper.is_empty() {
+            state = state.with_api_key_pepper(pepper);
+            tracing::info!("API-key pepper configured from env");
+        }
+    }
+
+    // Wire a real OIDC verifier when compiled with `--features live-oidc` and
+    // configured. Without it the SSO callback returns 404 (SSO not configured),
+    // which is now explicit rather than a silent default.
+    state = wire_oidc(state);
 
     if let Ok(url) = std::env::var("REDIS_URL") {
         if !url.is_empty() {
@@ -114,10 +129,75 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let addr = std::env::var("SECUREOPS_API_ADDR").unwrap_or_else(|_| "127.0.0.1:8080".into());
+    // Dev mode installs well-known insecure secrets (forgeable JWTs/licenses).
+    // Refuse to bind a non-loopback address in dev mode so those secrets can
+    // never be exposed to a network by accident.
+    if dev_mode && !is_loopback_addr(&addr) {
+        let allow_insecure = std::env::var("SECUREOPS_ALLOW_INSECURE_BIND")
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false);
+        if !allow_insecure {
+            anyhow::bail!(
+                "SECUREOPS_DEV_MODE=1 uses insecure well-known secrets and must not bind a \
+                 non-loopback address ({addr}). For a local container network you may set \
+                 SECUREOPS_ALLOW_INSECURE_BIND=1 to override; for any real deployment unset \
+                 dev mode and provide real SECUREOPS_JWT_SECRET / SECUREOPS_LICENSE_PUBKEY."
+            );
+        }
+        tracing::warn!(
+            "SECUREOPS_DEV_MODE=1 binding non-loopback {addr} with SECUREOPS_ALLOW_INSECURE_BIND=1 \
+             - INSECURE, local/dev only. Never expose this to an untrusted network."
+        );
+    }
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     tracing::info!("secureops-api listening on {addr}");
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+/// True when `addr`'s host is a loopback address (127.0.0.0/8, ::1, localhost).
+fn is_loopback_addr(addr: &str) -> bool {
+    let host = addr.rsplit_once(':').map(|(h, _)| h).unwrap_or(addr);
+    let host = host.trim_start_matches('[').trim_end_matches(']');
+    if host.eq_ignore_ascii_case("localhost") {
+        return true;
+    }
+    match host.parse::<std::net::IpAddr>() {
+        Ok(ip) => ip.is_loopback(),
+        Err(_) => false,
+    }
+}
+
+/// Attach a real OIDC verifier when built with `--features live-oidc` and the
+/// `SECUREOPS_OIDC_*` env is present. A no-op otherwise.
+#[cfg(feature = "live-oidc")]
+fn wire_oidc(state: AppState) -> AppState {
+    use secureops_api::sso::HttpOidcVerifier;
+    let (Ok(jwks_uri), Ok(audience), Ok(issuer)) = (
+        std::env::var("SECUREOPS_OIDC_JWKS_URI"),
+        std::env::var("SECUREOPS_OIDC_AUDIENCE"),
+        std::env::var("SECUREOPS_OIDC_ISSUER"),
+    ) else {
+        return state;
+    };
+    if jwks_uri.is_empty() || audience.is_empty() || issuer.is_empty() {
+        return state;
+    }
+    let default_tenant =
+        std::env::var("SECUREOPS_OIDC_DEFAULT_TENANT").unwrap_or_else(|_| "default".into());
+    tracing::info!("OIDC verifier wired (issuer={issuer})");
+    state.with_oidc(std::sync::Arc::new(HttpOidcVerifier {
+        jwks_uri,
+        audience,
+        issuer,
+        default_tenant,
+    }))
+}
+
+/// No-op when the real OIDC verifier isn't compiled in.
+#[cfg(not(feature = "live-oidc"))]
+fn wire_oidc(state: AppState) -> AppState {
+    state
 }
 
 /// True when `SECUREOPS_DEV_MODE` opts into insecure local-only defaults.

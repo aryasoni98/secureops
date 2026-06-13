@@ -57,7 +57,9 @@ fn jwt(features: Vec<String>, tier: &str) -> String {
             sub: "u1".into(),
             tenant: "tenant_1".into(),
             tier: tier.into(),
+            role: "member".into(),
             features,
+            iss: "secureops".into(),
             exp: FAR_FUTURE as usize,
         },
     )

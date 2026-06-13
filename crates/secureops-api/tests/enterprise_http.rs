@@ -32,7 +32,9 @@ fn jwt(features: &[&str]) -> String {
             sub: "u1".into(),
             tenant: "tenant_1".into(),
             tier: "enterprise".into(),
+            role: "admin".into(),
             features: features.iter().map(|s| s.to_string()).collect(),
+            iss: "secureops".into(),
             exp: FAR as usize,
         },
     )
@@ -125,6 +127,7 @@ impl OidcVerifier for TestVerifier {
             email: "u@corp.example".into(),
             tenant: "tenant_1".into(),
             tier: "enterprise".into(),
+            role: "member".into(),
             features: vec!["sso".into()],
         })
     }

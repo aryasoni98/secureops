@@ -1,0 +1,15 @@
+# Code ownership for required reviews (beta gap: "no CODEOWNERS").
+# Enable "Require review from Code Owners" in branch protection for `master`.
+
+# Default owner for everything.
+*                       @aryasoni98
+
+# Security-sensitive surfaces require explicit owner review.
+/crates/secureops-api/  @aryasoni98
+/crates/secureops-crypto/   @aryasoni98
+/crates/secureops-auditlog/ @aryasoni98
+/crates/secureops-license-server/ @aryasoni98
+/.github/               @aryasoni98
+/deploy/                @aryasoni98
+/deny.toml              @aryasoni98
+/SECURITY.md            @aryasoni98

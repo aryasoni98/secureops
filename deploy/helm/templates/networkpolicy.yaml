@@ -24,8 +24,13 @@ spec:
         - protocol: TCP
           port: {{ .Values.api.port }}
   egress:
-    # DNS
-    - to: []
+    # DNS - restricted to the kube-system namespace (CoreDNS) rather than a
+    # wildcard `to: []`, so a compromised pod cannot tunnel arbitrary traffic
+    # over port 53 to endpoints outside the cluster DNS service.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
       ports:
         - protocol: UDP
           port: 53

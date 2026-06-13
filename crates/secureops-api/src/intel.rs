@@ -32,9 +32,13 @@ use crate::store::FindingFilter;
 // Shared state types (referenced by AppState)
 // ---------------------------------------------------------------------------
 
-/// Stored result of a bug-hunt job (6b).
+/// Stored result of a bug-hunt job (6b). Carries the owning tenant so reads are
+/// isolated (a job UUID from one tenant must not be fetchable by another).
 #[derive(Debug, Clone, Serialize)]
 pub struct BugHuntJob {
+    /// Owning tenant (not serialized to clients; used for isolation checks).
+    #[serde(skip)]
+    pub tenant: String,
     pub status: String,
     pub report: Option<FindingReport>,
     pub iterations: usize,
@@ -365,6 +369,7 @@ pub async fn bughunt_run(
 
     let job_id = Uuid::new_v4();
     let job = BugHuntJob {
+        tenant: claims.tenant.clone(),
         status: format!("{:?}", outcome.status).to_lowercase(),
         report: outcome.report,
         iterations: outcome.iterations,
@@ -374,14 +379,16 @@ pub async fn bughunt_run(
     Ok(Json(json!({ "jobId": job_id, "status": status })))
 }
 
-/// `GET /api/v1/bughunt/{job_id}` - fetch a stored bug-hunt result.
+/// `GET /api/v1/bughunt/{job_id}` - fetch a stored bug-hunt result. Tenant-
+/// isolated: a job owned by another tenant returns `404` (not the report).
 pub async fn bughunt_get(
     State(s): State<AppState>,
-    Authenticated(_claims): Authenticated,
+    Authenticated(claims): Authenticated,
     Path(job_id): Path<Uuid>,
 ) -> ApiResult<Json<BugHuntJob>> {
     crate::lock_recover(&s.bughunt_jobs)
         .get(&job_id)
+        .filter(|j| j.tenant == claims.tenant)
         .cloned()
         .map(Json)
         .ok_or(ApiError::NotFound)
@@ -418,7 +425,8 @@ pub async fn remediation_create(
         .insert_remediation(&claims.tenant, &rem)
         .await
         .map_err(|e| ApiError::Store(e.to_string()))?;
-    s.hub.publish(
+    s.hub.publish_tenant(
+        &claims.tenant,
         json!({ "event": "remediation.queued", "id": rem.id, "class": rem.class }).to_string(),
     );
     Ok(Json(rem))
@@ -428,9 +436,17 @@ pub async fn remediation_create(
 /// a halted playbook class. `class` is one of `safe|reversible|destructive`.
 pub async fn remediation_circuit_reset(
     State(s): State<AppState>,
-    Authenticated(_claims): Authenticated,
+    Authenticated(claims): Authenticated,
     Path(class): Path<String>,
 ) -> ApiResult<Json<Value>> {
+    // Operator-only: resetting a tripped breaker re-enables (potentially
+    // destructive) playbook execution. Requires the tenant-admin role.
+    if !s
+        .authz
+        .allows_role(&claims.features, &claims.role, "remediation_admin")
+    {
+        return Err(ApiError::Forbidden("remediation_admin"));
+    }
     let pc = parse_playbook_class(&class)?;
     s.heal.breaker.reset(pc);
     Ok(Json(json!({ "class": class, "halted": false })))
@@ -456,6 +472,14 @@ pub async fn remediation_approve(
     Authenticated(claims): Authenticated,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<Value>> {
+    // Approving runs a playbook (destructive against a real cloud backend);
+    // require the tenant-admin role, not just any authenticated principal.
+    if !s
+        .authz
+        .allows_role(&claims.features, &claims.role, "remediation_admin")
+    {
+        return Err(ApiError::Forbidden("remediation_admin"));
+    }
     let rem = s
         .store
         .list_remediations(&claims.tenant)
@@ -483,7 +507,8 @@ pub async fn remediation_approve(
         )
         .await;
     let state_str = exec_state_str(outcome.state);
-    s.hub.publish(
+    s.hub.publish_tenant(
+        &claims.tenant,
         json!({ "event": "remediation.completed", "id": id, "state": state_str }).to_string(),
     );
 
@@ -510,7 +535,8 @@ pub async fn remediation_deny(
     if !updated {
         return Err(ApiError::NotFound);
     }
-    s.hub.publish(
+    s.hub.publish_tenant(
+        &claims.tenant,
         json!({ "event": "remediation.denied", "id": id, "state": "aborted" }).to_string(),
     );
     Ok(Json(json!({ "id": id, "state": "aborted" })))

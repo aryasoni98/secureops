@@ -46,7 +46,10 @@ pub async fn license_activate(
         sub: format!("license:{}", lic.lic_id),
         tenant: lic.tenant_id.clone(),
         tier: tier.clone(),
+        // The principal who activates the license is the tenant administrator.
+        role: "admin".into(),
         features: lic.features.clone(),
+        iss: crate::auth::ISSUER.into(),
         exp: lic.expiry as usize,
     };
     let token = issue_jwt(&s.jwt_secret, &claims).map_err(|e| ApiError::Internal(e.to_string()))?;
@@ -100,8 +103,13 @@ pub async fn create_scan(
     // Best-effort enqueue for the scanner worker; degrade gracefully if Redis is
     // down (P9 chaos: scan is still persisted, warning logged).
     if let Some(redis) = &s.redis {
-        let payload =
-            json!({ "scanId": scan.id, "scope": scan.scope, "kind": scan.kind }).to_string();
+        let payload = json!({
+            "scanId": scan.id,
+            "scope": scan.scope,
+            "kind": scan.kind,
+            "tenant_id": scan.tenant_id,
+        })
+        .to_string();
         if let Err(e) = redis
             .enqueue(crate::redis_queue::SCAN_QUEUE, &payload)
             .await
@@ -109,8 +117,10 @@ pub async fn create_scan(
             tracing::warn!("scan enqueue failed (degraded mode): {e}");
         }
     }
-    s.hub
-        .publish(json!({ "event": "scan.queued", "id": scan.id }).to_string());
+    s.hub.publish_tenant(
+        &claims.tenant,
+        json!({ "event": "scan.queued", "id": scan.id }).to_string(),
+    );
     Ok(Json(json!({ "jobId": scan.id, "status": "queued" })))
 }
 
@@ -188,8 +198,10 @@ pub async fn finding_action(
     if !updated {
         return Err(ApiError::NotFound);
     }
-    s.hub
-        .publish(json!({ "event": "finding.action", "id": id, "status": status }).to_string());
+    s.hub.publish_tenant(
+        &claims.tenant,
+        json!({ "event": "finding.action", "id": id, "status": status }).to_string(),
+    );
     Ok(Json(json!({ "id": id, "status": status })))
 }
 
@@ -217,42 +229,47 @@ pub async fn compliance_reports(
         .list_findings(&claims.tenant, &FindingFilter::default())
         .await
         .map_err(|e| ApiError::Store(e.to_string()))?;
+    // Real control mapping: the framework now drives the evaluated control set
+    // and pass/fail coverage (previously the param was echoed and ignored).
+    let report = crate::compliance::evaluate(&framework, &findings);
 
     match format.as_str() {
-        "json" => Ok(Json(json!({
-            "framework": framework,
-            "count": findings.len(),
-            "findings": findings,
-        }))
-        .into_response()),
+        "json" => Ok(Json(report).into_response()),
         "csv" => {
-            let mut csv = String::from("id,severity,status,cloud,blastRadius,title\n");
-            for f in &findings {
+            let mut csv = String::from("control,title,status,maxSeverity,findingCount\n");
+            for c in &report.controls {
                 csv.push_str(&format!(
-                    "{},{:?},{},{},{},{}\n",
-                    f.id,
-                    f.severity,
-                    f.status,
-                    f.cloud.clone().unwrap_or_default(),
-                    f.blast_radius,
-                    f.title.replace(',', " "),
+                    "{},{},{},{},{}\n",
+                    c.id,
+                    c.title.replace(',', " "),
+                    c.status,
+                    c.max_severity.clone().unwrap_or_default(),
+                    c.findings.len(),
                 ));
             }
             Ok(([(header::CONTENT_TYPE, "text/csv")], csv).into_response())
         }
         "zip" => {
+            let report_json = serde_json::to_string(&report).unwrap_or_else(|_| "{}".into());
             let findings_json = serde_json::to_string(&findings).unwrap_or_else(|_| "[]".into());
+            let bundle =
+                json!({ "report": serde_json::from_str::<Value>(&report_json).unwrap_or(Value::Null),
+                        "findings": serde_json::from_str::<Value>(&findings_json).unwrap_or(Value::Null) })
+                    .to_string();
             let manifest = json!({
-                "framework": framework,
+                "framework": report.framework,
+                "frameworkLabel": report.framework_label,
+                "score": report.score,
                 "policyVersion": "1",
                 "generatedAt": now_unix(),
                 "tenant": claims.tenant,
-                "count": findings.len(),
+                "controls": report.total_controls,
+                "failing": report.failing,
             })
             .to_string();
             let bytes = s
                 .export
-                .build(&findings_json, &manifest)
+                .build(&bundle, &manifest)
                 .map_err(|e| ApiError::Internal(e.to_string()))?;
             let pubkey = hex::encode(s.export.public_key());
             let mut resp = Response::new(Body::from(bytes));
