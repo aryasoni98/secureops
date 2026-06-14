@@ -179,7 +179,7 @@ jobs:
           cosign sign --yes ghcr.io/${{ github.repository }}/secureops@${{ steps.build.outputs.digest }}
 
       - name: Attest SBOM + SLSA provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ghcr.io/${{ github.repository }}/secureops
           subject-digest: ${{ steps.build.outputs.digest }}
