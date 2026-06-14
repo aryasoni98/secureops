@@ -253,7 +253,15 @@ const SCS: &[ControlDef] = &[
     ControlDef {
         id: "SCS-IAM",
         title: "IAM policies, roles, and privilege boundaries",
-        keywords: &["iam", "policy", "privilege", "role", "access key", "mfa", "root"],
+        keywords: &[
+            "iam",
+            "policy",
+            "privilege",
+            "role",
+            "access key",
+            "mfa",
+            "root",
+        ],
     },
     ControlDef {
         id: "SCS-NET",
@@ -278,7 +286,14 @@ const SCS: &[ControlDef] = &[
     ControlDef {
         id: "SCS-LOG",
         title: "Detective controls (CloudTrail, GuardDuty, Config)",
-        keywords: &["cloudtrail", "logging", "audit", "guardduty", "config", "monitor"],
+        keywords: &[
+            "cloudtrail",
+            "logging",
+            "audit",
+            "guardduty",
+            "config",
+            "monitor",
+        ],
     },
     ControlDef {
         id: "SCS-INC",
@@ -291,7 +306,15 @@ const OWASP: &[ControlDef] = &[
     ControlDef {
         id: "A01",
         title: "Broken Access Control",
-        keywords: &["public", "open", "privilege", "iam", "access", "0.0.0.0", "anonymous"],
+        keywords: &[
+            "public",
+            "open",
+            "privilege",
+            "iam",
+            "access",
+            "0.0.0.0",
+            "anonymous",
+        ],
     },
     ControlDef {
         id: "A02",
@@ -301,7 +324,14 @@ const OWASP: &[ControlDef] = &[
     ControlDef {
         id: "A05",
         title: "Security Misconfiguration",
-        keywords: &["misconfig", "default", "public", "exposed", "open", "bucket"],
+        keywords: &[
+            "misconfig",
+            "default",
+            "public",
+            "exposed",
+            "open",
+            "bucket",
+        ],
     },
     ControlDef {
         id: "A07",
@@ -421,7 +451,14 @@ const CCSK: &[ControlDef] = &[
     ControlDef {
         id: "CCSK-DOM3",
         title: "IAM and identity federation",
-        keywords: &["iam", "mfa", "role", "privilege", "access key", "federation"],
+        keywords: &[
+            "iam",
+            "mfa",
+            "role",
+            "privilege",
+            "access key",
+            "federation",
+        ],
     },
     ControlDef {
         id: "CCSK-DOM4",

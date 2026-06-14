@@ -129,39 +129,8 @@ jobs:
       - run: cargo clippy -p secureops-api --features live-oidc -- -D warnings
       - run: cargo build -p secureops-api --features "tls,otlp,live-oidc"
 
-  # ── Cosign: sign + verify release images keylessly via sigstore ─────────
-  cosign:
-    name: Cosign keyless sign+verify
-    needs: [rust]
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      packages: write
-    steps:
-      - uses: actions/checkout@v6
-      - uses: sigstore/cosign-installer@v3
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/setup-buildx-action@v3
-      - name: Build image
-        run: docker build -f deploy/docker/Dockerfile -t ghcr.io/${{ github.repository_owner }}/secureops:${{ github.ref_name }} .
-      - name: Push
-        run: docker push ghcr.io/${{ github.repository_owner }}/secureops:${{ github.ref_name }}
-      - name: Sign keyless
-        env:
-          COSIGN_EXPERIMENTAL: "true"
-        run: cosign sign --yes ghcr.io/${{ github.repository_owner }}/secureops:${{ github.ref_name }}
-      - name: Verify
-        env:
-          COSIGN_EXPERIMENTAL: "true"
-        run: |
-          cosign verify ghcr.io/${{ github.repository_owner }}/secureops:${{ github.ref_name }} \
-            --certificate-identity-regexp "https://github.com/${{ github.repository }}/" \
-            --certificate-oidc-issuer https://token.actions.githubusercontent.com
+  # Container image build/sign/push runs in release.yml (GHCR package +
+  # cosign keyless + SLSA attestation). This workflow only publishes crates.
 
   # ── Release: publish crates.io on version tag ───────────────────────────
   # The npm shim (@aryasoni98/secureops) lives in a separate repository and is

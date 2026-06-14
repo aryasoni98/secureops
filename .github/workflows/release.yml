@@ -25,9 +25,13 @@ jobs:
       - name: Extract changelog entry
         id: changelog
         run: |
-          # Extract the first version block from CHANGELOG.md
-          awk '/^## v/{if (found) exit; found=1} found' CHANGELOG.md \
-            | head -120 > /tmp/release-notes.md
+          # Extract the changelog block for this tag (## v0.0.2 or ## 0.0.2).
+          TAG="${GITHUB_REF#refs/tags/}"
+          awk -v tag="$TAG" '
+            $0 ~ "^## v?" tag { found=1; next }
+            found && /^## / { exit }
+            found
+          ' CHANGELOG.md | head -120 > /tmp/release-notes.md
           echo "notes_file=/tmp/release-notes.md" >> "$GITHUB_OUTPUT"
 
       - name: Create release

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.0.2 (2026-06-10)
+## v0.0.2 (2026-06-10)
 
 First versioned release after the P0-P9 closure. Rolls up the two
 previously-unreleased sweeps below plus a reality-gap pass. Final state:
