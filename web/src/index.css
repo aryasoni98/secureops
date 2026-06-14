@@ -9,7 +9,47 @@ body,
 }
 
 body {
-  background: #0b1020;
+  background: #070b14;
   color: #e6edf3;
-  font-family: system-ui, sans-serif;
+  font-family: Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism surface used across the dashboard. */
+.glass {
+  @apply bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] rounded-2xl;
+}
+
+.glass-hover {
+  @apply transition-colors duration-300 hover:bg-white/[0.07] hover:border-white/[0.14];
+}
+
+/* Gradient accent text (logo, headings). */
+.text-gradient {
+  @apply bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent;
+}
+
+/* Slim custom scrollbar to match the dark theme. */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
+}
+
+/* Honor reduced-motion preferences for the ambient background. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-aurora,
+  .animate-aurora-slow,
+  .animate-shimmer {
+    animation: none;
+  }
 }

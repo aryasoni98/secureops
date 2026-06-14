@@ -1,0 +1,9 @@
+target
+.git
+graphify-out
+web/node_modules
+web/dist
+**/*.rs.bk
+deploy/docker/.env
+.env
+.env.*
