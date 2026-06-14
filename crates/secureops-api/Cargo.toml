@@ -59,7 +59,7 @@ tokio-postgres = { version = "0.7", features = ["with-uuid-1", "with-serde_json-
 deadpool-postgres = "0.14"
 deadpool-redis = "0.18"
 # SigV4 presigning for S3/MinIO evidence URLs (pure Rust; no aws-sdk → no cc).
-hmac = "0.12"
+hmac = "0.13"
 hex = "0.4"
 # Stored-only ZIP for signed incident-report exports (default features off → no
 # bzip2/zstd/lzma C deps → cc-safe). Ed25519 signing reuses the existing dep.
