@@ -4932,7 +4932,7 @@ version = "0.0.2"
 dependencies = [
  "anyhow",
  "ed25519-dalek",
- "getrandom 0.2.17",
+ "getrandom 0.4.2",
  "secureops-core",
  "serde",
  "serde_json",
@@ -5042,7 +5042,7 @@ dependencies = [
  "anyhow",
  "argon2",
  "ed25519-dalek",
- "getrandom 0.2.17",
+ "getrandom 0.4.2",
  "keyring",
  "pbkdf2",
  "secureops-core",
