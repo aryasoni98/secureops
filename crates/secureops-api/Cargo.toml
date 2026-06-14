@@ -82,7 +82,7 @@ rustls = { version = "0.23", default-features = false, features = [
 
 # OTLP trace export (gated `otlp`): ship spans to the OpenTelemetry collector
 # over HTTP/protobuf (no tonic/gRPC → leaner tree). Wires a tracing layer.
-opentelemetry = { version = "0.27", optional = true }
+opentelemetry = { version = "0.32", optional = true }
 opentelemetry_sdk = { version = "0.27", features = [
     "rt-tokio",
 ], optional = true }
