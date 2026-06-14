@@ -70,6 +70,7 @@ jobs:
     permissions:
       contents: write
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -111,7 +112,8 @@ jobs:
         run: |
           PACKAGES="-p secureops-cli -p secureops-daemon -p secureops-api -p secureops-license-server -p secureops-scanner"
           if [ "${{ matrix.cross }}" = "true" ]; then
-            cross auditable build --release $PACKAGES --target ${{ matrix.target }}
+            # cargo-auditable is host-only; cross only wraps plain `cargo build`.
+            cross build --release $PACKAGES --target ${{ matrix.target }}
           else
             cargo auditable build --release $PACKAGES --target ${{ matrix.target }}
           fi
