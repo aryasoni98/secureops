@@ -6,6 +6,7 @@ on:
     tags: ['v*']        # tag pushes must trigger CI so the tag-gated publish-crates job runs
   pull_request:
     branches: [master]
+  workflow_dispatch:    # manual re-run of publish-crates after fixing secrets / resume
 
 # Run bundled JS actions (checkout/setup-node) on Node 24, ahead of the Node 20
 # removal from runners (Sept 2026). Silences deprecation warnings.
@@ -138,7 +139,7 @@ jobs:
   publish-crates:
     name: Publish crates.io
     needs: [rust]
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -185,7 +186,7 @@ jobs:
               if out=$(cargo publish -p "$crate" --no-verify 2>&1); then
                 echo "published $crate"; sleep 12; break
               fi
-              if echo "$out" | grep -qiE 'already uploaded|crate version.*already|is already'; then
+              if echo "$out" | grep -qiE 'already uploaded|already exists|crate version.*already|is already'; then
                 echo "skip $crate (already published)"; break
               fi
               if echo "$out" | grep -qiE '429|Too Many Requests'; then
