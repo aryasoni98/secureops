@@ -13,7 +13,7 @@ use utoipa::OpenApi;
 
 use crate::state::AppState;
 use crate::store::Store;
-use crate::{health, intel, routes, sso, ws};
+use crate::{health, intel, metrics, ratelimit, routes, sso, ws};
 
 /// Embed the built dashboard SPA (PRODUCT.md Phase 8): static assets under
 /// `/assets`, and any unmatched (client-side) route falls back to the SPA
@@ -113,9 +113,24 @@ pub fn build_router(state: AppState) -> Router {
     Router::new()
         .route("/livez", get(health::livez))
         .route("/readyz", get(readyz))
+        .route("/metrics", get(metrics::metrics_handler))
         .route("/ws/findings", get(ws::ws_handler))
         .route("/ws/scan-progress", get(ws::ws_handler))
         .route("/ws/remediation", get(ws::ws_handler))
         .nest("/api/v1", api)
+        // Middleware (innermost listed first): per-IP rate limiting rejects
+        // abusive clients early; the metrics layer counts every response
+        // (including 429s); TraceLayer emits a per-request span for the OTLP
+        // collector / log pipeline. `.layer` is outermost-last, so the request
+        // path is trace → metrics → ratelimit → handler.
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            ratelimit::enforce,
+        ))
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            metrics::track,
+        ))
+        .layer(tower_http::trace::TraceLayer::new_for_http())
         .with_state(state)
 }

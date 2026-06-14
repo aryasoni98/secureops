@@ -16,8 +16,28 @@ spec:
       labels:
         {{- include "secureops.selectorLabels" . | nindent 8 }}
     spec:
+      serviceAccountName: {{ include "secureops.fullname" . }}
+      automountServiceAccountToken: false
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      # Spread replicas across nodes so a single node failure / drain cannot take
+      # the whole API offline (paired with the PodDisruptionBudget).
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    {{- include "secureops.selectorLabels" . | nindent 20 }}
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "secureops.selectorLabels" . | nindent 14 }}
       containers:
         - name: api
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -28,15 +48,20 @@ spec:
           env:
             - name: SECUREOPS_API_ADDR
               value: {{ .Values.api.addr | quote }}
-            - name: DATABASE_URL
-              value: {{ .Values.api.databaseUrl | quote }}
             - name: REDIS_URL
               value: {{ .Values.api.redisUrl | quote }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ .Values.api.otelEndpoint | quote }}
-            # JWT secret + license pubkey from a Secret named per values.api.jwtSecretName
-            # (keys: jwt-secret, license-pubkey). Create it out-of-band or via your
-            # secrets operator - required: the API refuses to start without them.
+            # Secrets (jwt-secret, license-pubkey, database-url, optional
+            # api-key-pepper) come from a Secret - never inlined as plaintext env
+            # (those leak via `kubectl describe pod` and etcd). Create it
+            # out-of-band or via your secrets operator (ExternalSecrets / Sealed
+            # Secrets / Vault). The API refuses to start without jwt-secret + pubkey.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.api.secretName | default .Values.api.jwtSecretName }}
+                  key: database-url
             - name: SECUREOPS_JWT_SECRET
               valueFrom:
                 secretKeyRef:
@@ -47,6 +72,12 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.api.jwtSecretName }}
                   key: license-pubkey
+            - name: SECUREOPS_API_KEY_PEPPER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.api.jwtSecretName }}
+                  key: api-key-pepper
+                  optional: true
           ports:
             - name: http
               containerPort: {{ .Values.api.port }}

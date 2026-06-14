@@ -37,6 +37,28 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
 
+  sbom:
+    name: Attach CycloneDX SBOM to release
+    needs: create-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Generate CycloneDX SBOM
+        run: |
+          cargo install cargo-cyclonedx --locked
+          cargo cyclonedx --format json --all
+          # Aggregate every crate's SBOM into one downloadable artifact named
+          # for the tag, so consumers can pull the SBOM from the release page.
+          mkdir -p sbom && find . -name '*.cdx.json' -exec cp {} sbom/ \;
+          tar -czf "secureops-sbom-${GITHUB_REF_NAME}.cdx.tar.gz" sbom
+      - name: Upload SBOM to release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: secureops-sbom-*.cdx.tar.gz
+
   build-binaries:
     name: Build release binaries (${{ matrix.target }})
     needs: create-release
@@ -71,7 +93,9 @@ jobs:
 
       - name: Install cross (for aarch64 Linux)
         if: matrix.cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
+        # Pin to a released version (not git HEAD) so the cross-compile toolchain
+        # is a fixed, auditable supply-chain input.
+        run: cargo install cross --locked --version 0.2.5
 
       - name: Install cargo-auditable
         run: cargo install cargo-auditable --locked

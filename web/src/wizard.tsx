@@ -3,11 +3,84 @@
 // flags in localStorage just gate client navigation so reloads land in the
 // right place.
 
+import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, openWs, token } from "./api";
-import { Page, PrimaryButton } from "./components";
+import { AmbientBackground, Page, PrimaryButton } from "./components";
 import { setup } from "./setup";
+
+// --------------------------- step indicator ---------------------------------
+
+const STEPS = ["License", "LLM keys", "Cloud", "First scan"] as const;
+
+function StepProgress({ current }: { current: number }) {
+  return (
+    <div className="max-w-7xl mx-auto px-6 pt-8">
+      <div className="flex items-center gap-0 max-w-2xl">
+        {STEPS.map((label, i) => {
+          const done = i < current;
+          const active = i === current;
+          return (
+            <div key={label} className={`flex items-center ${i > 0 ? "flex-1" : ""}`}>
+              {i > 0 && (
+                <div className="flex-1 h-[2px] mx-2 bg-white/[0.08] relative overflow-hidden rounded-full">
+                  <motion.div
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: done || active ? 1 : 0 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    className="absolute inset-0 origin-left bg-gradient-to-r from-emerald-400 to-teal-400"
+                  />
+                </div>
+              )}
+              <motion.div
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: i * 0.08, type: "spring", stiffness: 300, damping: 20 }}
+                className="flex items-center gap-2 shrink-0"
+              >
+                <span
+                  className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold border transition-colors duration-300 ${
+                    done
+                      ? "bg-emerald-500 border-emerald-500 text-slate-950"
+                      : active
+                        ? "bg-emerald-500/15 border-emerald-400 text-emerald-300 shadow-glow"
+                        : "bg-white/[0.04] border-white/[0.12] text-slate-500"
+                  }`}
+                >
+                  {done ? "✓" : i + 1}
+                </span>
+                <span
+                  className={`text-xs font-medium hidden sm:inline ${
+                    active ? "text-white" : done ? "text-emerald-300" : "text-slate-500"
+                  }`}
+                >
+                  {label}
+                </span>
+              </motion.div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Shared chrome for wizard screens (no TopNav yet - user isn't set up). */
+function WizardFrame({ step, children }: { step: number; children: React.ReactNode }) {
+  return (
+    <>
+      <AmbientBackground />
+      <StepProgress current={step} />
+      {children}
+    </>
+  );
+}
+
+const inputClass =
+  "bg-white/[0.04] border border-white/[0.1] rounded-xl p-3 focus:outline-none focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20 transition-all duration-200 placeholder:text-slate-600";
+
+// ------------------------------- steps ---------------------------------------
 
 export function LicenseActivation() {
   const [key, setKey] = useState("");
@@ -24,24 +97,29 @@ export function LicenseActivation() {
     }
   }
   return (
-    <Page title="Activate License">
-      <p className="text-slate-400 mb-3">
-        Paste your SecureOps license key. The server verifies an Ed25519 signature; tampered or
-        expired keys are rejected.
-      </p>
-      <textarea
-        data-testid="license-key"
-        value={key}
-        onChange={(e) => setKey(e.target.value)}
-        rows={5}
-        className="w-full bg-slate-900 border border-slate-700 rounded p-3 font-mono text-xs"
-        placeholder="-----BEGIN SECUREOPS LICENSE----- ..."
-      />
-      <div className="mt-3 flex items-center gap-3">
-        <PrimaryButton onClick={activate}>Activate</PrimaryButton>
-        <p className="text-sm text-slate-300">{msg}</p>
-      </div>
-    </Page>
+    <WizardFrame step={0}>
+      <Page title="Activate License">
+        <p className="text-slate-400 mb-4 max-w-2xl">
+          Paste your SecureOps license key. The server verifies an Ed25519 signature; tampered or
+          expired keys are rejected.
+        </p>
+        <motion.textarea
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          data-testid="license-key"
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+          rows={5}
+          className={`w-full font-mono text-xs ${inputClass}`}
+          placeholder="-----BEGIN SECUREOPS LICENSE----- ..."
+        />
+        <div className="mt-4 flex items-center gap-3">
+          <PrimaryButton onClick={activate}>Activate</PrimaryButton>
+          <p className="text-sm text-slate-300">{msg}</p>
+        </div>
+      </Page>
+    </WizardFrame>
   );
 }
 
@@ -63,37 +141,41 @@ export function SetupLlmKeys() {
     nav("/setup/cloud");
   }
   return (
-    <Page title="Step 2 - LLM keys">
-      <p className="text-slate-400 mb-3">
-        Provide a key for at least one LLM provider so SecureOps can run the bug-hunt loop. The
-        key itself is never stored in the browser - configure it as an environment variable on
-        the API/scanner (`OPENAI_API_KEY` / `ANTHROPIC_API_KEY`); this step only records which
-        provider you chose.
-      </p>
-      <select
-        value={provider}
-        onChange={(e) => setProvider(e.target.value as (typeof LLM_PROVIDERS)[number])}
-        className="bg-slate-900 border border-slate-700 rounded p-2 mr-2"
-      >
-        <option value="openai">OpenAI</option>
-        <option value="anthropic">Anthropic</option>
-        <option value="local">Local (LocalProvider)</option>
-      </select>
-      <input
-        value={key}
-        onChange={(e) => setKey(e.target.value)}
-        type="password"
-        placeholder="sk-..."
-        className="bg-slate-900 border border-slate-700 rounded p-2 w-72"
-      />
-      <button
-        onClick={save}
-        className="ml-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-2 rounded"
-      >
-        Save & test
-      </button>
-      <p className="text-sm text-slate-300 mt-3">{msg}</p>
-    </Page>
+    <WizardFrame step={1}>
+      <Page title="Step 2 - LLM keys">
+        <p className="text-slate-400 mb-4 max-w-2xl">
+          Provide a key for at least one LLM provider so SecureOps can run the bug-hunt loop. The
+          key itself is never stored in the browser - configure it as an environment variable on
+          the API/scanner (`OPENAI_API_KEY` / `ANTHROPIC_API_KEY`); this step only records which
+          provider you chose.
+        </p>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="flex items-center gap-3 flex-wrap"
+        >
+          <select
+            value={provider}
+            onChange={(e) => setProvider(e.target.value as (typeof LLM_PROVIDERS)[number])}
+            className={inputClass}
+          >
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="local">Local (LocalProvider)</option>
+          </select>
+          <input
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            type="password"
+            placeholder="sk-..."
+            className={`w-72 ${inputClass}`}
+          />
+          <PrimaryButton onClick={save}>Save &amp; test</PrimaryButton>
+        </motion.div>
+        <p className="text-sm text-slate-300 mt-4">{msg}</p>
+      </Page>
+    </WizardFrame>
   );
 }
 
@@ -125,41 +207,50 @@ export function SetupCloud() {
     nav("/setup/scan");
   }
   return (
-    <Page title="Step 3 - Cloud read-only credential">
-      <p className="text-slate-400 mb-3">
-        SecureOps only needs read-only access for inventory + checks. Cloud mutations only happen
-        through human-approved playbooks.
-      </p>
-      <div className="flex gap-2 mb-3">
-        {(["aws", "gcp", "azure"] as CloudProvider[]).map((p) => (
-          <button
-            key={p}
-            onClick={() => setProvider(p)}
-            className={`px-3 py-1 rounded uppercase text-xs ${
-              provider === p ? "bg-emerald-500 text-slate-950" : "bg-slate-800"
-            }`}
-          >
-            {p}
-          </button>
-        ))}
-      </div>
-      <pre className="bg-slate-900 border border-slate-800 rounded p-3 text-xs overflow-auto whitespace-pre-wrap">
-        {CLOUD_SNIPPETS[provider]}
-      </pre>
-      <input
-        value={arn}
-        onChange={(e) => setArn(e.target.value)}
-        placeholder="arn:aws:iam::... / sa email / app id"
-        className="bg-slate-900 border border-slate-700 rounded p-2 mt-3 w-full"
-      />
-      <button
-        onClick={save}
-        className="mt-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-2 rounded"
-      >
-        Save & continue
-      </button>
-      <p className="text-sm text-slate-300 mt-3">{msg}</p>
-    </Page>
+    <WizardFrame step={2}>
+      <Page title="Step 3 - Cloud read-only credential">
+        <p className="text-slate-400 mb-4 max-w-2xl">
+          SecureOps only needs read-only access for inventory + checks. Cloud mutations only happen
+          through human-approved playbooks.
+        </p>
+        <div className="flex gap-2 mb-4">
+          {(["aws", "gcp", "azure"] as CloudProvider[]).map((p) => (
+            <motion.button
+              key={p}
+              whileHover={{ scale: 1.06 }}
+              whileTap={{ scale: 0.94 }}
+              onClick={() => setProvider(p)}
+              className={`px-3.5 py-1.5 rounded-full uppercase text-xs font-semibold border transition-colors duration-200 ${
+                provider === p
+                  ? "bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 border-transparent shadow-glow"
+                  : "bg-white/[0.04] border-white/[0.08] text-slate-300 hover:bg-white/[0.08]"
+              }`}
+            >
+              {p}
+            </motion.button>
+          ))}
+        </div>
+        <motion.pre
+          key={provider}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="glass p-4 text-xs overflow-auto whitespace-pre-wrap font-mono text-slate-300"
+        >
+          {CLOUD_SNIPPETS[provider]}
+        </motion.pre>
+        <input
+          value={arn}
+          onChange={(e) => setArn(e.target.value)}
+          placeholder="arn:aws:iam::... / sa email / app id"
+          className={`mt-4 w-full ${inputClass}`}
+        />
+        <div className="mt-4">
+          <PrimaryButton onClick={save}>Save &amp; continue</PrimaryButton>
+        </div>
+        <p className="text-sm text-slate-300 mt-4">{msg}</p>
+      </Page>
+    </WizardFrame>
   );
 }
 
@@ -194,41 +285,53 @@ export function SetupScan() {
     }
   }
   return (
-    <Page title="Step 4 - first scan">
-      <div className="flex items-center gap-3">
-        <select
-          value={scope}
-          onChange={(e) => setScope(e.target.value as (typeof SCAN_SCOPES)[number])}
-          className="bg-slate-900 border border-slate-700 rounded p-2"
+    <WizardFrame step={3}>
+      <Page title="Step 4 - first scan">
+        <div className="flex items-center gap-3">
+          <select
+            value={scope}
+            onChange={(e) => setScope(e.target.value as (typeof SCAN_SCOPES)[number])}
+            className={inputClass}
+          >
+            <option value="all">All clouds</option>
+            <option value="aws">AWS</option>
+            <option value="gcp">GCP</option>
+            <option value="azure">Azure</option>
+          </select>
+          <PrimaryButton onClick={go} disabled={starting}>
+            {starting ? "Starting…" : "Run scan"}
+          </PrimaryButton>
+          {jobId && (
+            <motion.span
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-sm text-slate-300"
+            >
+              job: {jobId}
+            </motion.span>
+          )}
+          {msg && <span className="text-sm text-rose-300">{msg}</span>}
+        </div>
+        <motion.pre
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mt-5 glass p-4 text-xs h-48 overflow-auto font-mono text-slate-300"
         >
-          <option value="all">All clouds</option>
-          <option value="aws">AWS</option>
-          <option value="gcp">GCP</option>
-          <option value="azure">Azure</option>
-        </select>
-        <button
-          onClick={go}
-          disabled={starting}
-          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-2 rounded disabled:opacity-50"
+          {progress.length
+            ? progress.join("\n")
+            : jobId
+              ? "Waiting for /ws/scan-progress events…"
+              : "Start a scan to stream progress here."}
+        </motion.pre>
+        <motion.button
+          whileHover={{ x: 4 }}
+          onClick={() => nav("/findings")}
+          className="mt-4 text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
         >
-          {starting ? "Starting…" : "Run scan"}
-        </button>
-        {jobId && <span className="text-sm text-slate-300">job: {jobId}</span>}
-        {msg && <span className="text-sm text-rose-300">{msg}</span>}
-      </div>
-      <pre className="mt-4 bg-slate-900 border border-slate-800 rounded p-3 text-xs h-48 overflow-auto">
-        {progress.length
-          ? progress.join("\n")
-          : jobId
-            ? "Waiting for /ws/scan-progress events…"
-            : "Start a scan to stream progress here."}
-      </pre>
-      <button
-        onClick={() => nav("/findings")}
-        className="mt-3 text-emerald-400 hover:text-emerald-300"
-      >
-        Continue to dashboard →
-      </button>
-    </Page>
+          Continue to dashboard →
+        </motion.button>
+      </Page>
+    </WizardFrame>
   );
 }

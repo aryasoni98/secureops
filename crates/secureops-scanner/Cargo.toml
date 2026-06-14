@@ -26,11 +26,11 @@ deadpool-redis = "0.18"
 async-trait = { workspace = true }
 # Read-only AWS collector (gated). aws-sdk v1 pulls aws-lc-rs (cc>=1.1) -
 # usable since the tree-sitter bump lifted the workspace cc cap.
-aws-config = { version = "1", optional = true }
-aws-sdk-s3 = { version = "1", optional = true }
-aws-sdk-ec2 = { version = "1", optional = true }
-aws-sdk-iam = { version = "1", optional = true }
-aws-sdk-cloudtrail = { version = "1", optional = true }
+aws-config = { version = "1", optional = true, default-features = false, features = ["default-https-client", "rt-tokio", "credentials-process", "sso"] }
+aws-sdk-s3 = { version = "1", optional = true, default-features = false, features = ["default-https-client", "rt-tokio"] }
+aws-sdk-ec2 = { version = "1", optional = true, default-features = false, features = ["default-https-client", "rt-tokio"] }
+aws-sdk-iam = { version = "1", optional = true, default-features = false, features = ["default-https-client", "rt-tokio"] }
+aws-sdk-cloudtrail = { version = "1", optional = true, default-features = false, features = ["default-https-client", "rt-tokio"] }
 
 [features]
 aws = [

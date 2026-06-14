@@ -4,17 +4,26 @@ replicaCount: 2
 
 image:
   repository: secureops-rust
-  # Defaults to the chart appVersion; override for a specific build.
+  # Defaults to the chart appVersion; override for a specific build. Prefer a
+  # digest (repository@sha256:...) over a mutable tag in production.
   tag: ""
   pullPolicy: IfNotPresent
 
 api:
   port: 8080
   addr: "0.0.0.0:8080"
-  # Reference secrets/datastores by value. In real deploys, source jwtSecret and
-  # licensePubkey from a Secret (see api-deployment.yaml envFrom note).
+  # All API secrets are sourced from a Kubernetes Secret (never inlined here).
+  # Required keys in `jwtSecretName`: jwt-secret, license-pubkey, database-url.
+  # Optional: api-key-pepper. Create the Secret out-of-band or via your secrets
+  # operator (ExternalSecrets / Sealed Secrets / Vault):
+  #   kubectl create secret generic secureops-api \
+  #     --from-literal=jwt-secret="$(openssl rand -hex 32)" \
+  #     --from-literal=license-pubkey="<base64url-ed25519-pubkey>" \
+  #     --from-literal=database-url="postgres://user:pass@postgres:5432/secureops" \
+  #     --from-literal=api-key-pepper="$(openssl rand -hex 32)"
   jwtSecretName: secureops-api
-  databaseUrl: "postgres://secureops_app:change-me@postgres:5432/secureops"
+  # Optional separate Secret for the DB URL (defaults to jwtSecretName).
+  secretName: ""
   redisUrl: "redis://redis:6379"
   otelEndpoint: "http://otel-collector:4317"
 
@@ -30,6 +39,8 @@ resources:
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
   seccompProfile:
     type: RuntimeDefault
 containerSecurityContext:
@@ -37,6 +48,11 @@ containerSecurityContext:
   readOnlyRootFilesystem: true
   capabilities:
     drop: ["ALL"]
+
+# Keep the API available during node drains / rolling upgrades.
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
 
 autoscaling:
   enabled: false

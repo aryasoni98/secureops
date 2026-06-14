@@ -78,7 +78,7 @@ fn spawn_egress_proxy(tasks: &mut JoinSet<()>, config: &secureops_core::OpenClaw
     let hosts = net.egress_allowlist.clone().unwrap_or_default();
     let pdp: Arc<dyn secureops_proxy::PolicyDecisionPoint> =
         Arc::new(secureops_proxy::AllowlistPdp::new(hosts.clone()));
-    let addr: std::net::SocketAddr = "127.0.0.1:8889".parse().unwrap();
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 8889));
     println!(
         "  egress proxy: ON at {addr} (set agent HTTPS_PROXY) - {} allowlisted host(s), fail-closed",
         hosts.len()

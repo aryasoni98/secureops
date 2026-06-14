@@ -1,12 +1,13 @@
 # SecureOps Rust - multi-stage image (CLI + Ring-2 daemon + platform API)
 # Build context: repo root   (docker build -f deploy/docker/Dockerfile .)
 
-# Pin the toolchain minor so image rebuilds are reproducible (MSRV: api crate 1.82).
-FROM rust:1.85-bookworm AS builder
+# Latest stable Rust on Debian (aws-sdk deps currently need ≥1.91.1).
+FROM rust:bookworm AS builder
 
 WORKDIR /build
 COPY . .
-RUN cargo build --release -p secureops-cli -p secureops-daemon -p secureops-api -p secureops-scanner -p secureops-license-server
+RUN cargo build --release -p secureops-cli -p secureops-daemon -p secureops-api -p secureops-license-server \
+    && cargo build --release -p secureops-scanner --features aws
 
 # -----------------------------------------------------------------------------
 

@@ -23,6 +23,8 @@ pub struct OidcClaims {
     pub email: String,
     pub tenant: String,
     pub tier: String,
+    /// Coarse RBAC role (`admin` | `member`); defaults to `member`.
+    pub role: String,
     pub features: Vec<String>,
 }
 
@@ -72,7 +74,9 @@ pub async fn oidc_callback(
         sub: claims.sub,
         tenant: claims.tenant,
         tier: claims.tier,
+        role: claims.role,
         features: claims.features,
+        iss: crate::auth::ISSUER.into(),
         exp,
     };
     let token =
@@ -100,6 +104,7 @@ pub fn map_oidc_claims(payload: &serde_json::Value, default_tenant: &str) -> Oid
             .unwrap_or(default_tenant)
             .to_string(),
         tier: payload["tier"].as_str().unwrap_or("community").to_string(),
+        role: payload["role"].as_str().unwrap_or("member").to_string(),
         features,
     }
 }
@@ -111,6 +116,9 @@ pub fn map_oidc_claims(payload: &serde_json::Value, default_tenant: &str) -> Oid
 pub struct HttpOidcVerifier {
     pub jwks_uri: String,
     pub audience: String,
+    /// Expected `iss` claim - pin to your IdP's issuer URL so tokens minted by
+    /// any other issuer (even with a matching `kid`/audience) are rejected.
+    pub issuer: String,
     pub default_tenant: String,
 }
 
@@ -129,6 +137,7 @@ impl OidcVerifier for HttpOidcVerifier {
                 .ok()?;
         let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
         validation.set_audience(&[&self.audience]);
+        validation.set_issuer(&[&self.issuer]);
         let data = jsonwebtoken::decode::<serde_json::Value>(token, &dk, &validation).ok()?;
         Some(map_oidc_claims(&data.claims, &self.default_tenant))
     }
@@ -148,6 +157,7 @@ mod tests {
                 email: "user1@corp.example".into(),
                 tenant: "tenant_1".into(),
                 tier: "enterprise".into(),
+                role: "member".into(),
                 features: vec!["sso".into()],
             })
         }

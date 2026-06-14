@@ -18,13 +18,38 @@ spec:
         app.kubernetes.io/name: secureops-neo4j
         app.kubernetes.io/part-of: secureops
     spec:
+      automountServiceAccountToken: false
+      # neo4j runs as its image uid (7474); enforce non-root + seccomp.
+      # readOnlyRootFilesystem is intentionally NOT set: neo4j writes to several
+      # runtime paths; the PVC-backed /data holds durable state.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 7474
+        runAsGroup: 7474
+        fsGroup: 7474
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: neo4j
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
+            # Source credentials from a Secret in production (set
+            # auth.existingSecret + auth.secretKey, key value "user/password").
+            # The inline default is dev-only and must not be used in production.
             - name: NEO4J_AUTH
+              {{- if .Values.auth.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret }}
+                  key: {{ .Values.auth.secretKey | default "NEO4J_AUTH" }}
+              {{- else }}
               value: "{{ .Values.auth.username }}/{{ .Values.auth.password }}"
+              {{- end }}
           ports:
             - name: bolt
               containerPort: {{ .Values.ports.bolt }}

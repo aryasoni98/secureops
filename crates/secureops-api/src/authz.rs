@@ -33,6 +33,11 @@ permit(principal, action == Action::"license", resource);
 permit(principal, action == Action::"compliance", resource);
 permit(principal, action == Action::"clouds", resource);
 permit(principal, action == Action::"llm_keys", resource);
+
+// Privileged write operations (approve/run remediations, reset circuit
+// breakers) require the tenant-admin role, not just any authenticated user.
+permit(principal, action == Action::"remediation_admin", resource)
+when { principal has role && principal.role == "admin" };
 "#;
 
 /// Wraps a parsed Cedar [`PolicySet`] + an [`Authorizer`].
@@ -56,12 +61,19 @@ impl PolicyEngine {
         Self::new(DEFAULT_POLICY).expect("built-in Cedar policy parses")
     }
 
-    /// `true` iff a principal holding `features` may perform `action`.
+    /// `true` iff a principal holding `features` (role `member`) may perform
+    /// `action`. Convenience for capability-only gates.
     pub fn allows(&self, features: &[String], action: &str) -> bool {
-        matches!(self.evaluate(features, action), Ok(Decision::Allow))
+        self.allows_role(features, "member", action)
     }
 
-    fn evaluate(&self, features: &[String], action: &str) -> anyhow::Result<Decision> {
+    /// `true` iff a principal holding `features` and RBAC `role` may perform
+    /// `action`. Role-gated policies (e.g. `remediation_admin`) consult `role`.
+    pub fn allows_role(&self, features: &[String], role: &str, action: &str) -> bool {
+        matches!(self.evaluate(features, role, action), Ok(Decision::Allow))
+    }
+
+    fn evaluate(&self, features: &[String], role: &str, action: &str) -> anyhow::Result<Decision> {
         let principal_uid = EntityUid::from_str("User::\"u\"")
             .map_err(|e| anyhow::anyhow!("principal uid: {e}"))?;
         let action_uid = EntityUid::from_str(&format!("Action::\"{action}\""))
@@ -77,6 +89,10 @@ impl PolicyEngine {
         );
         let mut attrs = HashMap::new();
         attrs.insert("features".to_string(), feature_set);
+        attrs.insert(
+            "role".to_string(),
+            RestrictedExpression::new_string(role.to_string()),
+        );
         let principal = Entity::new(principal_uid.clone(), attrs, HashSet::new())
             .map_err(|e| anyhow::anyhow!("principal entity: {e}"))?;
         let entities = Entities::from_entities([principal], None)
@@ -127,6 +143,16 @@ mod tests {
         assert!(e.allows(&[], "findings"));
         assert!(e.allows(&[], "scans"));
         assert!(e.allows(&[], "license"));
+    }
+
+    #[test]
+    fn remediation_admin_requires_admin_role() {
+        let e = PolicyEngine::default();
+        // A member (even with every feature) cannot perform admin writes.
+        assert!(!e.allows_role(&["bughunt".to_string()], "member", "remediation_admin"));
+        assert!(!e.allows(&[], "remediation_admin"));
+        // An admin can.
+        assert!(e.allows_role(&[], "admin", "remediation_admin"));
     }
 
     #[test]

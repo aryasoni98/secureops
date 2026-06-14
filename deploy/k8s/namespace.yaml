@@ -4,3 +4,11 @@ metadata:
   name: secureops
   labels:
     app.kubernetes.io/name: secureops
+    # Pod Security Admission: enforce the Restricted standard for this namespace
+    # (the daemon + audit CronJob both comply). The kernel-PEP bpf-agent needs
+    # elevated capabilities and MUST be installed into its own dedicated
+    # namespace with a privileged/baseline exemption - never here.
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted

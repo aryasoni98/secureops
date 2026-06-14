@@ -835,6 +835,13 @@ SecureOps is a security tool. Report vulnerabilities **privately** - see [SECURI
 
 Full external-infra deferral matrix: **[`DEFERRED.md`](DEFERRED.md)**.
 
+### Known limitations (beta)
+
+- **Execution sandbox** - the `secureops-sandbox` wasmtime/WASI library is complete and tested, but the daemon does not yet run skills inside it (it logs `WASM PEP DISABLED`). Runtime enforcement today is the egress proxy, monitors, kill switch, and (on Linux) the eBPF correlator.
+- **Egress audit granularity** - the proxy allows/denies per connection, but individual verdicts are not yet appended to the signed audit log; only circuit-breaker and lifecycle events are.
+- **Design-only features** - several PRODUCT.md sections are architecture proposals, not shipped code: multi-tenant fleet control plane (W2), real TPM remote attestation (E.2), FIPS-validated crypto mode (W7), federated IOC sharing (W5), honeytokens, and self-tuning seccomp profiles. Everything marked **(proposed)** in PRODUCT.md is design, not implementation.
+- **Observability** - the API/daemon emit plaintext `tracing` logs and have no Prometheus `/metrics` endpoint yet; the OTel collector config ships with a debug exporter that must be pointed at a real backend in production.
+
 ---
 
 ## Contributing

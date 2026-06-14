@@ -85,7 +85,9 @@ fn jwt() -> String {
             sub: "u".into(),
             tenant: "t1".into(),
             tier: "pro".into(),
+            role: "member".into(),
             features: vec![],
+            iss: "secureops".into(),
             exp: 4_102_444_800,
         },
     )

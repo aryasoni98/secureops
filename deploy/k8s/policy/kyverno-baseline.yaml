@@ -1,0 +1,122 @@
+# Kyverno admission policies (beta gap: "no admission control / policy engine").
+#
+# These ClusterPolicies enforce the Pod Security baseline the SecureOps manifests
+# already meet, so a future drift (someone adds privileged: true, drops the
+# securityContext, or pulls :latest) is rejected at admission rather than after
+# the fact. Apply after installing Kyverno (https://kyverno.io).
+#
+# They ship as `Audit` (report-only) so they can be rolled out without breaking
+# existing workloads; flip `validationFailureAction: Enforce` once the cluster is
+# clean. The bpf-agent's privileged namespace should be excluded via a Kyverno
+# exception or by scoping these policies away from it.
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: secureops-require-non-root
+  annotations:
+    policies.kyverno.io/title: Require runAsNonRoot
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: run-as-non-root
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+      validate:
+        message: "Containers must run as non-root (securityContext.runAsNonRoot=true)."
+        pattern:
+          spec:
+            =(securityContext):
+              =(runAsNonRoot): true
+            containers:
+              - =(securityContext):
+                  =(runAsNonRoot): true
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: secureops-disallow-privilege-escalation
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: no-priv-escalation
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+      validate:
+        message: "allowPrivilegeEscalation must be false."
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  allowPrivilegeEscalation: false
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: secureops-drop-all-capabilities
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: drop-all-caps
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+      validate:
+        message: "Containers must drop ALL Linux capabilities."
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  capabilities:
+                    drop: ["ALL"]
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: secureops-require-resource-limits
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: require-limits
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+      validate:
+        message: "CPU and memory limits are required (DoS / noisy-neighbour)."
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  limits:
+                    memory: "?*"
+                    cpu: "?*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: secureops-disallow-latest-tag
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: no-latest
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+      validate:
+        message: "Images must be pinned to a tag/digest, not :latest."
+        pattern:
+          spec:
+            containers:
+              - image: "!*:latest"

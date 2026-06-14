@@ -8,6 +8,9 @@ on:
     # Twice-daily run to catch regressions in degraded-mode behavior.
     - cron: "0 */12 * * *"
 
+permissions:
+  contents: read
+
 jobs:
   drills:
     runs-on: ubuntu-latest

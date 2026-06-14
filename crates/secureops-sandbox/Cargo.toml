@@ -15,8 +15,11 @@ secureops-policy = { path = "../secureops-policy", version = "0.0.2" }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 
-wasmtime = { version = "27", default-features = false, features = ["cranelift", "runtime"] }
-wasmtime-wasi = "27"
+# 36.x is the wasmtime LTS line; >=36.0.10 clears all RustSec advisories open
+# against 27.x (incl. GHSA-f984-pcp8-v2p7 sandbox escape and the wasmtime-wasi
+# path_open(TRUNCATE) FilePerms::WRITE bypass).
+wasmtime = { version = "36.0.10", default-features = false, features = ["cranelift", "runtime"] }
+wasmtime-wasi = { version = "36.0.10", features = ["preview1"] }
 
 [features]
 # Linux seccomp host-hardening around the wasmtime host (defense-in-depth).

@@ -19,6 +19,14 @@ cannot provision.
 | **Live Neo4j graph backend** | `secureops-graph` in-memory backend tested. `neo4j` feature compiles real `neo4rs` driver scaffolding. | Real Neo4j 5 instance. Helm subchart ships under Pro/Enterprise; in-memory backend covers Community. |
 | **Live Redis / MinIO** | `redis_queue` deadpool-redis impl + `evidence.rs` SigV4 MinIO presigner - both tested under `secureops-chaos` for degraded-mode behaviour. | Real Redis/MinIO containers - exercised by `docker compose -f deploy/docker/docker-compose.platform.yml up`. |
 
+## Dependency pins waiting on upstream fixes
+
+| Pin (Cargo.lock) | Why | Unpin when |
+|------------------|-----|------------|
+| `time = 0.3.47` | `time 0.3.48` triggers a rustc coherence conflict (E0119) against `aws-smithy-types`' blanket `impl<T> From<T> for CanDisable<T>` when building with `--features aws`. | Either crate ships a fix; retry `cargo update -p time`. |
+| `aws-smithy-types = 1.4.9` + `aws-smithy-eventstream = 0.60.20` | `aws-smithy-types 1.5.0` breaks type inference in `aws-runtime 1.7.4` (E0282 in `sigv4.rs`). | aws-runtime release compatible with smithy-types 1.5; retry `cargo update -p aws-smithy-types`. |
+| Unmaintained transitives (`backoff`, `instant`, `paste`, `rustls-pemfile`) | Pulled by `neo4rs 0.8` / `rustls-native-certs 0.7`; no safe upgrade. `deny.toml` scopes `unmaintained = "workspace"` so only direct deps fail the gate. | neo4rs releases off these deps. |
+
 ## Verification matrix
 
 | Phase | Code in repo | Tested in CI | Acceptance criteria proven |

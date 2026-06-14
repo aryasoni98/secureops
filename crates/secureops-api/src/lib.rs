@@ -17,13 +17,16 @@
 
 pub mod auth;
 pub mod authz;
+pub mod compliance;
 pub mod error;
 pub mod evidence;
 pub mod export;
 pub mod health;
 pub mod intel;
 pub mod license;
+pub mod metrics;
 pub mod models;
+pub mod ratelimit;
 pub mod redis_queue;
 pub mod router;
 pub mod routes;
@@ -34,6 +37,16 @@ pub mod ws;
 pub use error::{ApiError, ApiResult};
 pub use router::{build_router, with_spa};
 pub use state::AppState;
+
+/// Lock a mutex, recovering from poisoning instead of panicking.
+///
+/// A poisoned mutex means some earlier handler panicked while holding it; the
+/// shared maps guarded here (graphs/ranker/jobs/in-memory store) stay usable
+/// after such a panic, so recovering the guard keeps the API serving instead of
+/// turning one panic into a panic on every subsequent request.
+pub(crate) fn lock_recover<T>(m: &std::sync::Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
 
 pub mod state {
     //! Shared application state injected into every handler.
@@ -48,6 +61,8 @@ pub mod state {
     use crate::authz::PolicyEngine;
     use crate::evidence::S3Presigner;
     use crate::intel::BugHuntJob;
+    use crate::metrics::Metrics;
+    use crate::ratelimit::RateLimiter;
     use crate::redis_queue::RedisQueue;
     use crate::store::Store;
     use crate::ws::Hub;
@@ -64,6 +79,13 @@ pub mod state {
         pub hub: Hub,
         /// HMAC secret for issuing/verifying session JWTs.
         pub jwt_secret: Arc<str>,
+        /// Server-side pepper for HMAC-hashing API keys at rest. Defaults to the
+        /// JWT secret unless overridden via [`AppState::with_api_key_pepper`].
+        pub api_key_pepper: Arc<str>,
+        /// Process-wide metrics registry (rendered at `/metrics`).
+        pub metrics: Arc<Metrics>,
+        /// Per-IP HTTP rate limiter (auth endpoints throttled tighter).
+        pub limiter: Arc<RateLimiter>,
         /// Ed25519 public key (32 bytes) that valid license keys are signed by.
         pub license_pubkey: [u8; 32],
         /// Redis scan-job queue (5b). `None` → enqueue is skipped (degraded).
@@ -95,11 +117,15 @@ pub mod state {
             jwt_secret: impl Into<Arc<str>>,
             license_pubkey: [u8; 32],
         ) -> Self {
+            let jwt_secret: Arc<str> = jwt_secret.into();
             Self {
                 store,
                 authz,
                 hub: Hub::new(),
-                jwt_secret: jwt_secret.into(),
+                api_key_pepper: jwt_secret.clone(),
+                metrics: Arc::new(Metrics::new()),
+                limiter: Arc::new(RateLimiter::default_limits()),
+                jwt_secret,
                 license_pubkey,
                 redis: None,
                 evidence: None,
@@ -125,6 +151,19 @@ pub mod state {
         /// Attach an OIDC verifier (enables the SSO callback).
         pub fn with_oidc(mut self, verifier: Arc<dyn crate::sso::OidcVerifier>) -> Self {
             self.oidc = Some(verifier);
+            self
+        }
+
+        /// Override the API-key pepper (defaults to the JWT secret). Use a
+        /// dedicated secret in production so key hashes and JWTs don't share a key.
+        pub fn with_api_key_pepper(mut self, pepper: impl Into<Arc<str>>) -> Self {
+            self.api_key_pepper = pepper.into();
+            self
+        }
+
+        /// Replace the rate limiter (e.g. with env-configured limits).
+        pub fn with_rate_limiter(mut self, limiter: RateLimiter) -> Self {
+            self.limiter = std::sync::Arc::new(limiter);
             self
         }
 
