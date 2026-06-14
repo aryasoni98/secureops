@@ -28,7 +28,7 @@ secureops-monitors = { path = "../secureops-monitors", version = "0.0.2" } # ski
 serde_json = { workspace = true }
 
 napi = { version = "2", default-features = false, features = ["napi6", "async", "serde-json"] }
-napi-derive = "2"
+napi-derive = "3"
 
 [build-dependencies]
 napi-build = "2"
