@@ -71,7 +71,7 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq tidy
           # tidy exits 1 on warnings, 2 on errors; fail only on errors.
-          tidy -q -e site/index.html || [ $? -lt 2 ]
+          tidy -q -e docs/index.html || [ $? -lt 2 ]
 
   # ── Postgres integration: runs the `#[ignore]`-gated PgStore tests ──────
   postgres-integration:

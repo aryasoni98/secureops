@@ -8,9 +8,9 @@
 //! it is a *real* evaluation: each control reports the findings that implicate
 //! it, its status, and the framework now changes the output.
 //!
-//! Supported frameworks: `cis` (CIS-style cloud baseline), `soc2` (Trust
-//! Services Criteria), `pci` (PCI-DSS v4 requirement families). Unknown
-//! frameworks fall back to `cis`.
+//! Supported frameworks: `cis`, `soc2`, `pci`, `scs` (AWS SCS-C02), `owasp`,
+//! `iso27001`, `hipaa`, `gdpr`, `ccpa`, `ccsk`. Aliases like `aws-scs-c02`
+//! normalize to the canonical id. Unknown frameworks fall back to `cis`.
 
 use serde::Serialize;
 
@@ -72,10 +72,34 @@ fn severity_rank(s: Severity) -> u8 {
     }
 }
 
+fn normalize_framework(framework: &str) -> &'static str {
+    let lower = framework.to_ascii_lowercase();
+    match lower.as_str() {
+        "soc2" | "soc-2" => "soc2",
+        "pci" | "pci-dss" => "pci",
+        "scs" | "aws-scs-c02" | "aws_scs_c02" => "scs",
+        "owasp" | "owasp-top10" | "owasp_top10" => "owasp",
+        "iso27001" | "iso-27001" => "iso27001",
+        "hipaa" => "hipaa",
+        "gdpr" => "gdpr",
+        "ccpa" => "ccpa",
+        "ccsk" | "ccsk-v4" | "ccsk_v4" => "ccsk",
+        "cis" => "cis",
+        _ => "cis",
+    }
+}
+
 fn catalog(framework: &str) -> (&'static str, &'static [ControlDef]) {
     match framework {
         "soc2" => ("SOC 2 Trust Services Criteria", SOC2),
         "pci" => ("PCI-DSS v4.0", PCI),
+        "scs" => ("AWS Certified Security – Specialty (SCS-C02)", SCS),
+        "owasp" => ("OWASP Top 10", OWASP),
+        "iso27001" => ("ISO/IEC 27001:2022", ISO27001),
+        "hipaa" => ("HIPAA Security Rule", HIPAA),
+        "gdpr" => ("GDPR", GDPR),
+        "ccpa" => ("CCPA / CPRA", CCPA),
+        "ccsk" => ("CCSK v4", CCSK),
         _ => ("CIS Cloud Foundations Benchmark", CIS),
     }
 }
@@ -225,12 +249,207 @@ const PCI: &[ControlDef] = &[
     },
 ];
 
+const SCS: &[ControlDef] = &[
+    ControlDef {
+        id: "SCS-IAM",
+        title: "IAM policies, roles, and privilege boundaries",
+        keywords: &["iam", "policy", "privilege", "role", "access key", "mfa", "root"],
+    },
+    ControlDef {
+        id: "SCS-NET",
+        title: "Network segmentation and exposure (SG, NACL, WAF)",
+        keywords: &[
+            "security group",
+            "0.0.0.0",
+            "ingress",
+            "egress",
+            "waf",
+            "public",
+            "ssh",
+            "rdp",
+            "port",
+        ],
+    },
+    ControlDef {
+        id: "SCS-DATA",
+        title: "Data protection (S3, KMS, encryption)",
+        keywords: &["s3", "bucket", "encryption", "kms", "public", "storage"],
+    },
+    ControlDef {
+        id: "SCS-LOG",
+        title: "Detective controls (CloudTrail, GuardDuty, Config)",
+        keywords: &["cloudtrail", "logging", "audit", "guardduty", "config", "monitor"],
+    },
+    ControlDef {
+        id: "SCS-INC",
+        title: "Incident response readiness",
+        keywords: &["exposed", "breach", "incident", "alert", "unauthorized"],
+    },
+];
+
+const OWASP: &[ControlDef] = &[
+    ControlDef {
+        id: "A01",
+        title: "Broken Access Control",
+        keywords: &["public", "open", "privilege", "iam", "access", "0.0.0.0", "anonymous"],
+    },
+    ControlDef {
+        id: "A02",
+        title: "Cryptographic Failures",
+        keywords: &["encryption", "tls", "unencrypted", "cleartext", "kms"],
+    },
+    ControlDef {
+        id: "A05",
+        title: "Security Misconfiguration",
+        keywords: &["misconfig", "default", "public", "exposed", "open", "bucket"],
+    },
+    ControlDef {
+        id: "A07",
+        title: "Identification and Authentication Failures",
+        keywords: &["mfa", "password", "credential", "root", "authentication"],
+    },
+    ControlDef {
+        id: "A09",
+        title: "Security Logging and Monitoring Failures",
+        keywords: &["cloudtrail", "logging", "audit", "monitor", "detection"],
+    },
+];
+
+const ISO27001: &[ControlDef] = &[
+    ControlDef {
+        id: "A.5.15",
+        title: "Access control",
+        keywords: &["access", "iam", "privilege", "mfa", "public", "open"],
+    },
+    ControlDef {
+        id: "A.8.9",
+        title: "Configuration management",
+        keywords: &["misconfig", "default", "exposed", "public", "open"],
+    },
+    ControlDef {
+        id: "A.8.12",
+        title: "Data leakage prevention",
+        keywords: &["s3", "bucket", "public", "storage", "leak", "exposed"],
+    },
+    ControlDef {
+        id: "A.8.16",
+        title: "Monitoring activities",
+        keywords: &["cloudtrail", "logging", "audit", "monitor", "detection"],
+    },
+    ControlDef {
+        id: "A.8.24",
+        title: "Use of cryptography",
+        keywords: &["encryption", "kms", "tls", "unencrypted"],
+    },
+];
+
+const HIPAA: &[ControlDef] = &[
+    ControlDef {
+        id: "164.312(a)(1)",
+        title: "Access control (unique user, emergency, auto logoff)",
+        keywords: &["access", "iam", "privilege", "mfa", "authentication"],
+    },
+    ControlDef {
+        id: "164.312(b)",
+        title: "Audit controls",
+        keywords: &["cloudtrail", "logging", "audit", "monitor"],
+    },
+    ControlDef {
+        id: "164.312(c)(1)",
+        title: "Integrity controls",
+        keywords: &["tamper", "integrity", "unauthorized", "exposed"],
+    },
+    ControlDef {
+        id: "164.312(e)(1)",
+        title: "Transmission security",
+        keywords: &["tls", "encryption", "in transit", "cleartext"],
+    },
+    ControlDef {
+        id: "164.312(e)(2)(ii)",
+        title: "Encryption (addressable)",
+        keywords: &["encryption", "kms", "unencrypted", "phi", "database"],
+    },
+];
+
+const GDPR: &[ControlDef] = &[
+    ControlDef {
+        id: "Art.25",
+        title: "Data protection by design and default",
+        keywords: &["public", "exposed", "default", "encryption", "access"],
+    },
+    ControlDef {
+        id: "Art.32",
+        title: "Security of processing",
+        keywords: &["encryption", "access", "monitor", "audit", "integrity"],
+    },
+    ControlDef {
+        id: "Art.33",
+        title: "Breach notification readiness",
+        keywords: &["breach", "incident", "exposed", "leak", "public"],
+    },
+    ControlDef {
+        id: "Art.35",
+        title: "Data protection impact (high-risk processing)",
+        keywords: &["pii", "personal", "database", "storage", "public"],
+    },
+];
+
+const CCPA: &[ControlDef] = &[
+    ControlDef {
+        id: "1798.100",
+        title: "Right to know / data inventory",
+        keywords: &["storage", "database", "bucket", "logging", "inventory"],
+    },
+    ControlDef {
+        id: "1798.150",
+        title: "Reasonable security procedures",
+        keywords: &["encryption", "access", "public", "exposed", "misconfig"],
+    },
+    ControlDef {
+        id: "1798.81.5",
+        title: "Security of personal information",
+        keywords: &["encryption", "access", "credential", "public", "leak"],
+    },
+];
+
+const CCSK: &[ControlDef] = &[
+    ControlDef {
+        id: "CCSK-DOM2",
+        title: "Governance and risk (shared responsibility)",
+        keywords: &["policy", "misconfig", "compliance", "audit"],
+    },
+    ControlDef {
+        id: "CCSK-DOM3",
+        title: "IAM and identity federation",
+        keywords: &["iam", "mfa", "role", "privilege", "access key", "federation"],
+    },
+    ControlDef {
+        id: "CCSK-DOM4",
+        title: "Infrastructure security",
+        keywords: &[
+            "security group",
+            "0.0.0.0",
+            "network",
+            "firewall",
+            "ingress",
+            "public",
+        ],
+    },
+    ControlDef {
+        id: "CCSK-DOM5",
+        title: "Data security and encryption",
+        keywords: &["encryption", "kms", "s3", "bucket", "storage", "public"],
+    },
+    ControlDef {
+        id: "CCSK-DOM6",
+        title: "Logging and monitoring",
+        keywords: &["cloudtrail", "logging", "audit", "monitor", "detection"],
+    },
+];
+
 /// Evaluate a tenant's findings against a framework's controls.
 pub fn evaluate(framework: &str, findings: &[Finding]) -> ComplianceReport {
-    let fw = match framework {
-        "soc2" | "pci" | "cis" => framework,
-        _ => "cis",
-    };
+    let fw = normalize_framework(framework);
     let (label, defs) = catalog(fw);
 
     let mut controls = Vec::with_capacity(defs.len());
@@ -355,7 +574,14 @@ mod tests {
     }
 
     #[test]
-    fn unknown_framework_falls_back_to_cis() {
-        assert_eq!(evaluate("hipaa", &[]).framework, "cis");
+    fn hipaa_uses_hipaa_catalog() {
+        let r = evaluate("hipaa", &[]);
+        assert_eq!(r.framework, "hipaa");
+        assert!(r.framework_label.contains("HIPAA"));
+    }
+
+    #[test]
+    fn scs_alias_normalizes() {
+        assert_eq!(evaluate("aws-scs-c02", &[]).framework, "scs");
     }
 }

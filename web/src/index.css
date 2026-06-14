@@ -13,6 +13,12 @@ body {
   color: #e6edf3;
   font-family: Inter, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Full-bleed dashboard: content uses viewport width with edge padding from Page. */
+#root {
+  min-height: 100%;
 }
 
 /* Glassmorphism surface used across the dashboard. */
@@ -22,6 +28,11 @@ body {
 
 .glass-hover {
   @apply transition-colors duration-300 hover:bg-white/[0.07] hover:border-white/[0.14];
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
 }
 
 /* Gradient accent text (logo, headings). */

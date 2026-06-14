@@ -20,11 +20,11 @@ records the findings and exactly what changed.
 
 Remaining gap to "enterprise GA" is dominated by items that need real
 infrastructure or third parties (KMS/HSM, live OIDC IdP, GCP/Azure SDKs, an
-external pen test, a SOC 2 audit) — wired behind seams, listed under *Deferred*.
+external pen test, a SOC 2 audit) - wired behind seams, listed under *Deferred*.
 
 ---
 
-## P0 launch blockers — FIXED
+## P0 launch blockers - FIXED
 
 | # | Finding | Fix | Evidence |
 |---|---|---|---|
@@ -35,13 +35,13 @@ external pen test, a SOC 2 audit) — wired behind seams, listed under *Deferred
 | 5 | **No `/metrics`; OTLP env set but nothing read it** | Real Prometheus `/metrics` endpoint + per-request metrics middleware + `TraceLayer` request spans | `metrics.rs`, `router.rs` |
 | 6 | **No backups / DR** | `scripts/backup.sh` + `scripts/restore.sh` (Postgres/Redis/MinIO) + DR runbook with RTO/RPO | `scripts/`, `docs/dr.md` |
 
-## P1 high-risk — FIXED
+## P1 high-risk - FIXED
 
 | Finding | Fix |
 |---|---|
-| Privileged writes (remediation approve / circuit reset) had no RBAC | Coarse `role` (`admin`/`member`) in `Claims`; Cedar `remediation_admin` policy gates both; license activator = admin, OIDC/API-key role mapped (`authz.rs`, `intel.rs`, `auth.rs`) — test `remediation_approve_forbidden_for_member` |
-| JWT issuer not validated | `iss` pinned to `secureops`, validated on decode; foreign-issuer tokens rejected — test `jwt_wrong_issuer_rejected` |
-| API keys hashed with unsalted SHA-256 | Now **HMAC-SHA256 keyed by a server pepper** (`SECUREOPS_API_KEY_PEPPER`, defaults to JWT secret) — test `api_key_hash_is_stable_peppered_and_not_plaintext` |
+| Privileged writes (remediation approve / circuit reset) had no RBAC | Coarse `role` (`admin`/`member`) in `Claims`; Cedar `remediation_admin` policy gates both; license activator = admin, OIDC/API-key role mapped (`authz.rs`, `intel.rs`, `auth.rs`) - test `remediation_approve_forbidden_for_member` |
+| JWT issuer not validated | `iss` pinned to `secureops`, validated on decode; foreign-issuer tokens rejected - test `jwt_wrong_issuer_rejected` |
+| API keys hashed with unsalted SHA-256 | Now **HMAC-SHA256 keyed by a server pepper** (`SECUREOPS_API_KEY_PEPPER`, defaults to JWT secret) - test `api_key_hash_is_stable_peppered_and_not_plaintext` |
 | OIDC trusted IdP-supplied claims; no issuer check; unwired | `HttpOidcVerifier` validates `iss`; wired from env in `main.rs` under `live-oidc` |
 | No Postgres RLS backstop | Migration `007` enables FORCE RLS with a non-breaking `app.tenant` GUC policy on all tenant tables |
 | Cosmetic compliance endpoint (framework ignored) | Real control-mapping engine (`compliance.rs`): CIS/SOC2/PCI catalogs, pass/fail coverage + score; `framework` now drives output |
@@ -53,24 +53,24 @@ external pen test, a SOC 2 audit) — wired behind seams, listed under *Deferred
 
 ## Now available behind feature flags (were deferred)
 
-- **In-process TLS** — `--features tls` serves HTTPS via `axum-server` + rustls
+- **In-process TLS** - `--features tls` serves HTTPS via `axum-server` + rustls
   (ring, no aws-lc/C build); `SECUREOPS_TLS_CERT`/`_KEY` + `ip:port` addr. Falls
   back to plain HTTP when unconfigured. See `docs/tls-and-otlp.md`.
-- **OTLP trace export** — `--features otlp` ships spans to the collector over
+- **OTLP trace export** - `--features otlp` ships spans to the collector over
   HTTP/protobuf (`OTEL_EXPORTER_OTLP_ENDPOINT`, port `:4318`); `/metrics` +
   `TraceLayer` already in the default build. See `docs/tls-and-otlp.md`.
-- **Live OIDC IdP** — `HttpOidcVerifier` is real, issuer-validated, and
+- **Live OIDC IdP** - `HttpOidcVerifier` is real, issuer-validated, and
   env-wired; requires `--features live-oidc` + a real IdP (Okta/Entra/Google).
 
 CI compiles all three (`api-feature-builds` job) so they don't bit-rot.
 
-## Deferred (need infrastructure / third parties — seams in place)
+## Deferred (need infrastructure / third parties - seams in place)
 
-- **KMS / BYOK / CMK, key rotation** — no managed-KMS calls in-tree; the
+- **KMS / BYOK / CMK, key rotation** - no managed-KMS calls in-tree; the
   `secureops-crypto` keystore is the seam. Needs a cloud KMS account.
-- **GCP/Azure CSPM + remediation** — dry impls today; real SDKs are the seam.
-- **TPM/HSM-backed audit signer** — `InMemorySigner` default; `--features tpm`
+- **GCP/Azure CSPM + remediation** - dry impls today; real SDKs are the seam.
+- **TPM/HSM-backed audit signer** - `InMemorySigner` default; `--features tpm`
   scaffolds real `tss-esapi`; needs `/dev/tpm0`.
-- **SOC 2 / ISO 27001 attestation, external pen test** — process/3rd-party.
+- **SOC 2 / ISO 27001 attestation, external pen test** - process/3rd-party.
 
 See `DEFERRED.md` for the canonical infra-blocked list.

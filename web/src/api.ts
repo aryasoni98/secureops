@@ -83,6 +83,41 @@ export interface Remediation {
   state: "pending" | "completed" | "rolled_back" | "aborted" | "failed";
 }
 
+export interface ControlResult {
+  id: string;
+  title: string;
+  status: string;
+  maxSeverity?: string | null;
+  findings: string[];
+}
+
+export interface ComplianceReport {
+  framework: string;
+  frameworkLabel: string;
+  totalControls: number;
+  passing: number;
+  failing: number;
+  score: number;
+  controls: ControlResult[];
+  unmappedFindings: number;
+}
+
+export interface BugHuntReport {
+  title: string;
+  attack_vector: string;
+  affected_assets: string[];
+  evidence_refs: string[];
+  severity: string;
+  cvss_like_score: number;
+  remediation_steps: string[];
+}
+
+export interface BugHuntJob {
+  status: string;
+  report?: BugHuntReport;
+  iterations?: number;
+}
+
 export interface AttackPath {
   nodes: string[];
   blastRadius: number;
@@ -111,7 +146,7 @@ export const api = {
     req<{ node: string; blastRadius: number }>("GET", `/graph/blast-radius/${node}`),
   rebuildGraph: (spec: unknown) => req("POST", "/graph/rebuild", spec),
   runBugHunt: (scope: string) => req<{ jobId: string; status: string }>("POST", "/bughunt", { scope }),
-  getBugHunt: (id: string) => req<{ status: string; report?: unknown }>("GET", `/bughunt/${id}`),
+  getBugHunt: (id: string) => req<BugHuntJob>("GET", `/bughunt/${id}`),
   remediationQueue: () => req<{ remediations: Remediation[] }>("GET", "/remediations/queue"),
   queueRemediation: (finding_id: string, playbook_id: string) =>
     req<Remediation>("POST", "/remediations", { finding_id, playbook_id }),
@@ -134,8 +169,8 @@ export const api = {
   }) => req<{ updates: number }>("POST", "/rl/feedback", body),
   createScan: (scope: string) =>
     req<{ jobId: string; status: string }>("POST", "/scans", { scope }),
-  complianceCount: (framework: string) =>
-    req<{ count: number }>("GET", `/compliance/reports?framework=${framework}`),
+  complianceReport: (framework: string) =>
+    req<ComplianceReport>("GET", `/compliance/reports?framework=${framework}`),
   complianceDownload: (framework: string, format: ComplianceFormat) =>
     reqBlob(`/compliance/reports?framework=${framework}&format=${format}`),
 };

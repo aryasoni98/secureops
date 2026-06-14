@@ -7,7 +7,7 @@ with Cargo features and configure at runtime via env.
 ## TLS termination (`--features tls`)
 
 Serve HTTPS directly from `secureops-api` (via `axum-server` + rustls, ring
-crypto provider — no aws-lc/C build) instead of requiring an external TLS
+crypto provider - no aws-lc/C build) instead of requiring an external TLS
 terminator for single-binary deployments.
 
 ```bash

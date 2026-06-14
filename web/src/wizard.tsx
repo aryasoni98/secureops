@@ -16,7 +16,7 @@ const STEPS = ["License", "LLM keys", "Cloud", "First scan"] as const;
 
 function StepProgress({ current }: { current: number }) {
   return (
-    <div className="max-w-7xl mx-auto px-6 pt-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-14 pt-8">
       <div className="flex items-center gap-0 max-w-2xl">
         {STEPS.map((label, i) => {
           const done = i < current;
@@ -98,7 +98,7 @@ export function LicenseActivation() {
   }
   return (
     <WizardFrame step={0}>
-      <Page title="Activate License">
+      <Page title="Activate License" narrow>
         <p className="text-slate-400 mb-4 max-w-2xl">
           Paste your SecureOps license key. The server verifies an Ed25519 signature; tampered or
           expired keys are rejected.
@@ -142,7 +142,7 @@ export function SetupLlmKeys() {
   }
   return (
     <WizardFrame step={1}>
-      <Page title="Step 2 - LLM keys">
+      <Page title="Step 2 - LLM keys" narrow>
         <p className="text-slate-400 mb-4 max-w-2xl">
           Provide a key for at least one LLM provider so SecureOps can run the bug-hunt loop. The
           key itself is never stored in the browser - configure it as an environment variable on
@@ -208,7 +208,7 @@ export function SetupCloud() {
   }
   return (
     <WizardFrame step={2}>
-      <Page title="Step 3 - Cloud read-only credential">
+      <Page title="Step 3 - Cloud read-only credential" narrow>
         <p className="text-slate-400 mb-4 max-w-2xl">
           SecureOps only needs read-only access for inventory + checks. Cloud mutations only happen
           through human-approved playbooks.
@@ -286,7 +286,7 @@ export function SetupScan() {
   }
   return (
     <WizardFrame step={3}>
-      <Page title="Step 4 - first scan">
+      <Page title="Step 4 - first scan" narrow>
         <div className="flex items-center gap-3">
           <select
             value={scope}

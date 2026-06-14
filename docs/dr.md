@@ -15,7 +15,7 @@ covered separately.
 
 > These are the **defaults achievable with the shipped tooling**. Tighter
 > objectives (RPO ≤ 5 min, RTO ≤ 15 min) require operator-provisioned Postgres
-> streaming replication and MinIO/S3 cross-region replication — both supported
+> streaming replication and MinIO/S3 cross-region replication - both supported
 > by the architecture but out of scope for the in-tree scripts.
 
 ## Backups
@@ -33,8 +33,8 @@ Each backup directory contains `postgres.dump`, `redis-dump.rdb`, optional
 `(cd <dir> && sha256sum -c SHA256SUMS)`.
 
 **Retention:** keep ≥ 30 days of daily backups (compliance minimum). The
-audit-log table additionally has a sanctioned prune path —
-`SELECT prune_audit_log(<retain_days>);` (migration `007`) — which is the only
+audit-log table additionally has a sanctioned prune path -
+`SELECT prune_audit_log(<retain_days>);` (migration `007`) - which is the only
 permitted deletion route (the table otherwise REVOKEs DELETE for tamper-evidence).
 
 ## Restore

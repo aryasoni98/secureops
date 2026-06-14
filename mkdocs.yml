@@ -9,9 +9,8 @@ theme:
     - navigation.tabs
     - content.code.copy
 nav:
-  - Home: index.md
+  - Home: RUNNING.md
   - Architecture: architecture.md
-  - Running locally: RUNNING.md
   - API reference: api.md
   - Deploy:
     - AWS: deploy-aws.md
@@ -24,5 +23,7 @@ nav:
     - RL feedback: rl-feedback.md
     - License: license.md
     - Pen-test checklist: pen-test-checklist.md
+    - Disaster recovery: dr.md
+    - TLS & OTLP: tls-and-otlp.md
 docs_dir: docs
 # `pip install mkdocs-material && mkdocs build` (CI gate in release.yml).
