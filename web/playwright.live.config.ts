@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 // Live local test: assumes `npm run dev` (5173) + secureops-api (8080) already running.
 export default defineConfig({
   testDir: "./tests",
+  testMatch: "**/live-*.spec.ts",
   timeout: 60_000,
   retries: 0,
   use: {

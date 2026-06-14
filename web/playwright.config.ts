@@ -6,6 +6,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
+  // Live-only specs (need `npm run dev` + a running secureops-api/license-server)
+  // run via playwright.live.config.ts, never in CI's headless preview job.
+  testIgnore: "**/live-*.spec.ts",
   timeout: 30_000,
   retries: 0,
   use: {
